@@ -1,18 +1,18 @@
-version: "3.8"
+# 不再需要 version 字段
 
 services:
   db:
     image: mysql:8.0
-    container_name: travel
-    restart: always
+    container_name: travel-db
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: travel
     ports:
-      - "3307:3306" # 将宿主机的 3307 映射到容器的 3306
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./certs:/app/certs # 将宿主机的 certs 目录挂载到容器内 /app/certs
+      - mysql_data:/var/lib/mysql # 使用具名卷持久化数据
+      - ./certs:/app/certs # 挂载证书目录
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 10s
@@ -20,13 +20,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: travel-redis-dev
+    container_name: travel-redis
     restart: unless-stopped
-    # 可选：映射端口供宿主机调试（如不需要可删除）
     ports:
-      - "6379:6379"
+      - "6379:6379" # 可选：映射到宿主机方便调试
     volumes:
-      - redis_data_dev:/data
+      - redis_data:/data # 持久化 Redis 数据
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -34,19 +33,26 @@ services:
       retries: 5
 
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: travel-server
-    restart: always
+    restart: unless-stopped
     ports:
       - "8082:8080"
+      - "2346:2345"
     env_file:
-      # 环境变量 config读取
       - .env.prod
     volumes:
-      - ./uploads:/root/uploads # 持久化照片文件
+      - .:/app
+      - /app/tmp
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
+# 顶级 volumes 必须顶格声明，且与 services 对齐
 volumes:
   mysql_data:
+  redis_data:
