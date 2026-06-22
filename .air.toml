@@ -1,0 +1,15 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # 适配 cmd 目录结构，编译 cmd 下的入口
+  cmd = "go build -o ./tmp/main ./cmd"
+  bin = "./tmp/main"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["assets", "tmp", "vendor"]
+  delay = 1000
+  poll = true
+  poll_interval = 500
+
+[log]
+  time = true

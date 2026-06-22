@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: travel
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: travel
+    ports:
+      - "3307:3306" # 将宿主机的 3307 映射到容器的 3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./certs:/app/certs # 将宿主机的 certs 目录挂载到容器内 /app/certs
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: travel-redis-dev
+    restart: unless-stopped
+    # 可选：映射端口供宿主机调试（如不需要可删除）
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: travel-server
+    restart: always
+    ports:
+      - "8082:8080"
+    env_file:
+      # 环境变量 config读取
+      - .env.prod
+    volumes:
+      - ./uploads:/root/uploads # 持久化照片文件
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
