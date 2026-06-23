@@ -158,7 +158,7 @@ func UpdateTrip(c *gin.Context) {
 func InviteCollaborator(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	// 简单生成邀请 token（实际应加密含 tripID 的临时凭据）
-	inviteToken, _ := middleware.GenerateToken(c.GetUint("userID"))
+	inviteToken, _ := middleware.GenerateMiniAppToken(c.GetUint("userID"))
 	inviteUrl := fmt.Sprintf("/pages/trip/detail?id=%d&token=%s", id, inviteToken)
 	response.Success(c, gin.H{"invite_url": inviteUrl})
 }

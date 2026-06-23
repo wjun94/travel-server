@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # 生成 swagger 文档
-RUN swag init
+RUN swag init -g cmd/main.go -o docs
 
 # 编译
 RUN go build -o photo-print-backend .

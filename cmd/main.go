@@ -48,6 +48,7 @@ func main() {
 	{
 		// 公开接口（无需登录）
 		api.POST("/user/login", miniapp.UserLogin)            // 微信登录
+		api.POST("/admin/login", admin.AdminLogin)            // 后台登录
 		api.GET("/feed", miniapp.GetFeed)                     // 攻略瀑布流
 		api.GET("/nearby", miniapp.GetNearby)                 // 周边推荐
 		api.GET("/nearby/recommend", miniapp.GetTopRecommend) // TOP推荐
@@ -100,7 +101,17 @@ func main() {
 		// 后台管理接口（需登录 + 管理员权限）
 		adminGroup := api.Group("/admin", middleware.JWTAuth(), middleware.AdminOnly())
 		{
+			adminGroup.GET("/info", admin.GetAdminInfo)
 			adminGroup.GET("/dashboard", admin.Dashboard)
+			adminGroup.GET("/admin/users", admin.ListAdminUsers)
+			adminGroup.POST("/user", admin.CreateAdminUser)
+			adminGroup.PUT("/user/:id", admin.UpdateAdminUser)
+			adminGroup.DELETE("/user/:id", admin.DeleteAdminUser)
+			adminGroup.GET("/roles", admin.ListRoles)
+			adminGroup.POST("/role", admin.CreateRole)
+			adminGroup.PUT("/role/:id", admin.UpdateRole)
+			adminGroup.DELETE("/role/:id", admin.DeleteRole)
+
 			adminGroup.GET("/users", admin.ListUsers)
 			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole)
 			adminGroup.GET("/posts", admin.ListPosts)

@@ -48,7 +48,7 @@ var upgrader = websocket.Upgrader{
 // WebSocketHandler 处理 WebSocket 连接（协同编辑 + 消息）
 func WebSocketHandler(c *gin.Context) {
 	token := c.Query("token")
-	claims, err := middleware.ParseToken(token)
+	claims, err := middleware.ParseMiniAppToken(token)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"msg": "token无效"})
 		return

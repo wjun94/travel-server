@@ -129,7 +129,7 @@ export DEEPSEEK_API_KEY=sk-xxxx
 生成 Swag 文档
 
 ```bash
-go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/main.go -o docs
+swag init -g cmd/main.go -o docs
 ```
 
 ```bash

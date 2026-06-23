@@ -8,44 +8,44 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"travel-server/internal/model"
-	"travel-server/pkg/database"
+	"travel-server/internal/repository"
 )
 
-// jwtSecret JWT 签名密钥（生产环境应从配置读取）
-var jwtSecret = []byte("travel-secret-key")
+// 小程序用户 JWT 密钥
+var miniAppJwtSecret = []byte("miniapp-secret-key")
 
-// Claims 自定义 JWT 载荷
-type Claims struct {
+// 后台管理员 JWT 密钥（独立）
+var adminJwtSecret = []byte("admin-secret-key")
+
+// ---------- 小程序用户 Claims ----------
+type MiniAppClaims struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken 为用户生成 JWT Token
-func GenerateToken(userID uint) (string, error) {
-	claims := Claims{
+func GenerateMiniAppToken(userID uint) (string, error) {
+	claims := MiniAppClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7天过期
-			Issuer:    "travel-server",
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			Issuer:    "travel-miniapp",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(miniAppJwtSecret)
 }
 
-// ParseToken 解析并验证 JWT Token
-func ParseToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+func ParseMiniAppToken(tokenString string) (*MiniAppClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &MiniAppClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return miniAppJwtSecret, nil
 	})
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+	if claims, ok := token.Claims.(*MiniAppClaims); ok && token.Valid {
 		return claims, nil
 	}
 	return nil, err
 }
 
-// JWTAuth 验证 JWT Token 并注入 userID 到上下文
+// JWTAuth 小程序用户认证中间件
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -54,7 +54,7 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		claims, err := ParseToken(tokenString)
+		claims, err := ParseMiniAppToken(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"msg": "token无效"})
 			return
@@ -64,19 +64,59 @@ func JWTAuth() gin.HandlerFunc {
 	}
 }
 
-// AdminOnly 检查用户是否为管理员（role >= 2）
+// ---------- 后台管理员 Claims ----------
+type AdminClaims struct {
+	AdminUserID uint `json:"admin_user_id"`
+	jwt.RegisteredClaims
+}
+
+func GenerateAdminToken(adminUserID uint) (string, error) {
+	claims := AdminClaims{
+		AdminUserID: adminUserID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			Issuer:    "travel-admin",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(adminJwtSecret)
+}
+
+func ParseAdminToken(tokenString string) (*AdminClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &AdminClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return adminJwtSecret, nil
+	})
+	if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, err
+}
+
+// AdminOnly 后台管理员认证中间件（验证 Admin JWT，并注入 adminUserID 和角色）
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		uid, exists := c.Get("userID")
-		if !exists {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"msg": "未登录"})
 			return
 		}
-		var user model.User
-		if err := database.DB.First(&user, uid).Error; err != nil || user.Role < 2 {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"msg": "无权限"})
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := ParseAdminToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"msg": "token无效"})
 			return
 		}
+
+		// 查询后台用户是否存在且启用
+		adminUser, err := repository.GetAdminUserByID(claims.AdminUserID)
+		if err != nil || adminUser.Status != 1 {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"msg": "用户已被禁用或不存在"})
+			return
+		}
+
+		// 注入上下文
+		c.Set("adminUserID", adminUser.ID)
+		c.Set("adminRole", adminUser.Role)
 		c.Next()
 	}
 }

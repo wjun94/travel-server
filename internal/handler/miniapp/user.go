@@ -46,7 +46,7 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	token, _ := middleware.GenerateToken(user.ID)
+	token, _ := middleware.GenerateMiniAppToken(user.ID)
 	response.Success(c, gin.H{"token": token, "user": user})
 }
 
