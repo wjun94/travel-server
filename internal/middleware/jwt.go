@@ -92,8 +92,8 @@ func ParseAdminToken(tokenString string) (*AdminClaims, error) {
 	return nil, err
 }
 
-// AdminOnly 后台管理员认证中间件（验证 Admin JWT，并注入 adminUserID 和角色）
-func AdminOnly() gin.HandlerFunc {
+// AdminJWTAuth 后台管理员认证中间件（验证 Admin JWT，并注入 adminUserID 和角色）
+func AdminJWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {

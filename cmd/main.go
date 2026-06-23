@@ -99,7 +99,7 @@ func main() {
 		}
 
 		// 后台管理接口（需登录 + 管理员权限）
-		adminGroup := api.Group("/admin", middleware.JWTAuth(), middleware.AdminOnly())
+		adminGroup := api.Group("/admin", middleware.AdminJWTAuth())
 		{
 			adminGroup.GET("/info", admin.GetAdminInfo)
 			adminGroup.GET("/dashboard", admin.Dashboard)
