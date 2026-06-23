@@ -21,5 +21,5 @@ func Success(c *gin.Context, data interface{}) {
 
 // Fail 返回错误响应
 func Fail(c *gin.Context, httpCode int, msg string) {
-	c.JSON(httpCode, Response{Code: httpCode, Msg: msg})
+	c.JSON(httpCode, Response{Code: 1, Msg: msg})
 }

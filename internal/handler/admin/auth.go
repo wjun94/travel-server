@@ -32,7 +32,7 @@ func AdminLogin(c *gin.Context) {
 
 	user, err := service.AdminLogin(req.Username, req.Password)
 	if err != nil {
-		response.Fail(c, http.StatusUnauthorized, err.Error())
+		response.Fail(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
