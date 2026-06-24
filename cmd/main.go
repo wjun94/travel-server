@@ -116,7 +116,8 @@ func main() {
 			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole)
 			adminGroup.GET("/posts", admin.ListPosts)
 			adminGroup.PUT("/post/:id/status", admin.UpdatePostStatus)
-			adminGroup.POST("/official-partner", admin.CreateOfficialPartner)
+			adminGroup.POST("/partner", admin.CreatePartner)
+			adminGroup.GET("/partners", admin.ListPartners)
 			adminGroup.POST("/recommendation", admin.SaveRecommendation)
 			adminGroup.GET("/recommendations", admin.ListRecommendations)
 		}

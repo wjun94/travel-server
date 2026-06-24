@@ -197,7 +197,7 @@ go run cmd/main.go
 | /api/v1/admin/user/:id/role    | PUT  | 修改用户角色   |
 | /api/v1/admin/posts            | GET  | 攻略列表       |
 | /api/v1/admin/post/:id/status  | PUT  | 审核攻略状态   |
-| /api/v1/admin/official-partner | POST | 发布官方搭子团 |
+| /api/v1/admin/partner          | POST | 发布官方搭子团 |
 | /api/v1/admin/recommendation   | POST | 保存推荐内容   |
 | /api/v1/admin/recommendations  | GET  | 推荐列表       |
 

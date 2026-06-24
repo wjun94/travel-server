@@ -48,3 +48,16 @@ func GetApplicationByID(id uint) (*model.PartnerApplication, error) {
 func UpdateApplicationStatus(id uint, status int) error {
 	return database.DB.Model(&model.PartnerApplication{}).Where("id = ?", id).Update("status", status).Error
 }
+
+// GetPartners 获取搭子列表（分页）
+func GetPartners(page, pageSize int) ([]model.Partner, int64, error) {
+	var list []model.Partner
+	var total int64
+	offset := (page - 1) * pageSize
+	err := database.DB.Model(&model.Partner{}).Where("type = ?", 1).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	err = database.DB.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	return list, total, err
+}
