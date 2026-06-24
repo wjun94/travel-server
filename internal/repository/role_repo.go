@@ -5,10 +5,12 @@ import (
 	"travel-server/pkg/database"
 )
 
-func ListRoles() ([]model.Role, error) {
+func ListRoles(page, pageSize int) ([]model.Role, int64, error) {
 	var roles []model.Role
-	err := database.DB.Find(&roles).Error
-	return roles, err
+	var total int64
+	database.DB.Model(&model.Role{}).Count(&total)
+	err := database.DB.Offset((page - 1) * pageSize).Limit(pageSize).Find(&roles).Error
+	return roles, total, err
 }
 
 func GetRoleByID(id uint) (*model.Role, error) {

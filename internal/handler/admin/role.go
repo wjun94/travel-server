@@ -10,19 +10,23 @@ import (
 	"travel-server/pkg/response"
 )
 
-// ListRoles 获取所有角色
+// ListRoles 获取所有角色（分页）
 // @Summary 角色列表
 // @Security BearerAuth
 // @Tags 后台-角色
-// @Success 200 {object} response.Response{data=[]model.Role}
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.Role,total=int}}
 // @Router /api/v1/admin/roles [get]
 func ListRoles(c *gin.Context) {
-	roles, err := repository.ListRoles()
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	roles, total, err := repository.ListRoles(page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取角色列表失败")
 		return
 	}
-	response.Success(c, roles)
+	response.Success(c, gin.H{"list": roles, "total": total})
 }
 
 // CreateRole 创建角色
