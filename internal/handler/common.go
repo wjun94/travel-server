@@ -73,12 +73,12 @@ func WebSocketHandler(c *gin.Context) {
 		action, _ := msg["action"].(string)
 		switch action {
 		case "join_trip":
-			tripID, _ := msg["trip_id"].(string)
+			tripID, _ := msg["tripId"].(string)
 			ws.WsHub.Join("trip:"+tripID, conn)
 		case "edit_trip":
-			tripID, _ := msg["trip_id"].(string)
+			tripID, _ := msg["tripId"].(string)
 			tripIDUint := uint(0)
-			if f, ok := msg["trip_id"].(float64); ok {
+			if f, ok := msg["tripId"].(float64); ok {
 				tripIDUint = uint(f)
 			}
 			// 持久化编辑

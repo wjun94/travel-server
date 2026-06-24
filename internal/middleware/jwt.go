@@ -19,7 +19,7 @@ var adminJwtSecret = []byte("admin-secret-key")
 
 // ---------- 小程序用户 Claims ----------
 type MiniAppClaims struct {
-	UserID uint `json:"user_id"`
+	UserID uint `json:"userId"`
 	jwt.RegisteredClaims
 }
 
@@ -66,7 +66,7 @@ func JWTAuth() gin.HandlerFunc {
 
 // ---------- 后台管理员 Claims ----------
 type AdminClaims struct {
-	AdminUserID uint `json:"admin_user_id"`
+	AdminUserID uint `json:"adminUserId"`
 	jwt.RegisteredClaims
 }
 

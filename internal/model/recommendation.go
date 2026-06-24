@@ -10,7 +10,7 @@ type Recommendation struct {
 	City      string    `gorm:"size:50" json:"city"`
 	Type      string    `gorm:"size:50" json:"type"` // house / activity
 	Link      string    `json:"link"`                // 跳转链接
-	StartTime time.Time `json:"start_time"`          // 展示开始时间
-	EndTime   time.Time `json:"end_time"`            // 展示结束时间
-	CreatedAt time.Time `json:"created_at"`
+	StartTime time.Time `json:"startTime"`          // 展示开始时间
+	EndTime   time.Time `json:"endTime"`            // 展示结束时间
+	CreatedAt time.Time `json:"createdAt"`
 }

@@ -100,7 +100,7 @@ func GetUserInfo(c *gin.Context) {
 func UpdateProfile(c *gin.Context) {
 	var req struct {
 		Nickname  string `json:"nickname"`
-		AvatarURL string `json:"avatar_url"`
+		AvatarURL string `json:"avatarUrl"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")

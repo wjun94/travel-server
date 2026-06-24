@@ -63,7 +63,7 @@ func AddAccount(c *gin.Context) {
 // @Router /api/v1/account/import [post]
 func ImportWechatPay(c *gin.Context) {
 	var req struct {
-		TripID       uint     `json:"trip_id"`
+		TripID       uint     `json:"tripId"`
 		Transactions []string `json:"transactions"` // 微信支付单号（实际应传入金额）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

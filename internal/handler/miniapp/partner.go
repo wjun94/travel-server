@@ -100,7 +100,7 @@ func HandleApplication(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ApplicationID uint `json:"application_id"`
+		ApplicationID uint `json:"applicationId"`
 		Status        int  `json:"status"` // 1同意 2拒绝
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

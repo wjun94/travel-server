@@ -19,9 +19,9 @@ import (
 // @Router /api/v1/message/list [get]
 func GetMessageList(c *gin.Context) {
 	uid := c.GetUint("userID")
-	targetIDStr := c.Query("target_user_id")
+	targetIDStr := c.Query("targetUserId")
 	if targetIDStr == "" {
-		response.Fail(c, 400, "缺少target_user_id")
+		response.Fail(c, 400, "缺少targetUserId")
 		return
 	}
 	targetID, err := strconv.Atoi(targetIDStr)
@@ -46,7 +46,7 @@ func GetMessageList(c *gin.Context) {
 // @Router /api/v1/message/send [post]
 func SendMessage(c *gin.Context) {
 	var req struct {
-		ToUserID uint   `json:"to_user_id"`
+		ToUserID uint   `json:"toUserId"`
 		Content  string `json:"content"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

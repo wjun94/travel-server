@@ -67,5 +67,5 @@ func SyncFootprint(c *gin.Context) {
 // @Router /api/v1/footprint/poster [get]
 func GeneratePoster(c *gin.Context) {
 	// TODO: 实际生成海报逻辑（调用图片合成服务），这里返回模拟链接
-	response.Success(c, gin.H{"poster_url": "https://cdn.example.com/poster/user123.png"})
+	response.Success(c, gin.H{"posterUrl": "https://cdn.example.com/poster/user123.png"})
 }

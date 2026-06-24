@@ -41,7 +41,7 @@ func CreateAdminUser(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
-		RoleID   uint   `json:"role_id" binding:"required"`
+		RoleID   uint   `json:"roleId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -72,7 +72,7 @@ func CreateAdminUser(c *gin.Context) {
 func UpdateAdminUser(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req struct {
-		RoleID   uint   `json:"role_id"`
+		RoleID   uint   `json:"roleId"`
 		Status   *int   `json:"status"`
 		Password string `json:"password"`
 	}

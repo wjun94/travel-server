@@ -20,8 +20,8 @@ func Dashboard(c *gin.Context) {
 	database.DB.Model(&model.Post{}).Count(&postCount)
 	database.DB.Model(&model.Partner{}).Count(&partnerCount)
 	response.Success(c, gin.H{
-		"user_count":    userCount,
-		"post_count":    postCount,
-		"partner_count": partnerCount,
+		"userCount":    userCount,
+		"postCount":    postCount,
+		"partnerCount": partnerCount,
 	})
 }

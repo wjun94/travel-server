@@ -14,7 +14,7 @@ func ApplyTripEdit(tripID uint, editMsg map[string]interface{}) error {
 		return err
 	}
 	// 只更新 daily_plans 字段
-	if plans, ok := editMsg["daily_plans"]; ok {
+	if plans, ok := editMsg["dailyPlans"]; ok {
 		b, _ := json.Marshal(plans)
 		trip.DailyPlans = model.JSONString(b)
 	}
