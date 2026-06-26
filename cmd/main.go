@@ -126,6 +126,7 @@ func main() {
 	// WebSocket 路由
 	r.GET("/ws", handler.WebSocketHandler)
 
-	log.Println("Server running on :", config.AppConfig.ServerPort)
+	// log.Println("Server running on :", config.AppConfig.ServerPort)
+	log.Println("Server running on :8082")
 	r.Run(":" + config.AppConfig.ServerPort)
 }
