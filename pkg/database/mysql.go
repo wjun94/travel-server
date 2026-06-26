@@ -4,6 +4,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
@@ -22,9 +23,17 @@ func InitMySQL() {
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
 	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	// 重试连接，最多尝试 30 次，每次间隔 2 秒
+	for i := 0; i < 30; i++ {
+		DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		log.Printf("数据库连接失败(第%d次重试): %v", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
 	if err != nil {
-		log.Fatalf("数据库连接失败: %v", err)
+		log.Fatalf("数据库连接失败，已超出重试次数: %v", err)
 	}
 
 	// 自动创建/更新表结构
