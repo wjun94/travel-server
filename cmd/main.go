@@ -121,28 +121,43 @@ func main() {
 			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
 		}
 
-		// 后台管理接口（需登录 + 管理员权限）
+		// ==================== 后台管理接口 ====================
+		// 需 Admin JWT 登录，路径前缀统一为 /api/v1/admin
 		adminGroup := api.Group("/admin", middleware.AdminJWTAuth())
 		{
-			adminGroup.GET("/info", admin.GetAdminInfo)
-			adminGroup.GET("/dashboard", admin.Dashboard)
-			adminGroup.GET("/admin/users", admin.ListAdminUsers)
-			adminGroup.POST("/user", admin.CreateAdminUser)
-			adminGroup.PUT("/user/:id", admin.UpdateAdminUser)
-			adminGroup.DELETE("/user/:id", admin.DeleteAdminUser)
-			adminGroup.GET("/roles", admin.ListRoles)
-			adminGroup.POST("/role", admin.CreateRole)
-			adminGroup.PUT("/role/:id", admin.UpdateRole)
-			adminGroup.DELETE("/role/:id", admin.DeleteRole)
+			// ---------- 认证 ----------
+			adminGroup.GET("/info", admin.GetAdminInfo) // 获取当前管理员信息
 
-			adminGroup.GET("/users", admin.ListUsers)
-			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole)
-			adminGroup.GET("/guides", admin.ListGuides)
-			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus)
-			adminGroup.POST("/partner", admin.CreatePartner)
-			adminGroup.GET("/partners", admin.ListPartners)
-			adminGroup.POST("/recommendation", admin.SaveRecommendation)
-			adminGroup.GET("/recommendations", admin.ListRecommendations)
+			// ---------- 仪表盘 ----------
+			adminGroup.GET("/dashboard", admin.Dashboard) // 数据统计面板
+
+			// ---------- 管理员账号管理 ----------
+			adminGroup.GET("/admin-users", admin.ListAdminUsers)        // 管理员列表
+			adminGroup.POST("/admin-user", admin.CreateAdminUser)       // 创建管理员
+			adminGroup.PUT("/admin-user/:id", admin.UpdateAdminUser)    // 编辑管理员
+			adminGroup.DELETE("/admin-user/:id", admin.DeleteAdminUser) // 删除管理员
+
+			// ---------- 角色权限管理 ----------
+			adminGroup.GET("/roles", admin.ListRoles)        // 角色列表
+			adminGroup.POST("/role", admin.CreateRole)       // 创建角色
+			adminGroup.PUT("/role/:id", admin.UpdateRole)    // 编辑角色
+			adminGroup.DELETE("/role/:id", admin.DeleteRole) // 删除角色
+
+			// ---------- 小程序用户管理 ----------
+			adminGroup.GET("/users", admin.ListUsers)              // 用户列表
+			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole) // 修改用户角色
+
+			// ---------- 攻略内容管理 ----------
+			adminGroup.GET("/guides", admin.ListGuides)                  // 攻略列表
+			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus) // 审核攻略（上架/下架）
+
+			// ---------- 官方搭子管理 ----------
+			adminGroup.POST("/partner", admin.CreatePartner) // 创建官方搭子
+			adminGroup.GET("/partners", admin.ListPartners)  // 搭子列表
+
+			// ---------- 推荐内容管理 ----------
+			adminGroup.POST("/recommendation", admin.SaveRecommendation)  // 新增/更新推荐
+			adminGroup.GET("/recommendations", admin.ListRecommendations) // 推荐列表
 		}
 	}
 
