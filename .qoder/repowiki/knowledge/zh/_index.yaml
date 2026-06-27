@@ -1,0 +1,159 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: main
+nodes_managed: true
+exported_at: "2026-06-27T15:12:21Z"
+modules:
+    "":
+        dir_name: 旅行搭子小程序后端服务
+        title: 旅行搭子小程序后端服务
+        scope:
+            - README.md
+            - .gitignore
+            - .air.toml
+            - Dockerfile
+            - Dockerfile.dev
+            - docker-compose.yml
+            - docker-compose.dev.yml
+            - go.mod
+            - go.sum
+            - cmd/
+            - internal/
+            - pkg/
+            - .env.dev
+            - .env.example
+            - .env.prod
+            - cmd\main.go
+            - docs\docs.go
+            - docs\swagger.json
+            - docs\swagger.yaml
+            - internal\ai\deepseek.go
+            - internal\handler\admin\admin_users.go
+            - internal\handler\admin\auth.go
+            - internal\handler\admin\dashboard.go
+            - internal\handler\admin\guide.go
+            - internal\handler\admin\partner.go
+            - internal\handler\admin\recommendation.go
+            - internal\handler\admin\role.go
+            - internal\handler\admin\user.go
+            - internal\handler\common.go
+            - internal\handler\miniapp\accounting.go
+            - internal\handler\miniapp\checklist.go
+            - internal\handler\miniapp\comment.go
+            - internal\handler\miniapp\favorite.go
+            - internal\handler\miniapp\footprint.go
+            - internal\handler\miniapp\guide.go
+            - internal\handler\miniapp\message.go
+            - internal\handler\miniapp\nearby.go
+            - internal\handler\miniapp\partner.go
+            - internal\handler\miniapp\trip.go
+            - internal\handler\miniapp\user.go
+            - internal\middleware\cors.go
+            - internal\middleware\jwt.go
+            - internal\model\accounting.go
+            - internal\model\admin_user.go
+            - internal\model\checklist.go
+            - internal\model\comment.go
+            - internal\model\favorite.go
+            - internal\model\footprint.go
+            - internal\model\guide.go
+            - internal\model\guide_section.go
+            - internal\model\message.go
+            - internal\model\partner.go
+            - internal\model\recommendation.go
+            - internal\model\role.go
+            - internal\model\trip.go
+            - internal\model\trip_day.go
+            - internal\model\trip_item.go
+            - internal\model\user.go
+            - internal\repository\accounting_repo.go
+            - internal\repository\admin_user_repo.go
+            - internal\repository\checklist_repo.go
+            - internal\repository\comment_repo.go
+            - internal\repository\favorite_repo.go
+            - internal\repository\guide_repo.go
+            - internal\repository\message_repo.go
+            - internal\repository\partner_repo.go
+            - internal\repository\recommendation_repo.go
+            - internal\repository\role_repo.go
+            - internal\repository\trip_repo.go
+            - internal\repository\user_repo.go
+            - internal\service\admin_svc.go
+            - internal\service\partner_svc.go
+            - internal\service\trip_svc.go
+            - internal\service\user_svc.go
+            - internal\ws\hub.go
+            - pkg\config\config.go
+            - pkg\database\mysql.go
+            - pkg\database\redis.go
+            - pkg\response\response.go
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    build_system:
+        dir_name: 基于 Docker 与 Air 的 Go 后端构建体系
+        title: 基于 Docker 与 Air 的 Go 后端构建体系
+        scope: []
+        source_files:
+            - Dockerfile
+            - Dockerfile.dev
+            - docker-compose.yml
+            - docker-compose.dev.yml
+            - .air.toml
+            - go.mod
+        children: []
+        depends_on: []
+        related_to: []
+    configuration_system:
+        dir_name: 基于环境变量的配置管理系统
+        title: 基于环境变量的配置管理系统
+        scope: []
+        source_files:
+            - pkg/config/config.go
+            - cmd/main.go
+            - .env.example
+            - .env.dev
+            - .env.prod
+            - docker-compose.yml
+        children: []
+        depends_on: []
+        related_to: []
+    dependency_management:
+        dir_name: Go Modules 依赖管理体系
+        title: Go Modules 依赖管理体系
+        scope: []
+        source_files:
+            - go.mod
+            - go.sum
+            - Dockerfile
+            - .air.toml
+        children: []
+        depends_on: []
+        related_to: []
+    error_handling:
+        dir_name: 错误处理与响应规范
+        title: 错误处理与响应规范
+        scope: []
+        source_files:
+            - pkg/response/response.go
+            - internal/handler/common.go
+            - internal/service/admin_svc.go
+            - internal/service/user_svc.go
+            - internal/middleware/jwt.go
+        children: []
+        depends_on: []
+        related_to: []
+    logging_system:
+        dir_name: 日志系统现状：基于标准库的极简实现
+        title: 日志系统现状：基于标准库的极简实现
+        scope: []
+        source_files:
+            - cmd/main.go
+            - pkg/database/mysql.go
+            - pkg/database/redis.go
+            - internal/handler/common.go
+        children: []
+        depends_on: []
+        related_to: []

@@ -1,0 +1,13 @@
+schema_version: 1
+module_path: build_system
+title: 基于 Docker 与 Air 的 Go 后端构建体系
+scope: []
+source_files:
+    - Dockerfile
+    - Dockerfile.dev
+    - docker-compose.yml
+    - docker-compose.dev.yml
+    - .air.toml
+    - go.mod
+depends_on: []
+related_to: []

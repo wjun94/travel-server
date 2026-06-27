@@ -1,0 +1,13 @@
+schema_version: 1
+module_path: configuration_system
+title: 基于环境变量的配置管理系统
+scope: []
+source_files:
+    - pkg/config/config.go
+    - cmd/main.go
+    - .env.example
+    - .env.dev
+    - .env.prod
+    - docker-compose.yml
+depends_on: []
+related_to: []

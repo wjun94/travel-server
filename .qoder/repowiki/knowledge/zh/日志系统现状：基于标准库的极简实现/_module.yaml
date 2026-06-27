@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: logging_system
+title: 日志系统现状：基于标准库的极简实现
+scope: []
+source_files:
+    - cmd/main.go
+    - pkg/database/mysql.go
+    - pkg/database/redis.go
+    - internal/handler/common.go
+depends_on: []
+related_to: []
