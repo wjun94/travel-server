@@ -66,7 +66,11 @@ func main() {
 			// 攻略
 			miniAuth.POST("/guide", miniapp.CreateGuide)
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)
+			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)
 			miniAuth.POST("/guide/section", miniapp.CreateSection)
+			miniAuth.PUT("/guide/section/:id", miniapp.UpdateSection)
+			miniAuth.DELETE("/guide/section/:id", miniapp.DeleteSection)
+			miniAuth.PUT("/guide/sections/reorder", miniapp.ReorderSections)
 
 			// 行程
 			miniAuth.POST("/trip", miniapp.CreateTrip)

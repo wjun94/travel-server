@@ -23,9 +23,28 @@ func GetFeedGuides(page, pageSize int, destination string) ([]model.Guide, int64
 	return guides, total, err
 }
 
-// CreateGuide 创建攻略
+// CreateGuide 创建攻略（仅基本信息）
 func CreateGuide(guide *model.Guide) error {
 	return database.DB.Create(guide).Error
+}
+
+// CreateGuideWithSections 事务创建攻略 + 板块
+func CreateGuideWithSections(guide *model.Guide, sections []model.GuideSection) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(guide).Error; err != nil {
+			return err
+		}
+		for i := range sections {
+			sections[i].GuideID = guide.ID
+			sections[i].SortOrder = i + 1
+		}
+		if len(sections) > 0 {
+			if err := tx.Create(&sections).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // GetGuideByID 查询攻略详情（含板块）
@@ -51,6 +70,11 @@ func ListGuides(page, pageSize int) ([]model.Guide, int64, error) {
 // UpdateGuideStatus 审核攻略（修改状态）
 func UpdateGuideStatus(id uint, status int) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// UpdateGuide 更新攻略基本信息（支持零值更新）
+func UpdateGuide(id uint, updates map[string]interface{}) error {
+	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // IncrementGuideViewCount 增加浏览量
