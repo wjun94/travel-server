@@ -39,9 +39,12 @@ func InitMySQL() {
 	// 自动创建/更新表结构
 	err = DB.AutoMigrate(
 		&model.User{},
-		&model.Post{},
+		&model.Guide{},
+		&model.GuideSection{},
 		&model.Trip{},
-		&model.TripCollaborator{},
+		&model.TripDay{},
+		&model.TripItem{},
+		&model.TripMember{},
 		&model.Partner{},
 		&model.PartnerApplication{},
 		&model.Message{},
@@ -50,6 +53,8 @@ func InitMySQL() {
 		&model.ChecklistItem{},
 		&model.Footprint{},
 		&model.Recommendation{},
+		&model.Favorite{},
+		&model.Comment{},
 		&model.AdminUser{},
 		&model.Role{},
 	)
@@ -68,7 +73,7 @@ func InitMySQL() {
 		editorRole := model.Role{
 			Name:        "内容编辑",
 			Description: "可管理攻略和搭子",
-			Permissions: `["dashboard","posts_manage","partners_manage"]`,
+			Permissions: `["dashboard","guides_manage","partners_manage"]`,
 		}
 		DB.Create(&adminRole)
 		DB.Create(&editorRole)

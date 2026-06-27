@@ -53,6 +53,8 @@ func main() {
 		api.GET("/nearby", miniapp.GetNearby)                 // 周边推荐
 		api.GET("/nearby/recommend", miniapp.GetTopRecommend) // TOP推荐
 		api.GET("/weather", handler.GetWeather)               // 天气查询
+		api.GET("/comments", miniapp.GetComments)             // 评论列表
+		api.GET("/comment/replies", miniapp.GetReplies)       // 子回复列表
 
 		// 小程序端需登录接口
 		miniAuth := api.Group("", middleware.JWTAuth())
@@ -62,15 +64,23 @@ func main() {
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)
 
 			// 攻略
-			miniAuth.POST("/post", miniapp.CreatePost)
-			miniAuth.GET("/post/:id", miniapp.GetPostDetail)
+			miniAuth.POST("/guide", miniapp.CreateGuide)
+			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)
+			miniAuth.POST("/guide/section", miniapp.CreateSection)
 
 			// 行程
 			miniAuth.POST("/trip", miniapp.CreateTrip)
 			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip)
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)
 			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)
-			miniAuth.POST("/trip/:id/invite", miniapp.InviteCollaborator)
+			miniAuth.POST("/trip/day", miniapp.AddTripDay)
+			miniAuth.PUT("/trip/day/:id", miniapp.UpdateTripDay)
+			miniAuth.DELETE("/trip/day/:id", miniapp.DeleteTripDay)
+			miniAuth.POST("/trip/item", miniapp.AddTripItem)
+			miniAuth.PUT("/trip/item/:id", miniapp.UpdateTripItem)
+			miniAuth.DELETE("/trip/item/:id", miniapp.DeleteTripItem)
+			miniAuth.POST("/trip/member", miniapp.InviteMember)
+			miniAuth.DELETE("/trip/member/:id", miniapp.RemoveMember)
 
 			// 搭子
 			miniAuth.POST("/partner", miniapp.CreatePartner)
@@ -96,6 +106,15 @@ func main() {
 			miniAuth.GET("/footprint", miniapp.GetFootprints)
 			miniAuth.POST("/footprint/sync", miniapp.SyncFootprint)
 			miniAuth.GET("/footprint/poster", miniapp.GeneratePoster)
+
+			// 收藏
+			miniAuth.POST("/favorite", miniapp.AddFavorite)
+			miniAuth.DELETE("/favorite/:id", miniapp.RemoveFavorite)
+			miniAuth.GET("/favorites", miniapp.GetFavorites)
+
+			// 评论（列表公开）
+			miniAuth.POST("/comment", miniapp.CreateComment)
+			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
 		}
 
 		// 后台管理接口（需登录 + 管理员权限）
@@ -114,8 +133,8 @@ func main() {
 
 			adminGroup.GET("/users", admin.ListUsers)
 			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole)
-			adminGroup.GET("/posts", admin.ListPosts)
-			adminGroup.PUT("/post/:id/status", admin.UpdatePostStatus)
+			adminGroup.GET("/guides", admin.ListGuides)
+			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus)
 			adminGroup.POST("/partner", admin.CreatePartner)
 			adminGroup.GET("/partners", admin.ListPartners)
 			adminGroup.POST("/recommendation", admin.SaveRecommendation)

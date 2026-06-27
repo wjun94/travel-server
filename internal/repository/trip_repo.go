@@ -7,40 +7,130 @@ import (
 	"gorm.io/gorm"
 )
 
+// ==================== Trip ====================
+
 // CreateTrip 创建行程
 func CreateTrip(trip *model.Trip) error {
 	return database.DB.Create(trip).Error
 }
 
-// GetTripByID 获取行程详情（含协作者）
+// GetTripByID 获取行程详情（含行程日+行程项+同行者）
 func GetTripByID(id uint) (*model.Trip, error) {
 	var trip model.Trip
-	err := database.DB.Preload("Collaborators").First(&trip, id).Error
+	err := database.DB.
+		Preload("Days.Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort_order asc")
+		}).
+		Preload("Members").
+		First(&trip, id).Error
 	return &trip, err
 }
 
-// UpdateTrip 更新行程（含乐观锁版本号）
-func UpdateTrip(trip *model.Trip) error {
-	// 使用 version 字段避免并发覆盖
-	result := database.DB.Model(&model.Trip{}).
-		Where("id = ? AND version = ?", trip.ID, trip.Version).
-		Updates(map[string]interface{}{
-			"daily_plans": trip.DailyPlans,
-			"version":     trip.Version + 1,
-		})
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound // 版本冲突
+// UpdateTrip 更新行程基本信息
+func UpdateTrip(id uint, updates map[string]interface{}) error {
+	return database.DB.Model(&model.Trip{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteTrip 软删除行程
+func DeleteTrip(id uint) error {
+	return database.DB.Delete(&model.Trip{}, id).Error
+}
+
+// ListUserTrips 用户行程列表
+func ListUserTrips(userID uint, page, pageSize int) ([]model.Trip, int64, error) {
+	var trips []model.Trip
+	var total int64
+	offset := (page - 1) * pageSize
+	database.DB.Model(&model.Trip{}).Where("user_id = ?", userID).Count(&total)
+	err := database.DB.Where("user_id = ?", userID).
+		Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error
+	return trips, total, err
+}
+
+// ListPublicTrips 公开行程列表
+func ListPublicTrips(page, pageSize int, destination string) ([]model.Trip, int64, error) {
+	var trips []model.Trip
+	var total int64
+	offset := (page - 1) * pageSize
+	query := database.DB.Model(&model.Trip{}).Where("is_public = ?", 1)
+	if destination != "" {
+		query = query.Where("destination LIKE ?", "%"+destination+"%")
 	}
-	return result.Error
+	query.Count(&total)
+	err := query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error
+	return trips, total, err
 }
 
-// AddCollaborator 添加协作者
-func AddCollaborator(tripID, userID uint, perm int) error {
-	c := model.TripCollaborator{TripID: tripID, UserID: userID, Permission: perm}
-	return database.DB.Create(&c).Error
+// ==================== TripDay ====================
+
+// CreateTripDay 创建行程日
+func CreateTripDay(day *model.TripDay) error {
+	return database.DB.Create(day).Error
 }
 
-// RemoveCollaborator 移除协作者
-func RemoveCollaborator(tripID, userID uint) error {
-	return database.DB.Where("trip_id = ? AND user_id = ?", tripID, userID).Delete(&model.TripCollaborator{}).Error
+// UpdateTripDay 更新行程日
+func UpdateTripDay(id uint, updates map[string]interface{}) error {
+	return database.DB.Model(&model.TripDay{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteTripDay 删除行程日（级联删除下属行程项）
+func DeleteTripDay(id uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("trip_day_id = ?", id).Delete(&model.TripItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&model.TripDay{}, id).Error
+	})
+}
+
+// ==================== TripItem ====================
+
+// CreateTripItem 创建行程项
+func CreateTripItem(item *model.TripItem) error {
+	return database.DB.Create(item).Error
+}
+
+// UpdateTripItem 更新行程项
+func UpdateTripItem(id uint, updates map[string]interface{}) error {
+	return database.DB.Model(&model.TripItem{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteTripItem 删除行程项
+func DeleteTripItem(id uint) error {
+	return database.DB.Delete(&model.TripItem{}, id).Error
+}
+
+// BatchCreateTripItems 批量创建行程项
+func BatchCreateTripItems(items []model.TripItem) error {
+	return database.DB.Create(&items).Error
+}
+
+// ReorderTripItems 重新排序行程项
+func ReorderTripItems(tripDayID uint, itemIDs []uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		for i, id := range itemIDs {
+			if err := tx.Model(&model.TripItem{}).Where("id = ? AND trip_day_id = ?", id, tripDayID).
+				Update("sort_order", i+1).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ==================== TripMember ====================
+
+// AddTripMember 添加同行者
+func AddTripMember(member *model.TripMember) error {
+	return database.DB.Create(member).Error
+}
+
+// RemoveTripMember 移除同行者
+func RemoveTripMember(id uint) error {
+	return database.DB.Delete(&model.TripMember{}, id).Error
+}
+
+// UpdateTripMemberRole 更新同行者角色
+func UpdateTripMemberRole(id uint, role string) error {
+	return database.DB.Model(&model.TripMember{}).Where("id = ?", id).Update("role", role).Error
 }

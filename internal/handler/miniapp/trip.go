@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/ai"
-	"travel-server/internal/middleware"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/pkg/response"
@@ -34,33 +32,63 @@ func AIGenerateTrip(c *gin.Context) {
 	}
 	uid := c.GetUint("userID")
 
-	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, strings.Join(req.Tags, "、"))
+	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, "")
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
 		return
 	}
 
-	// 解析返回的 JSON
-	var plan struct {
-		Days []model.DailyPlan `json:"days"`
+	// 解析 AI 返回的行程日数据
+	var aiResult struct {
+		Days []struct {
+			Day   int `json:"day"`
+			Items []struct {
+				Time     string `json:"time"`
+				Name     string `json:"name"`
+				Type     string `json:"type"`
+				Duration string `json:"duration"`
+			} `json:"items"`
+		} `json:"days"`
 	}
-	if err := json.Unmarshal([]byte(result), &plan); err != nil {
+	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
 		response.Fail(c, 500, "AI返回格式异常")
 		return
 	}
 
+	// 创建行程
 	trip := model.Trip{
 		UserID:      uid,
 		Destination: req.Destination,
-		Days:        req.Days,
-		DailyPlans:  model.JSONString(result),
+		Status:      0,
 	}
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "保存失败")
 		return
 	}
-	response.Success(c, trip)
+
+	// 创建行程日及行程项
+	for _, d := range aiResult.Days {
+		day := model.TripDay{
+			TripID:    trip.ID,
+			DayNumber: d.Day,
+		}
+		repository.CreateTripDay(&day)
+		for _, item := range d.Items {
+			tripItem := model.TripItem{
+				TripDayID: day.ID,
+				StartTime: item.Time,
+				ItemType:  item.Type,
+				Title:     item.Name,
+				Status:    0,
+			}
+			repository.CreateTripItem(&tripItem)
+		}
+	}
+
+	// 重新加载完整数据
+	fullTrip, _ := repository.GetTripByID(trip.ID)
+	response.Success(c, fullTrip)
 }
 
 // CreateTrip 手动创建行程
@@ -77,6 +105,7 @@ func CreateTrip(c *gin.Context) {
 		return
 	}
 	trip.UserID = c.GetUint("userID")
+	trip.Status = 0
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
@@ -86,7 +115,6 @@ func CreateTrip(c *gin.Context) {
 
 // GetTrip 获取行程详情
 // @Summary 获取行程详情
-// @Security BearerAuth
 // @Tags 小程序-行程
 // @Param id path int true "行程ID"
 // @Success 200 {object} response.Response{data=model.Trip}
@@ -101,12 +129,12 @@ func GetTrip(c *gin.Context) {
 	response.Success(c, trip)
 }
 
-// UpdateTrip 协同编辑行程
+// UpdateTrip 更新行程基本信息
 // @Summary 更新行程
 // @Security BearerAuth
 // @Tags 小程序-行程
 // @Param id path int true "行程ID"
-// @Param body body object{daily_plans=object} true "更新数据"
+// @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/{id} [put]
 func UpdateTrip(c *gin.Context) {
@@ -116,49 +144,184 @@ func UpdateTrip(c *gin.Context) {
 		response.Fail(c, 404, "行程不存在")
 		return
 	}
-	// 权限检查：创建者或协作者（编辑权限）
+	// 权限检查：仅创建者可编辑
 	userID := c.GetUint("userID")
 	if trip.UserID != userID {
-		hasPerm := false
-		for _, col := range trip.Collaborators {
-			if col.UserID == userID && col.Permission == 1 {
-				hasPerm = true
-				break
-			}
-		}
-		if !hasPerm {
-			response.Fail(c, 403, "无编辑权限")
-			return
-		}
+		response.Fail(c, 403, "无编辑权限")
+		return
 	}
 
-	var req struct {
-		DailyPlans json.RawMessage `json:"daily_plans"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 过滤不可更新的字段
+	delete(updates, "id")
+	delete(updates, "user_id")
+	delete(updates, "created_at")
 
-	trip.DailyPlans = model.JSONString(req.DailyPlans)
-	if err := repository.UpdateTrip(trip); err != nil {
+	if err := repository.UpdateTrip(uint(id), updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
-	response.Success(c, trip)
+	response.Success(c, nil)
 }
 
-// InviteCollaborator 生成邀请链接
-// @Summary 邀请好友协同编辑
+// ==================== TripDay 行程日 ====================
+
+// AddTripDay 添加行程日
+// @Summary 添加行程日
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程ID"
-// @Success 200 {object} response.Response{data=object{invite_url=string}}
-// @Router /api/v1/trip/{id}/invite [post]
-func InviteCollaborator(c *gin.Context) {
+// @Param body body model.TripDay true "行程日信息"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/day [post]
+func AddTripDay(c *gin.Context) {
+	var day model.TripDay
+	if err := c.ShouldBindJSON(&day); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.CreateTripDay(&day); err != nil {
+		response.Fail(c, 500, "添加失败")
+		return
+	}
+	response.Success(c, day)
+}
+
+// UpdateTripDay 更新行程日
+// @Summary 更新行程日
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path int true "行程日ID"
+// @Param body body object true "更新数据"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/day/{id} [put]
+func UpdateTripDay(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	// 简单生成邀请 token（实际应加密含 tripID 的临时凭据）
-	inviteToken, _ := middleware.GenerateMiniAppToken(c.GetUint("userID"))
-	inviteUrl := fmt.Sprintf("/pages/trip/detail?id=%d&token=%s", id, inviteToken)
-	response.Success(c, gin.H{"inviteUrl": inviteUrl})
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.UpdateTripDay(uint(id), updates); err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// DeleteTripDay 删除行程日
+// @Summary 删除行程日
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path int true "行程日ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/day/{id} [delete]
+func DeleteTripDay(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := repository.DeleteTripDay(uint(id)); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// ==================== TripItem 行程项 ====================
+
+// AddTripItem 添加行程项
+// @Summary 添加行程项
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param body body model.TripItem true "行程项信息"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/item [post]
+func AddTripItem(c *gin.Context) {
+	var item model.TripItem
+	if err := c.ShouldBindJSON(&item); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.CreateTripItem(&item); err != nil {
+		response.Fail(c, 500, "添加失败")
+		return
+	}
+	response.Success(c, item)
+}
+
+// UpdateTripItem 更新行程项
+// @Summary 更新行程项
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path int true "行程项ID"
+// @Param body body object true "更新数据"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/item/{id} [put]
+func UpdateTripItem(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.UpdateTripItem(uint(id), updates); err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// DeleteTripItem 删除行程项
+// @Summary 删除行程项
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path int true "行程项ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/item/{id} [delete]
+func DeleteTripItem(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := repository.DeleteTripItem(uint(id)); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// ==================== TripMember 同行者 ====================
+
+// InviteMember 邀请同行者
+// @Summary 邀请同行者
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param body body model.TripMember true "同行者信息"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/member [post]
+func InviteMember(c *gin.Context) {
+	var member model.TripMember
+	if err := c.ShouldBindJSON(&member); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.AddTripMember(&member); err != nil {
+		response.Fail(c, 500, "邀请失败")
+		return
+	}
+	response.Success(c, member)
+}
+
+// RemoveMember 移除同行者
+// @Summary 移除同行者
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path int true "同行者记录ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/member/{id} [delete]
+func RemoveMember(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := repository.RemoveTripMember(uint(id)); err != nil {
+		response.Fail(c, 500, "移除失败")
+		return
+	}
+	response.Success(c, nil)
 }

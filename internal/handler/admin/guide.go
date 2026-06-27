@@ -10,34 +10,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ListPosts 后台攻略列表（含审核状态）
+// ListGuides 后台攻略列表（含审核状态）
 // @Summary 攻略列表
 // @Security BearerAuth
 // @Tags 后台-内容
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]model.Post,total=int}}
-// @Router /api/v1/admin/posts [get]
-func ListPosts(c *gin.Context) {
+// @Success 200 {object} response.Response{data=object{list=[]model.Guide,total=int}}
+// @Router /api/v1/admin/guides [get]
+func ListGuides(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	posts, total, err := repository.ListPosts(page, pageSize)
+	guides, total, err := repository.ListGuides(page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取攻略列表失败")
 		return
 	}
-	response.Success(c, gin.H{"list": posts, "total": total})
+	response.Success(c, gin.H{"list": guides, "total": total})
 }
 
-// UpdatePostStatus 审核攻略（发布/下架）
+// UpdateGuideStatus 审核攻略（发布/下架）
 // @Summary 审核攻略
 // @Security BearerAuth
 // @Tags 后台-内容
 // @Param id path int true "攻略ID"
 // @Param body body object{status=int} true "状态(1已发布 2下架)"
 // @Success 200 {object} response.Response
-// @Router /api/v1/admin/post/{id}/status [put]
-func UpdatePostStatus(c *gin.Context) {
+// @Router /api/v1/admin/guide/{id}/status [put]
+func UpdateGuideStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -54,7 +54,7 @@ func UpdatePostStatus(c *gin.Context) {
 		response.Fail(c, 400, "状态值无效")
 		return
 	}
-	if err := repository.UpdatePostStatus(uint(id), req.Status); err != nil {
+	if err := repository.UpdateGuideStatus(uint(id), req.Status); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}

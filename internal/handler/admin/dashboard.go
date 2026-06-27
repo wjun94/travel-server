@@ -12,16 +12,16 @@ import (
 // @Summary 仪表盘统计
 // @Security BearerAuth
 // @Tags 后台-仪表盘
-// @Success 200 {object} response.Response{data=object{user_count=int,post_count=int,partner_count=int}}
+// @Success 200 {object} response.Response{data=object{user_count=int,guide_count=int,partner_count=int}}
 // @Router /api/v1/admin/dashboard [get]
 func Dashboard(c *gin.Context) {
-	var userCount, postCount, partnerCount int64
+	var userCount, guideCount, partnerCount int64
 	database.DB.Model(&model.User{}).Count(&userCount)
-	database.DB.Model(&model.Post{}).Count(&postCount)
+	database.DB.Model(&model.Guide{}).Count(&guideCount)
 	database.DB.Model(&model.Partner{}).Count(&partnerCount)
 	response.Success(c, gin.H{
 		"userCount":    userCount,
-		"postCount":    postCount,
+		"guideCount":   guideCount,
 		"partnerCount": partnerCount,
 	})
 }
