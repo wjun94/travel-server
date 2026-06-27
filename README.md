@@ -44,42 +44,49 @@ travel-server/
 │   └── main.go                     # 服务入口，路由注册
 ├── internal/
 │   ├── ai/
-│   │   └── deepseek.go            # DeepSeek 聊天客户端
+│   │   └── deepseek.go            # DeepSeek 大模型客户端
 │   ├── handler/
-│   │   ├── common.go              # 天气、WebSocket 公共处理
+│   │   ├── common.go              # 天气查询 / WebSocket
 │   │   ├── miniapp/               # 小程序端接口
-│   │   │   ├── user.go            # 登录、用户信息
-│   │   │   ├── post.go            # 攻略瀑布流
-│   │   │   ├── trip.go            # 行程创建/编辑/协同
-│   │   │   ├── nearby.go          # 周边推荐
+│   │   │   ├── user.go            # 登录、个人信息
+│   │   │   ├── guide.go           # 攻略 CRUD + 板块管理
+│   │   │   ├── trip.go            # 行程 CRUD + AI 生成
 │   │   │   ├── partner.go         # 搭子组队
+│   │   │   ├── comment.go         # 评论与点赞
+│   │   │   ├── favorite.go        # 收藏管理
 │   │   │   ├── message.go         # 私聊消息
 │   │   │   ├── accounting.go      # 记账管理
 │   │   │   ├── checklist.go       # 备忘清单
+│   │   │   ├── nearby.go          # 周边推荐
 │   │   │   └── footprint.go       # 足迹与海报
 │   │   └── admin/                 # 后台管理接口
+│   │       ├── auth.go            # 登录认证
 │   │       ├── dashboard.go       # 数据看板
-│   │       ├── user.go            # 用户管理
-│   │       ├── post.go            # 内容审核
+│   │       ├── admin_users.go     # 管理员账号 CRUD
+│   │       ├── user.go            # 小程序用户管理
+│   │       ├── role.go            # 角色权限管理
+│   │       ├── guide.go           # 攻略审核
 │   │       ├── partner.go         # 官方搭子
-│   │       └── recommendation.go  # 推荐配置
+│   │       └── recommendation.go  # TOP 推荐配置
 │   ├── middleware/
 │   │   ├── cors.go                # 跨域中间件
-│   │   └── jwt.go                 # JWT + 管理员权限
-│   ├── model/                     # GORM 数据模型
-│   ├── repository/                # 数据库操作层
+│   │   └── jwt.go                 # JWT 认证（小程序 + 管理员双通道）
+│   ├── model/                     # GORM 数据模型（16 文件）
+│   ├── repository/                # 数据库操作层（12 文件）
 │   ├── service/                   # 业务逻辑层
 │   └── ws/
 │       └── hub.go                 # WebSocket 房间管理
 ├── pkg/
 │   ├── config/
-│   │   └── config.go              # 环境变量配置加载
+│   │   └── config.go              # 环境变量加载
 │   ├── database/
-│   │   ├── mysql.go               # MySQL 连接 & 自动迁移
+│   │   ├── mysql.go               # MySQL 连接 & 雪花 ID 初始化
 │   │   └── redis.go               # Redis 连接
-│   └── response/
-│       └── response.go            # 统一 JSON 响应
-├── docs/                          # Swagger 文档（自动生成）
+│   ├── response/
+│   │   └── response.go            # 统一 JSON 响应格式
+│   └── snowflake/
+│       └── snowflake.go           # 雪花算法分布式 ID 生成
+├── docs/                          # Swagger 文档（swag init 自动生成）
 ├── .env.example                   # 环境变量模板
 ├── go.mod
 ├── go.sum
@@ -126,12 +133,6 @@ export DEEPSEEK_API_KEY=sk-xxxx
 
 ### 3. 安装依赖并运行
 
-生成 Swag 文档
-
-```bash
-swag init -g cmd/main.go -o docs
-```
-
 ```bash
 cd travel-server
 go mod tidy
@@ -153,55 +154,107 @@ go run cmd/main.go
 
 ## 📡 API 概览
 
-### 小程序端接口
+### 公开接口（无需登录）
 
-| 接口路径                        | 方法 | 说明              | 认证             |
-| ------------------------------- | ---- | ----------------- | ---------------- |
-| /api/v1/user/login              | POST | 微信登录          | ❌               |
-| /api/v1/feed                    | GET  | 瀑布流攻略        | ❌               |
-| /api/v1/nearby                  | GET  | 周边推荐          | ❌               |
-| /api/v1/nearby/recommend        | GET  | 本周 TOP 推荐     | ❌               |
-| /api/v1/weather                 | GET  | 天气查询          | ❌               |
-| /api/v1/user/info               | GET  | 获取个人信息      | ✅               |
-| /api/v1/user/profile            | PUT  | 更新个人资料      | ✅               |
-| /api/v1/post                    | POST | 发布攻略          | ✅               |
-| /api/v1/post/:id                | GET  | 攻略详情          | ✅               |
-| /api/v1/trip                    | POST | 手动创建行程      | ✅               |
-| /api/v1/trip/ai-generate        | POST | AI 生成行程       | ✅               |
-| /api/v1/trip/:id                | GET  | 行程详情          | ✅               |
-| /api/v1/trip/:id                | PUT  | 协同编辑行程      | ✅               |
-| /api/v1/trip/:id/invite         | POST | 邀请协同编辑      | ✅               |
-| /api/v1/partner                 | POST | 发布搭子          | ✅               |
-| /api/v1/partner/list            | GET  | 搭子列表          | ✅               |
-| /api/v1/partner/:id/apply       | POST | 申请加入搭子      | ✅               |
-| /api/v1/partner/:id/application | PUT  | 处理申请          | ✅               |
-| /api/v1/message/list            | GET  | 消息记录          | ✅               |
-| /api/v1/message/send            | POST | 发送消息          | ✅               |
-| /api/v1/account/:tripId         | GET  | 查看账本          | ✅               |
-| /api/v1/account                 | POST | 添加记账          | ✅               |
-| /api/v1/account/import          | POST | 导入微信支付账单  | ✅               |
-| /api/v1/checklist               | GET  | 获取备忘清单      | ✅               |
-| /api/v1/checklist               | POST | 创建清单          | ✅               |
-| /api/v1/checklist/:id/item      | PUT  | 更新勾选状态      | ✅               |
-| /api/v1/footprint               | GET  | 查看足迹          | ✅               |
-| /api/v1/footprint/sync          | POST | 同步足迹          | ✅               |
-| /api/v1/footprint/poster        | GET  | 生成足迹海报      | ✅               |
-| /ws                             | WS   | 协同编辑+实时消息 | ✅ (query token) |
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | /api/v1/user/login | 微信静默登录 |
+| POST | /api/v1/admin/login | 后台管理员登录 |
+| GET  | /api/v1/feed | 攻略瀑布流 |
+| GET  | /api/v1/nearby | 周边推荐 |
+| GET  | /api/v1/nearby/recommend | 本周 TOP 推荐 |
+| GET  | /api/v1/weather | 天气查询 |
+| GET  | /api/v1/comments | 评论列表 |
+| GET  | /api/v1/comment/replies | 子回复列表 |
 
-### 后台管理接口 (需 Admin 权限)
+### 小程序端（需 JWT）
 
-| 接口路径                       | 方法 | 说明           |
-| ------------------------------ | ---- | -------------- |
-| /api/v1/admin/dashboard        | GET  | 数据看板       |
-| /api/v1/admin/users            | GET  | 用户列表       |
-| /api/v1/admin/user/:id/role    | PUT  | 修改用户角色   |
-| /api/v1/admin/posts            | GET  | 攻略列表       |
-| /api/v1/admin/post/:id/status  | PUT  | 审核攻略状态   |
-| /api/v1/admin/partner          | POST | 发布官方搭子团 |
-| /api/v1/admin/recommendation   | POST | 保存推荐内容   |
-| /api/v1/admin/recommendations  | GET  | 推荐列表       |
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| **用户** | | |
+| GET  | /api/v1/user/info | 个人信息 |
+| PUT  | /api/v1/user/profile | 更新资料 |
+| **攻略** | | |
+| POST | /api/v1/guide | 创建攻略 |
+| GET  | /api/v1/guide/:id | 攻略详情 |
+| PUT  | /api/v1/guide/:id | 编辑攻略 |
+| POST | /api/v1/guide/section | 添加板块 |
+| PUT  | /api/v1/guide/section/:id | 更新板块 |
+| DELETE | /api/v1/guide/section/:id | 删除板块 |
+| PUT  | /api/v1/guide/sections/reorder | 板块排序 |
+| **行程** | | |
+| POST | /api/v1/trip | 创建行程 |
+| POST | /api/v1/trip/ai-generate | AI 生成行程 |
+| GET  | /api/v1/trip/:id | 行程详情 |
+| PUT  | /api/v1/trip/:id | 编辑行程 |
+| POST | /api/v1/trip/day | 添加日 |
+| PUT  | /api/v1/trip/day/:id | 编辑日 |
+| DELETE | /api/v1/trip/day/:id | 删除日 |
+| POST | /api/v1/trip/item | 添加行程项 |
+| PUT  | /api/v1/trip/item/:id | 编辑行程项 |
+| DELETE | /api/v1/trip/item/:id | 删除行程项 |
+| POST | /api/v1/trip/member | 邀请成员 |
+| DELETE | /api/v1/trip/member/:id | 移除成员 |
+| **搭子** | | |
+| POST | /api/v1/partner | 发布搭子 |
+| GET  | /api/v1/partner/list | 搭子列表 |
+| POST | /api/v1/partner/:id/apply | 申请加入 |
+| PUT  | /api/v1/partner/:id/application | 处理申请 |
+| **消息** | | |
+| GET  | /api/v1/message/list | 消息记录 |
+| POST | /api/v1/message/send | 发送消息 |
+| **记账** | | |
+| GET  | /api/v1/account/:tripId | 查看账本 |
+| POST | /api/v1/account | 添加记账 |
+| POST | /api/v1/account/import | 导入微信支付账单 |
+| **备忘清单** | | |
+| GET  | /api/v1/checklist | 获取清单 |
+| POST | /api/v1/checklist | 创建清单 |
+| PUT  | /api/v1/checklist/:id/item | 更新勾选 |
+| **足迹** | | |
+| GET  | /api/v1/footprint | 查看足迹 |
+| POST | /api/v1/footprint/sync | 同步足迹 |
+| GET  | /api/v1/footprint/poster | 生成海报 |
+| **收藏** | | |
+| POST | /api/v1/favorite | 添加收藏 |
+| DELETE | /api/v1/favorite/:id | 取消收藏 |
+| GET  | /api/v1/favorites | 收藏列表 |
+| **评论** | | |
+| POST | /api/v1/comment | 发表评论 |
+| POST | /api/v1/comment/:id/like | 点赞评论 |
 
-> ✅ 表示需在 Header 中携带 `Authorization: Bearer <token>`
+### 后台管理（需 Admin JWT）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| **认证 & 仪表盘** | | |
+| GET  | /api/v1/admin/info | 管理员信息 |
+| GET  | /api/v1/admin/dashboard | 数据看板 |
+| **管理员账号** | | |
+| GET  | /api/v1/admin/admin/users | 管理员列表 |
+| POST | /api/v1/admin/admin/user | 创建管理员 |
+| PUT  | /api/v1/admin/admin/user/:id | 编辑管理员 |
+| DELETE | /api/v1/admin/admin/user/:id | 删除管理员 |
+| **角色权限** | | |
+| GET  | /api/v1/admin/roles | 角色列表 |
+| POST | /api/v1/admin/role | 创建角色 |
+| PUT  | /api/v1/admin/role/:id | 编辑角色 |
+| DELETE | /api/v1/admin/role/:id | 删除角色 |
+| **小程序用户** | | |
+| GET  | /api/v1/admin/users | 用户列表 |
+| PUT  | /api/v1/admin/user/:id/role | 修改用户角色 |
+| **攻略内容** | | |
+| GET  | /api/v1/admin/guides | 攻略列表 |
+| PUT  | /api/v1/admin/guide/:id/status | 审核攻略 |
+| **官方搭子** | | |
+| POST | /api/v1/admin/partner | 创建官方搭子 |
+| GET  | /api/v1/admin/partners | 搭子列表 |
+| **推荐内容** | | |
+| POST | /api/v1/admin/recommendation | 保存推荐 |
+| GET  | /api/v1/admin/recommendations | 推荐列表 |
+
+> ✅ 所有认证接口需携带 Header `Authorization: Bearer <token>`
+> API 完整文档请启动服务后访问 `http://localhost:8080/swagger/index.html`
 
 ---
 
@@ -257,9 +310,7 @@ docker build -t travel-server .
 docker run -d --env-file .env -p 8080:8080 travel-server
 ```
 
-## Docker 部署
-
-## 🧪 开发模式（热重载 + 实时日志）
+## 🧪 本地开发（热重载）
 
 为了方便本地开发，我们提供了独立的开发环境配置文件，支持**代码修改自动重启**，无需手动重新构建镜像。
 

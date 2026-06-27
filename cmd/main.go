@@ -1,6 +1,6 @@
 /*
  * 旅行搭子小程序后端服务入口
- * 初始化配置、数据库、注册路由，启动 HTTP 服务
+ * 初始化配置 → 数据库 → 注册路由 → 启动 HTTP 服务
  */
 package main
 
@@ -11,7 +11,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "travel-server/docs" // swagger 自动生成的文档包
+	_ "travel-server/docs"
 	"travel-server/internal/handler"
 	"travel-server/internal/handler/admin"
 	"travel-server/internal/handler/miniapp"
@@ -29,24 +29,21 @@ import (
 // @in header
 // @name Authorization
 func main() {
-	// 加载环境变量配置
+	// 启动初始化
 	config.LoadConfig()
-
-	// 初始化数据库连接
 	database.InitMySQL()
 	database.InitRedis()
 
-	// 创建 Gin 引擎
+	// 创建 Gin 引擎 & 全局中间件
 	r := gin.Default()
-	r.Use(middleware.Cors()) // 全局跨域
+	r.Use(middleware.Cors())
 
-	// Swagger UI 路由
+	// Swagger 文档面板
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// API 路由分组
 	api := r.Group("/api/v1")
 	{
-		// 公开接口（无需登录）
+		// ==================== 公开接口（无需登录） ====================
 		api.POST("/user/login", miniapp.UserLogin)            // 微信登录
 		api.POST("/admin/login", admin.AdminLogin)            // 后台登录
 		api.GET("/feed", miniapp.GetFeed)                     // 攻略瀑布流
@@ -56,14 +53,14 @@ func main() {
 		api.GET("/comments", miniapp.GetComments)             // 评论列表
 		api.GET("/comment/replies", miniapp.GetReplies)       // 子回复列表
 
-		// 小程序端需登录接口
+		// ==================== 小程序端（需 JWT 登录） ====================
 		miniAuth := api.Group("", middleware.JWTAuth())
 		{
-			// 用户
+			// ---------- 用户 ----------
 			miniAuth.GET("/user/info", miniapp.GetUserInfo)
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)
 
-			// 攻略
+			// ---------- 攻略 ----------
 			miniAuth.POST("/guide", miniapp.CreateGuide)
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)
@@ -72,7 +69,7 @@ func main() {
 			miniAuth.DELETE("/guide/section/:id", miniapp.DeleteSection)
 			miniAuth.PUT("/guide/sections/reorder", miniapp.ReorderSections)
 
-			// 行程
+			// ---------- 行程 ----------
 			miniAuth.POST("/trip", miniapp.CreateTrip)
 			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip)
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)
@@ -86,85 +83,83 @@ func main() {
 			miniAuth.POST("/trip/member", miniapp.InviteMember)
 			miniAuth.DELETE("/trip/member/:id", miniapp.RemoveMember)
 
-			// 搭子
+			// ---------- 搭子 ----------
 			miniAuth.POST("/partner", miniapp.CreatePartner)
 			miniAuth.GET("/partner/list", miniapp.GetPartnerList)
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication)
 
-			// 消息
+			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)
 			miniAuth.POST("/message/send", miniapp.SendMessage)
 
-			// 记账
+			// ---------- 记账 ----------
 			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)
 			miniAuth.POST("/account", miniapp.AddAccount)
 			miniAuth.POST("/account/import", miniapp.ImportWechatPay)
 
-			// 备忘清单
+			// ---------- 备忘清单 ----------
 			miniAuth.GET("/checklist", miniapp.GetChecklists)
 			miniAuth.POST("/checklist", miniapp.CreateChecklist)
 			miniAuth.PUT("/checklist/:id/item", miniapp.UpdateChecklistItem)
 
-			// 足迹
+			// ---------- 足迹 ----------
 			miniAuth.GET("/footprint", miniapp.GetFootprints)
 			miniAuth.POST("/footprint/sync", miniapp.SyncFootprint)
 			miniAuth.GET("/footprint/poster", miniapp.GeneratePoster)
 
-			// 收藏
+			// ---------- 收藏 ----------
 			miniAuth.POST("/favorite", miniapp.AddFavorite)
 			miniAuth.DELETE("/favorite/:id", miniapp.RemoveFavorite)
 			miniAuth.GET("/favorites", miniapp.GetFavorites)
 
-			// 评论（列表公开）
+			// ---------- 评论 ----------
 			miniAuth.POST("/comment", miniapp.CreateComment)
 			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
 		}
 
-		// ==================== 后台管理接口 ====================
-		// 需 Admin JWT 登录，路径前缀统一为 /api/v1/admin
+		// ==================== 后台管理（需管理员 JWT） ====================
 		adminGroup := api.Group("/admin", middleware.AdminJWTAuth())
 		{
 			// ---------- 认证 ----------
-			adminGroup.GET("/info", admin.GetAdminInfo) // 获取当前管理员信息
+			adminGroup.GET("/info", admin.GetAdminInfo)
 
 			// ---------- 仪表盘 ----------
-			adminGroup.GET("/dashboard", admin.Dashboard) // 数据统计面板
+			adminGroup.GET("/dashboard", admin.Dashboard)
 
-			// ---------- 管理员账号管理 ----------
-			adminGroup.GET("/admin-users", admin.ListAdminUsers)        // 管理员列表
-			adminGroup.POST("/admin-user", admin.CreateAdminUser)       // 创建管理员
-			adminGroup.PUT("/admin-user/:id", admin.UpdateAdminUser)    // 编辑管理员
-			adminGroup.DELETE("/admin-user/:id", admin.DeleteAdminUser) // 删除管理员
+			// ---------- 后台管理员 ----------
+			adminGroup.GET("/admin/users", admin.ListAdminUsers)
+			adminGroup.POST("/admin/user", admin.CreateAdminUser)
+			adminGroup.PUT("/admin/user/:id", admin.UpdateAdminUser)
+			adminGroup.DELETE("/admin/user/:id", admin.DeleteAdminUser)
 
-			// ---------- 角色权限管理 ----------
-			adminGroup.GET("/roles", admin.ListRoles)        // 角色列表
-			adminGroup.POST("/role", admin.CreateRole)       // 创建角色
-			adminGroup.PUT("/role/:id", admin.UpdateRole)    // 编辑角色
-			adminGroup.DELETE("/role/:id", admin.DeleteRole) // 删除角色
+			// ---------- 角色权限 ----------
+			adminGroup.GET("/roles", admin.ListRoles)
+			adminGroup.POST("/role", admin.CreateRole)
+			adminGroup.PUT("/role/:id", admin.UpdateRole)
+			adminGroup.DELETE("/role/:id", admin.DeleteRole)
 
-			// ---------- 小程序用户管理 ----------
-			adminGroup.GET("/users", admin.ListUsers)              // 用户列表
-			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole) // 修改用户角色
+			// ---------- 小程序用户 ----------
+			adminGroup.GET("/users", admin.ListUsers)
+			adminGroup.PUT("/user/:id/role", admin.UpdateUserRole)
 
-			// ---------- 攻略内容管理 ----------
-			adminGroup.GET("/guides", admin.ListGuides)                  // 攻略列表
-			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus) // 审核攻略（上架/下架）
+			// ---------- 攻略内容 ----------
+			adminGroup.GET("/guides", admin.ListGuides)
+			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus)
 
-			// ---------- 官方搭子管理 ----------
-			adminGroup.POST("/partner", admin.CreatePartner) // 创建官方搭子
-			adminGroup.GET("/partners", admin.ListPartners)  // 搭子列表
+			// ---------- 官方搭子 ----------
+			adminGroup.POST("/partner", admin.CreatePartner)
+			adminGroup.GET("/partners", admin.ListPartners)
 
-			// ---------- 推荐内容管理 ----------
-			adminGroup.POST("/recommendation", admin.SaveRecommendation)  // 新增/更新推荐
-			adminGroup.GET("/recommendations", admin.ListRecommendations) // 推荐列表
+			// ---------- 推荐内容 ----------
+			adminGroup.POST("/recommendation", admin.SaveRecommendation)
+			adminGroup.GET("/recommendations", admin.ListRecommendations)
 		}
 	}
 
-	// WebSocket 路由
+	// WebSocket 协同编辑
 	r.GET("/ws", handler.WebSocketHandler)
 
-	// log.Println("Server running on :", config.AppConfig.ServerPort)
 	log.Println("Server running on :8082")
 	r.Run(":" + config.AppConfig.ServerPort)
 }
