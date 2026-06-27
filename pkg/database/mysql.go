@@ -12,12 +12,18 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/pkg/config"
+	"travel-server/pkg/snowflake"
 )
 
 var DB *gorm.DB
 
 // InitMySQL 初始化 MySQL 连接并自动迁移表结构
 func InitMySQL() {
+	// 初始化雪花算法 ID 生成器
+	if err := snowflake.Init(); err != nil {
+		log.Fatalf("雪花算法初始化失败: %v", err)
+	}
+
 	cfg := config.AppConfig
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
