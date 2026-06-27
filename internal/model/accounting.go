@@ -9,8 +9,8 @@ import (
 // Accounting 旅行记账
 type Accounting struct {
 	ID            string    `gorm:"primaryKey" json:"id"`
-	TripID        string    `json:"tripId"`                        // 关联的行程 ID
-	UserID        string    `json:"userId"`                        // 记账用户
+	TripID        string    `gorm:"size:191" json:"tripId"`        // 关联的行程 ID
+	UserID        string    `gorm:"size:191" json:"userId"`        // 记账用户
 	Category      string    `gorm:"size:50" json:"category"`       // 分类：交通/餐饮/住宿/其他
 	Amount        float64   `json:"amount"`                        // 金额
 	Note          string    `gorm:"size:200" json:"note"`          // 备注

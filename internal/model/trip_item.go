@@ -9,7 +9,7 @@ import (
 // TripItem 行程项表 — 行程日下的具体安排项，行程的最小执行单元
 type TripItem struct {
 	ID           string    `gorm:"primaryKey" json:"id"`
-	TripDayID    string    `json:"tripDayId"`                           // 所属行程日
+	TripDayID    string    `gorm:"size:191" json:"tripDayId"`           // 所属行程日
 	SortOrder    int       `json:"sortOrder"`                           // 排序序号
 	StartTime    string    `gorm:"type:time" json:"startTime"`          // 开始时间
 	EndTime      string    `gorm:"type:time" json:"endTime"`            // 结束时间

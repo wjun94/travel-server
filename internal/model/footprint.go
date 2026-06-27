@@ -9,7 +9,7 @@ import (
 // Footprint 用户足迹（点亮城市）
 type Footprint struct {
 	ID        string    `gorm:"primaryKey" json:"id"`
-	UserID    string    `json:"userId"`
+	UserID    string    `gorm:"size:191" json:"userId"`
 	City      string    `gorm:"size:50" json:"city"`
 	Province  string    `gorm:"size:50" json:"province"`
 	Lat       float64   `json:"lat"`       // 纬度

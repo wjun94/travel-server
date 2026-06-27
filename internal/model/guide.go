@@ -10,7 +10,7 @@ import (
 // Guide 攻略表 — 决策参考型内容，包含目的地综合信息
 type Guide struct {
 	ID              string         `gorm:"primaryKey" json:"id"`
-	UserID          string         `json:"userId"`                              // 作者
+	UserID          string         `gorm:"size:191" json:"userId"`              // 作者
 	Title           string         `gorm:"size:200" json:"title"`               // 标题
 	CoverImage      string         `gorm:"size:255" json:"coverImage"`          // 封面图
 	Destination     string         `gorm:"size:100" json:"destination"`         // 目的地

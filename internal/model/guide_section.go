@@ -31,7 +31,7 @@ var ValidSectionTypes = map[string]bool{
 // GuideSection 攻略板块表 — 攻略内的分类内容板块（交通、住宿、美食、景点、避坑等）
 type GuideSection struct {
 	ID          string    `gorm:"primaryKey" json:"id"`
-	GuideID     string    `json:"guideId"`                    // 所属攻略
+	GuideID     string    `gorm:"size:191" json:"guideId"`    // 所属攻略
 	SectionType string    `gorm:"size:30" json:"sectionType"` // 板块类型：transport/hotel/attraction/food/shopping/tips/custom
 	Title       string    `gorm:"size:100" json:"title"`      // 板块标题
 	Content     string    `gorm:"type:text" json:"content"`   // 板块内容（富文本/Markdown）

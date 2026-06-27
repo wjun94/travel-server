@@ -9,8 +9,8 @@ import (
 // Partner 搭子组队信息
 type Partner struct {
 	ID             string     `gorm:"primaryKey" json:"id"`
-	UserID         string     `json:"userId"`                // 发起人 ID（官方搭子为 0）
-	Type           int        `gorm:"default:0" json:"type"` // 0用户发起 1官方活动
+	UserID         string     `gorm:"size:191" json:"userId"` // 发起人 ID（官方搭子为空）
+	Type           int        `gorm:"default:0" json:"type"`  // 0用户发起 1官方活动
 	Destination    string     `json:"destination"`
 	StartDate      *time.Time `json:"startDate"`
 	Days           int        `json:"days"`
@@ -33,10 +33,10 @@ func (p *Partner) BeforeCreate() error {
 // PartnerApplication 搭子申请记录
 type PartnerApplication struct {
 	ID          string    `gorm:"primaryKey" json:"id"`
-	PartnerID   string    `json:"partnerId"`
-	ApplicantID string    `json:"applicantId"`             // 申请人 ID
-	Message     string    `json:"message"`                 // 申请留言
-	Status      int       `gorm:"default:0" json:"status"` // 0待审核 1同意 2拒绝
+	PartnerID   string    `gorm:"size:191" json:"partnerId"`
+	ApplicantID string    `gorm:"size:191" json:"applicantId"` // 申请人 ID
+	Message     string    `json:"message"`                     // 申请留言
+	Status      int       `gorm:"default:0" json:"status"`     // 0待审核 1同意 2拒绝
 	CreatedAt   time.Time `json:"createdAt"`
 }
 

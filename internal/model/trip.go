@@ -10,7 +10,7 @@ import (
 // Trip 行程表 — 执行计划型内容，按时间线组织
 type Trip struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
-	UserID      string         `json:"userId"`                                // 创建者
+	UserID      string         `gorm:"size:191" json:"userId"`                // 创建者
 	GuideID     *string        `json:"guideId"`                               // 关联攻略（可为空）
 	Title       string         `gorm:"size:200" json:"title"`                 // 行程标题
 	Destination string         `gorm:"size:100" json:"destination"`           // 目的地
@@ -38,8 +38,8 @@ func (t *Trip) BeforeCreate() error {
 // TripMember 同行者表
 type TripMember struct {
 	ID        string    `gorm:"primaryKey" json:"id"`
-	TripID    string    `json:"tripId"`                             // 所属行程
-	UserID    *string   `json:"userId"`                             // 关联用户（可为空，支持非注册用户）
+	TripID    string    `gorm:"size:191" json:"tripId"`             // 所属行程
+	UserID    *string   `gorm:"size:191" json:"userId"`             // 关联用户（可为空，支持非注册用户）
 	Name      string    `gorm:"size:50" json:"name"`                // 姓名
 	Role      string    `gorm:"size:20;default:viewer" json:"role"` // 角色：owner/editor/viewer
 	CreatedAt time.Time `json:"createdAt"`
