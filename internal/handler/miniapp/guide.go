@@ -50,7 +50,7 @@ func CreateGuide(c *gin.Context) {
 	}
 	// 组装 Guide
 	guide := model.Guide{
-		UserID:          c.GetUint("userID"),
+		UserID:          c.MustGet("userID").(string),
 		Title:           req.Title,
 		CoverImage:      req.CoverImage,
 		Destination:     req.Destination,
@@ -87,24 +87,20 @@ func CreateGuide(c *gin.Context) {
 // GetGuideDetail 获取攻略详情（含板块）
 // @Summary 攻略详情
 // @Tags 小程序-攻略
-// @Param id path int true "攻略ID"
+// @Param id path string true "攻略ID"
 // @Success 200 {object} response.Response{data=object{guide=model.Guide,sections=[]model.GuideSection}}
 // @Router /api/v1/guide/{id} [get]
 func GetGuideDetail(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
-	guide, err := repository.GetGuideByID(uint(id))
+	id := c.Param("id")
+	guide, err := repository.GetGuideByID(id)
 	if err != nil {
 		response.Fail(c, 404, "攻略不存在")
 		return
 	}
-	sections, _ := repository.GetSectionsByGuideID(uint(id))
+	sections, _ := repository.GetSectionsByGuideID(id)
 	// 增加浏览量（非作者）
-	if userID := c.GetUint("userID"); guide.UserID != userID {
-		_ = repository.IncrementGuideViewCount(uint(id))
+	if userID := c.MustGet("userID").(string); guide.UserID != userID {
+		_ = repository.IncrementGuideViewCount(id)
 	}
 	response.Success(c, gin.H{"guide": guide, "sections": sections})
 }
@@ -113,18 +109,18 @@ func GetGuideDetail(c *gin.Context) {
 // @Summary 更新攻略
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param id path int true "攻略ID"
+// @Param id path string true "攻略ID"
 // @Param body body model.UpdateGuideReq true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/guide/{id} [put]
 func UpdateGuide(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	guide, err := repository.GetGuideByID(uint(id))
+	id := c.Param("id")
+	guide, err := repository.GetGuideByID(id)
 	if err != nil {
 		response.Fail(c, 404, "攻略不存在")
 		return
 	}
-	if guide.UserID != c.GetUint("userID") {
+	if guide.UserID != c.MustGet("userID").(string) {
 		response.Fail(c, 403, "无权操作")
 		return
 	}
@@ -138,7 +134,7 @@ func UpdateGuide(c *gin.Context) {
 		response.Fail(c, 400, "无更新内容")
 		return
 	}
-	if err := repository.UpdateGuide(uint(id), updates); err != nil {
+	if err := repository.UpdateGuide(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
@@ -216,7 +212,7 @@ func CreateSection(c *gin.Context) {
 	}
 	// 从原始 body 提取 guideId
 	var body struct {
-		GuideID uint `json:"guideId"`
+		GuideID string `json:"guideId"`
 	}
 	c.ShouldBindJSON(&body)
 
@@ -237,12 +233,12 @@ func CreateSection(c *gin.Context) {
 // @Summary 更新攻略板块
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param id path int true "板块ID"
+// @Param id path string true "板块ID"
 // @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/guide/section/{id} [put]
 func UpdateSection(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -254,7 +250,7 @@ func UpdateSection(c *gin.Context) {
 			return
 		}
 	}
-	if err := repository.UpdateSection(uint(id), updates); err != nil {
+	if err := repository.UpdateSection(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
@@ -265,12 +261,12 @@ func UpdateSection(c *gin.Context) {
 // @Summary 删除攻略板块
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param id path int true "板块ID"
+// @Param id path string true "板块ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/guide/section/{id} [delete]
 func DeleteSection(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.DeleteSection(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.DeleteSection(id); err != nil {
 		response.Fail(c, 500, "删除失败")
 		return
 	}
@@ -281,13 +277,13 @@ func DeleteSection(c *gin.Context) {
 // @Summary 板块排序
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param body body object{guideId=int,sectionIds=[]int} true "排序数据"
+// @Param body body object{guideId=string,sectionIds=[]string} true "排序数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/guide/sections/reorder [put]
 func ReorderSections(c *gin.Context) {
 	var req struct {
-		GuideID    uint   `json:"guideId"`
-		SectionIDs []uint `json:"sectionIds"`
+		GuideID    string   `json:"guideId"`
+		SectionIDs []string `json:"sectionIds"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")

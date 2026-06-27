@@ -19,11 +19,11 @@ var adminJwtSecret = []byte("admin-secret-key")
 
 // ---------- 小程序用户 Claims ----------
 type MiniAppClaims struct {
-	UserID uint `json:"userId"`
+	UserID string `json:"userId"`
 	jwt.RegisteredClaims
 }
 
-func GenerateMiniAppToken(userID uint) (string, error) {
+func GenerateMiniAppToken(userID string) (string, error) {
 	claims := MiniAppClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -66,11 +66,11 @@ func JWTAuth() gin.HandlerFunc {
 
 // ---------- 后台管理员 Claims ----------
 type AdminClaims struct {
-	AdminUserID uint `json:"adminUserId"`
+	AdminUserID string `json:"adminUserId"`
 	jwt.RegisteredClaims
 }
 
-func GenerateAdminToken(adminUserID uint) (string, error) {
+func GenerateAdminToken(adminUserID string) (string, error) {
 	claims := AdminClaims{
 		AdminUserID: adminUserID,
 		RegisteredClaims: jwt.RegisteredClaims{

@@ -6,7 +6,7 @@ import (
 )
 
 // GetChecklistsByUser 获取用户的备忘清单
-func GetChecklistsByUser(userID uint) ([]model.Checklist, error) {
+func GetChecklistsByUser(userID string) ([]model.Checklist, error) {
 	var lists []model.Checklist
 	err := database.DB.Where("user_id = ?", userID).Preload("Items").Find(&lists).Error
 	return lists, err
@@ -18,6 +18,6 @@ func CreateChecklist(cl *model.Checklist) error {
 }
 
 // UpdateChecklistItem 更新清单条目勾选状态
-func UpdateChecklistItem(id uint, checked int) error {
+func UpdateChecklistItem(id string, checked int) error {
 	return database.DB.Model(&model.ChecklistItem{}).Where("id = ?", id).Update("checked", checked).Error
 }

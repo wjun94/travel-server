@@ -5,7 +5,7 @@ import (
 )
 
 // ApplyTripEdit 处理 WebSocket 传来的行程编辑，更新数据库
-func ApplyTripEdit(tripID uint, editMsg map[string]interface{}) error {
+func ApplyTripEdit(tripID string, editMsg map[string]interface{}) error {
 	_, err := repository.GetTripByID(tripID)
 	if err != nil {
 		return err

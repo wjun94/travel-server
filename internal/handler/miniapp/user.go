@@ -81,7 +81,7 @@ func getWxSession(code string) (*WxSessionResp, error) {
 // @Success 200 {object} response.Response{data=model.User}
 // @Router /api/v1/user/info [get]
 func GetUserInfo(c *gin.Context) {
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 	user, err := repository.GetUserByID(uid)
 	if err != nil {
 		response.Fail(c, 404, "用户不存在")
@@ -106,7 +106,7 @@ func UpdateProfile(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 	database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(map[string]interface{}{
 		"nickname":   req.Nickname,
 		"avatar_url": req.AvatarURL,

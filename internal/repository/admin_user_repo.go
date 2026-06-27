@@ -14,9 +14,9 @@ func GetAdminUserByUsername(username string) (*model.AdminUser, error) {
 	return &user, nil
 }
 
-func GetAdminUserByID(id uint) (*model.AdminUser, error) {
+func GetAdminUserByID(id string) (*model.AdminUser, error) {
 	var user model.AdminUser
-	err := database.DB.Preload("Role").First(&user, id).Error
+	err := database.DB.Preload("Role").First(&user, "id = ?", id).Error
 	return &user, err
 }
 
@@ -37,6 +37,6 @@ func UpdateAdminUser(user *model.AdminUser) error {
 	return database.DB.Save(user).Error
 }
 
-func DeleteAdminUser(id uint) error {
-	return database.DB.Delete(&model.AdminUser{}, id).Error
+func DeleteAdminUser(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&model.AdminUser{}).Error
 }

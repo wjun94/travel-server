@@ -33,16 +33,12 @@ func ListGuides(c *gin.Context) {
 // @Summary 审核攻略
 // @Security BearerAuth
 // @Tags 后台-内容
-// @Param id path int true "攻略ID"
+// @Param id path string true "攻略ID"
 // @Param body body object{status=int} true "状态(1已发布 2下架)"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/guide/{id}/status [put]
 func UpdateGuideStatus(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
+	id := c.Param("id")
 	var req struct {
 		Status int `json:"status"`
 	}
@@ -54,7 +50,7 @@ func UpdateGuideStatus(c *gin.Context) {
 		response.Fail(c, 400, "状态值无效")
 		return
 	}
-	if err := repository.UpdateGuideStatus(uint(id), req.Status); err != nil {
+	if err := repository.UpdateGuideStatus(id, req.Status); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}

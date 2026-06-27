@@ -21,7 +21,7 @@ func CreateUser(user *model.User) error {
 }
 
 // GetUserByID 根据 ID 获取用户
-func GetUserByID(id uint) (*model.User, error) {
+func GetUserByID(id string) (*model.User, error) {
 	var user model.User
 	err := database.DB.First(&user, id).Error
 	return &user, err
@@ -38,6 +38,6 @@ func ListUsers(page, pageSize int) ([]model.User, int64, error) {
 }
 
 // UpdateUserRole 更新用户角色
-func UpdateUserRole(userID uint, role int) error {
+func UpdateUserRole(userID string, role int) error {
 	return database.DB.Model(&model.User{}).Where("id = ?", userID).Update("role", role).Error
 }

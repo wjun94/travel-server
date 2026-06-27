@@ -62,12 +62,12 @@ func CreateRole(c *gin.Context) {
 // @Summary 更新角色
 // @Security BearerAuth
 // @Tags 后台-角色
-// @Param id path int true "角色ID"
+// @Param id path string true "角色ID"
 // @Param body body object{name=string,description=string,permissions=string} true "角色信息"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/role/{id} [put]
 func UpdateRole(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	var req struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -77,7 +77,7 @@ func UpdateRole(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	role, err := repository.GetRoleByID(uint(id))
+	role, err := repository.GetRoleByID(id)
 	if err != nil {
 		response.Fail(c, 404, "角色不存在")
 		return
@@ -102,12 +102,12 @@ func UpdateRole(c *gin.Context) {
 // @Summary 删除角色
 // @Security BearerAuth
 // @Tags 后台-角色
-// @Param id path int true "角色ID"
+// @Param id path string true "角色ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/role/{id} [delete]
 func DeleteRole(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.DeleteRole(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.DeleteRole(id); err != nil {
 		response.Fail(c, 500, "删除失败")
 		return
 	}

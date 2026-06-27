@@ -7,7 +7,7 @@ import (
 )
 
 // ApproveApplication 同意搭子申请，更新成员数
-func ApproveApplication(appID uint) error {
+func ApproveApplication(appID string) error {
 	app, err := repository.GetApplicationByID(appID)
 	if err != nil {
 		return err

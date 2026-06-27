@@ -24,7 +24,7 @@ func CreatePartner(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	p.UserID = c.GetUint("userID")
+	p.UserID = c.MustGet("userID").(string)
 	p.Status = 0         // 默认招募中
 	p.CurrentMembers = 1 // 发起人计入
 	if err := repository.CreatePartner(&p); err != nil {
@@ -56,16 +56,12 @@ func GetPartnerList(c *gin.Context) {
 // @Summary 申请加入搭子
 // @Security BearerAuth
 // @Tags 小程序-搭子
-// @Param id path int true "搭子ID"
+// @Param id path string true "搭子ID"
 // @Param body body object{message=string} true "申请留言"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner/{id}/apply [post]
 func ApplyPartner(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
+	id := c.Param("id")
 	var req struct {
 		Message string `json:"message"`
 	}
@@ -74,8 +70,8 @@ func ApplyPartner(c *gin.Context) {
 		return
 	}
 	app := model.PartnerApplication{
-		PartnerID:   uint(id),
-		ApplicantID: c.GetUint("userID"),
+		PartnerID:   id,
+		ApplicantID: c.MustGet("userID").(string),
 		Message:     req.Message,
 	}
 	if err := repository.CreateApplication(&app); err != nil {
@@ -89,19 +85,15 @@ func ApplyPartner(c *gin.Context) {
 // @Summary 处理搭子申请
 // @Security BearerAuth
 // @Tags 小程序-搭子
-// @Param id path int true "搭子ID"
-// @Param body body object{application_id=int,status=int} true "申请ID和状态(1同意 2拒绝)"
+// @Param id path string true "搭子ID"
+// @Param body body object{applicationId=string,status=int} true "申请ID和状态(1同意 2拒绝)"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner/{id}/application [put]
 func HandleApplication(c *gin.Context) {
-	partnerID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
+	partnerID := c.Param("id")
 	var req struct {
-		ApplicationID uint `json:"applicationId"`
-		Status        int  `json:"status"` // 1同意 2拒绝
+		ApplicationID string `json:"applicationId"`
+		Status        int    `json:"status"` // 1同意 2拒绝
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -113,12 +105,12 @@ func HandleApplication(c *gin.Context) {
 	}
 
 	// 验证是否为搭子发起人
-	partner, err := repository.GetPartnerByID(uint(partnerID))
+	partner, err := repository.GetPartnerByID(partnerID)
 	if err != nil {
 		response.Fail(c, 404, "搭子不存在")
 		return
 	}
-	if partner.UserID != c.GetUint("userID") {
+	if partner.UserID != c.MustGet("userID").(string) {
 		response.Fail(c, 403, "无权限处理该搭子的申请")
 		return
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 // GetAccountsByTrip 获取某行程的记账记录
-func GetAccountsByTrip(tripID, userID uint) ([]model.Accounting, error) {
+func GetAccountsByTrip(tripID, userID string) ([]model.Accounting, error) {
 	var accounts []model.Accounting
 	err := database.DB.Where("trip_id = ? AND user_id = ?", tripID, userID).Find(&accounts).Error
 	return accounts, err

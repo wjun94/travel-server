@@ -2,8 +2,6 @@
 package miniapp
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/model"
@@ -15,17 +13,13 @@ import (
 // @Summary 获取账本
 // @Security BearerAuth
 // @Tags 小程序-记账
-// @Param tripId path int true "行程ID"
+// @Param tripId path string true "行程ID"
 // @Success 200 {object} response.Response{data=[]model.Accounting}
 // @Router /api/v1/account/{tripId} [get]
 func GetAccounts(c *gin.Context) {
-	tripID, err := strconv.Atoi(c.Param("tripId"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
-	userID := c.GetUint("userID")
-	accounts, err := repository.GetAccountsByTrip(uint(tripID), userID)
+	tripID := c.Param("tripId")
+	userID := c.MustGet("userID").(string)
+	accounts, err := repository.GetAccountsByTrip(tripID, userID)
 	if err != nil {
 		response.Fail(c, 500, "获取记账失败")
 		return
@@ -46,7 +40,7 @@ func AddAccount(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	acc.UserID = c.GetUint("userID")
+	acc.UserID = c.MustGet("userID").(string)
 	if err := repository.CreateAccount(&acc); err != nil {
 		response.Fail(c, 500, "添加失败")
 		return
@@ -58,19 +52,19 @@ func AddAccount(c *gin.Context) {
 // @Summary 导入微信支付账单
 // @Security BearerAuth
 // @Tags 小程序-记账
-// @Param body body object{trip_id=int,transactions=[]string} true "账单数据"
+// @Param body body object{trip_id=string,transactions=[]string} true "账单数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/account/import [post]
 func ImportWechatPay(c *gin.Context) {
 	var req struct {
-		TripID       uint     `json:"tripId"`
+		TripID       string   `json:"tripId"`
 		Transactions []string `json:"transactions"` // 微信支付单号（实际应传入金额）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 	for _, t := range req.Transactions {
 		acc := model.Accounting{
 			TripID:        req.TripID,

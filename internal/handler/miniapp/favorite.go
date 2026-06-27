@@ -23,7 +23,7 @@ func AddFavorite(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	fav.UserID = c.GetUint("userID")
+	fav.UserID = c.MustGet("userID").(string)
 	if err := repository.AddFavorite(&fav); err != nil {
 		response.Fail(c, 500, "收藏失败")
 		return
@@ -35,15 +35,15 @@ func AddFavorite(c *gin.Context) {
 // @Summary 取消收藏
 // @Security BearerAuth
 // @Tags 小程序-收藏
-// @Param id path int true "收藏ID"
+// @Param id path string true "收藏目标ID"
 // @Param target_type query string true "收藏类型"
 // @Success 200 {object} response.Response
 // @Router /api/v1/favorite/{id} [delete]
 func RemoveFavorite(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	targetType := c.Query("target_type")
-	userID := c.GetUint("userID")
-	if err := repository.RemoveFavorite(userID, uint(id), targetType); err != nil {
+	userID := c.MustGet("userID").(string)
+	if err := repository.RemoveFavorite(userID, id, targetType); err != nil {
 		response.Fail(c, 500, "取消收藏失败")
 		return
 	}
@@ -63,7 +63,7 @@ func GetFavorites(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	targetType := c.Query("target_type")
-	userID := c.GetUint("userID")
+	userID := c.MustGet("userID").(string)
 	favs, total, err := repository.ListUserFavorites(userID, targetType, page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")

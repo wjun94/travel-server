@@ -34,14 +34,14 @@ func ListAdminUsers(c *gin.Context) {
 // @Summary 创建后台用户
 // @Security BearerAuth
 // @Tags 后台-用户
-// @Param body body object{username=string,password=string,role_id=int} true "用户信息"
+// @Param body body object{username=string,password=string,roleId=string} true "用户信息"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/user [post]
 func CreateAdminUser(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
-		RoleID   uint   `json:"roleId" binding:"required"`
+		RoleID   string `json:"roleId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -65,14 +65,14 @@ func CreateAdminUser(c *gin.Context) {
 // @Summary 修改后台用户
 // @Security BearerAuth
 // @Tags 后台-用户
-// @Param id path int true "用户ID"
-// @Param body body object{role_id=int,status=int,password=string} true "修改参数"
+// @Param id path string true "用户ID"
+// @Param body body object{roleId=string,status=int,password=string} true "修改参数"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/user/{id} [put]
 func UpdateAdminUser(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	var req struct {
-		RoleID   uint   `json:"roleId"`
+		RoleID   string `json:"roleId"`
 		Status   *int   `json:"status"`
 		Password string `json:"password"`
 	}
@@ -80,12 +80,12 @@ func UpdateAdminUser(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	user, err := repository.GetAdminUserByID(uint(id))
+	user, err := repository.GetAdminUserByID(id)
 	if err != nil {
 		response.Fail(c, 404, "用户不存在")
 		return
 	}
-	if req.RoleID != 0 {
+	if req.RoleID != "" {
 		user.RoleID = req.RoleID
 	}
 	if req.Status != nil {
@@ -106,12 +106,12 @@ func UpdateAdminUser(c *gin.Context) {
 // @Summary 删除后台用户
 // @Security BearerAuth
 // @Tags 后台-用户
-// @Param id path int true "用户ID"
+// @Param id path string true "用户ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/user/{id} [delete]
 func DeleteAdminUser(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.DeleteAdminUser(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.DeleteAdminUser(id); err != nil {
 		response.Fail(c, 500, "删除失败")
 		return
 	}

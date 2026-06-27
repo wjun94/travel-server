@@ -33,16 +33,12 @@ func ListUsers(c *gin.Context) {
 // @Summary 更新用户角色
 // @Security BearerAuth
 // @Tags 后台-用户
-// @Param id path int true "用户ID"
+// @Param id path string true "用户ID"
 // @Param body body object{role=int} true "角色(0普通 1领队 2管理员)"
 // @Success 200 {object} response.Response
 // @Router /api/v1/admin/user/{id}/role [put]
 func UpdateUserRole(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
+	id := c.Param("id")
 	var req struct {
 		Role int `json:"role"`
 	}
@@ -54,7 +50,7 @@ func UpdateUserRole(c *gin.Context) {
 		response.Fail(c, 400, "无效角色值")
 		return
 	}
-	if err := repository.UpdateUserRole(uint(id), req.Role); err != nil {
+	if err := repository.UpdateUserRole(id, req.Role); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}

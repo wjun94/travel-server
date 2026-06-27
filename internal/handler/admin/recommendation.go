@@ -21,7 +21,7 @@ func SaveRecommendation(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	rec.ID = 0 // 强制新建
+	rec.ID = "" // 强制新建，由 BeforeCreate 生成 ID
 	if err := repository.CreateRecommendation(&rec); err != nil {
 		response.Fail(c, 500, "保存失败")
 		return

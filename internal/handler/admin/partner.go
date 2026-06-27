@@ -23,8 +23,8 @@ func CreatePartner(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	p.Type = 1   // 官方活动
-	p.UserID = 0 // 系统发布
+	p.Type = 1    // 官方活动
+	p.UserID = "" // 系统发布
 	if err := repository.CreatePartner(&p); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return

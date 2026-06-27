@@ -3,7 +3,6 @@ package miniapp
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -30,7 +29,7 @@ func AIGenerateTrip(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 
 	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, "")
 	result, err := ai.Chat(prompt)
@@ -104,7 +103,7 @@ func CreateTrip(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	trip.UserID = c.GetUint("userID")
+	trip.UserID = c.MustGet("userID").(string)
 	trip.Status = 0
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "创建失败")
@@ -116,12 +115,12 @@ func CreateTrip(c *gin.Context) {
 // GetTrip 获取行程详情
 // @Summary 获取行程详情
 // @Tags 小程序-行程
-// @Param id path int true "行程ID"
+// @Param id path string true "行程ID"
 // @Success 200 {object} response.Response{data=model.Trip}
 // @Router /api/v1/trip/{id} [get]
 func GetTrip(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	trip, err := repository.GetTripByID(uint(id))
+	id := c.Param("id")
+	trip, err := repository.GetTripByID(id)
 	if err != nil {
 		response.Fail(c, 404, "行程不存在")
 		return
@@ -133,19 +132,19 @@ func GetTrip(c *gin.Context) {
 // @Summary 更新行程
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程ID"
+// @Param id path string true "行程ID"
 // @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/{id} [put]
 func UpdateTrip(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	trip, err := repository.GetTripByID(uint(id))
+	id := c.Param("id")
+	trip, err := repository.GetTripByID(id)
 	if err != nil {
 		response.Fail(c, 404, "行程不存在")
 		return
 	}
 	// 权限检查：仅创建者可编辑
-	userID := c.GetUint("userID")
+	userID := c.MustGet("userID").(string)
 	if trip.UserID != userID {
 		response.Fail(c, 403, "无编辑权限")
 		return
@@ -161,7 +160,7 @@ func UpdateTrip(c *gin.Context) {
 	delete(updates, "user_id")
 	delete(updates, "created_at")
 
-	if err := repository.UpdateTrip(uint(id), updates); err != nil {
+	if err := repository.UpdateTrip(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
@@ -194,18 +193,18 @@ func AddTripDay(c *gin.Context) {
 // @Summary 更新行程日
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程日ID"
+// @Param id path string true "行程日ID"
 // @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/day/{id} [put]
 func UpdateTripDay(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if err := repository.UpdateTripDay(uint(id), updates); err != nil {
+	if err := repository.UpdateTripDay(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
@@ -216,12 +215,12 @@ func UpdateTripDay(c *gin.Context) {
 // @Summary 删除行程日
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程日ID"
+// @Param id path string true "行程日ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/day/{id} [delete]
 func DeleteTripDay(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.DeleteTripDay(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.DeleteTripDay(id); err != nil {
 		response.Fail(c, 500, "删除失败")
 		return
 	}
@@ -254,18 +253,18 @@ func AddTripItem(c *gin.Context) {
 // @Summary 更新行程项
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程项ID"
+// @Param id path string true "行程项ID"
 // @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/item/{id} [put]
 func UpdateTripItem(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if err := repository.UpdateTripItem(uint(id), updates); err != nil {
+	if err := repository.UpdateTripItem(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
@@ -276,12 +275,12 @@ func UpdateTripItem(c *gin.Context) {
 // @Summary 删除行程项
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "行程项ID"
+// @Param id path string true "行程项ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/item/{id} [delete]
 func DeleteTripItem(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.DeleteTripItem(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.DeleteTripItem(id); err != nil {
 		response.Fail(c, 500, "删除失败")
 		return
 	}
@@ -314,12 +313,12 @@ func InviteMember(c *gin.Context) {
 // @Summary 移除同行者
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param id path int true "同行者记录ID"
+// @Param id path string true "同行者记录ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/trip/member/{id} [delete]
 func RemoveMember(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository.RemoveTripMember(uint(id)); err != nil {
+	id := c.Param("id")
+	if err := repository.RemoveTripMember(id); err != nil {
 		response.Fail(c, 500, "移除失败")
 		return
 	}

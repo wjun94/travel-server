@@ -63,7 +63,7 @@ func AdminLogin(c *gin.Context) {
 // @Router /api/v1/admin/info [get]
 func GetAdminInfo(c *gin.Context) {
 	adminID, _ := c.Get("adminUserID") // AdminOnly 中间件注入
-	user, err := repository.GetAdminUserByID(adminID.(uint))
+	user, err := repository.GetAdminUserByID(adminID.(string))
 	if err != nil {
 		response.Fail(c, 404, "用户不存在")
 		return

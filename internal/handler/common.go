@@ -77,12 +77,8 @@ func WebSocketHandler(c *gin.Context) {
 			ws.WsHub.Join("trip:"+tripID, conn)
 		case "edit_trip":
 			tripID, _ := msg["tripId"].(string)
-			tripIDUint := uint(0)
-			if f, ok := msg["tripId"].(float64); ok {
-				tripIDUint = uint(f)
-			}
 			// 持久化编辑
-			service.ApplyTripEdit(tripIDUint, msg)
+			service.ApplyTripEdit(tripID, msg)
 			// 广播给同房间其他连接
 			ws.WsHub.Broadcast("trip:"+tripID, msg, conn)
 		}

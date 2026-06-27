@@ -17,7 +17,7 @@ import (
 // @Success 200 {object} response.Response{data=[]model.Footprint}
 // @Router /api/v1/footprint [get]
 func GetFootprints(c *gin.Context) {
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 	var footprints []model.Footprint
 	if err := database.DB.Where("user_id = ?", uid).Find(&footprints).Error; err != nil {
 		response.Fail(c, 500, "获取足迹失败")
@@ -45,7 +45,7 @@ func SyncFootprint(c *gin.Context) {
 		return
 	}
 	fp := model.Footprint{
-		UserID:    c.GetUint("userID"),
+		UserID:    c.MustGet("userID").(string),
 		City:      req.City,
 		Province:  req.Province,
 		Lat:       req.Lat,

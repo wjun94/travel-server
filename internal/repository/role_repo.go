@@ -13,9 +13,9 @@ func ListRoles(page, pageSize int) ([]model.Role, int64, error) {
 	return roles, total, err
 }
 
-func GetRoleByID(id uint) (*model.Role, error) {
+func GetRoleByID(id string) (*model.Role, error) {
 	var role model.Role
-	err := database.DB.First(&role, id).Error
+	err := database.DB.First(&role, "id = ?", id).Error
 	return &role, err
 }
 
@@ -27,6 +27,6 @@ func UpdateRole(role *model.Role) error {
 	return database.DB.Save(role).Error
 }
 
-func DeleteRole(id uint) error {
-	return database.DB.Delete(&model.Role{}, id).Error
+func DeleteRole(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&model.Role{}).Error
 }

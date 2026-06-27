@@ -2,14 +2,15 @@ package model
 
 import (
 	"time"
+	"travel-server/pkg/snowflake"
 
 	"gorm.io/gorm"
 )
 
 // Guide 攻略表 — 决策参考型内容，包含目的地综合信息
 type Guide struct {
-	ID              uint           `gorm:"primaryKey" json:"id"`
-	UserID          uint           `json:"userId"`                              // 作者
+	ID              string         `gorm:"primaryKey" json:"id"`
+	UserID          string         `json:"userId"`                              // 作者
 	Title           string         `gorm:"size:200" json:"title"`               // 标题
 	CoverImage      string         `gorm:"size:255" json:"coverImage"`          // 封面图
 	Destination     string         `gorm:"size:100" json:"destination"`         // 目的地
@@ -30,4 +31,12 @@ type Guide struct {
 	CreatedAt       time.Time      `json:"createdAt"`
 	UpdatedAt       time.Time      `json:"updatedAt"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"` // 软删除
+}
+
+// BeforeCreate GORM 钩子
+func (g *Guide) BeforeCreate() error {
+	if g.ID == "" {
+		g.ID = snowflake.GenerateID()
+	}
+	return nil
 }

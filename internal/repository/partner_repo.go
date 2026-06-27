@@ -21,9 +21,9 @@ func GetPartnerList(page, pageSize int) ([]model.Partner, int64, error) {
 }
 
 // GetPartnerByID 根据 ID 获取搭子
-func GetPartnerByID(id uint) (*model.Partner, error) {
+func GetPartnerByID(id string) (*model.Partner, error) {
 	var p model.Partner
-	err := database.DB.First(&p, id).Error
+	err := database.DB.First(&p, "id = ?", id).Error
 	return &p, err
 }
 
@@ -38,14 +38,14 @@ func CreateApplication(app *model.PartnerApplication) error {
 }
 
 // GetApplicationByID 获取申请详情
-func GetApplicationByID(id uint) (*model.PartnerApplication, error) {
+func GetApplicationByID(id string) (*model.PartnerApplication, error) {
 	var app model.PartnerApplication
-	err := database.DB.First(&app, id).Error
+	err := database.DB.First(&app, "id = ?", id).Error
 	return &app, err
 }
 
 // UpdateApplicationStatus 修改申请状态
-func UpdateApplicationStatus(id uint, status int) error {
+func UpdateApplicationStatus(id string, status int) error {
 	return database.DB.Model(&model.PartnerApplication{}).Where("id = ?", id).Update("status", status).Error
 }
 

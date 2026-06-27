@@ -13,7 +13,7 @@ func CreateComment(comment *model.Comment) error {
 }
 
 // GetCommentsByTarget 获取目标评论列表（含回复嵌套）
-func GetCommentsByTarget(targetType string, targetID uint, page, pageSize int) ([]model.Comment, int64, error) {
+func GetCommentsByTarget(targetType string, targetID string, page, pageSize int) ([]model.Comment, int64, error) {
 	var comments []model.Comment
 	var total int64
 	offset := (page - 1) * pageSize
@@ -26,7 +26,7 @@ func GetCommentsByTarget(targetType string, targetID uint, page, pageSize int) (
 }
 
 // GetRepliesByParentID 获取子回复
-func GetRepliesByParentID(parentID uint) ([]model.Comment, error) {
+func GetRepliesByParentID(parentID string) ([]model.Comment, error) {
 	var replies []model.Comment
 	err := database.DB.Where("parent_id = ?", parentID).
 		Order("created_at asc").Find(&replies).Error
@@ -34,12 +34,12 @@ func GetRepliesByParentID(parentID uint) ([]model.Comment, error) {
 }
 
 // DeleteComment 删除评论
-func DeleteComment(id uint) error {
-	return database.DB.Delete(&model.Comment{}, id).Error
+func DeleteComment(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&model.Comment{}).Error
 }
 
 // IncrementCommentLikeCount 点赞评论
-func IncrementCommentLikeCount(id uint) error {
+func IncrementCommentLikeCount(id string) error {
 	return database.DB.Model(&model.Comment{}).Where("id = ?", id).
 		UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
 }

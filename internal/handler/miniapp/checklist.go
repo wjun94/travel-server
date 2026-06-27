@@ -1,8 +1,6 @@
 package miniapp
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/model"
@@ -17,7 +15,7 @@ import (
 // @Success 200 {object} response.Response{data=[]model.Checklist}
 // @Router /api/v1/checklist [get]
 func GetChecklists(c *gin.Context) {
-	uid := c.GetUint("userID")
+	uid := c.MustGet("userID").(string)
 	lists, err := repository.GetChecklistsByUser(uid)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
@@ -39,7 +37,7 @@ func CreateChecklist(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	cl.UserID = c.GetUint("userID")
+	cl.UserID = c.MustGet("userID").(string)
 	if err := repository.CreateChecklist(&cl); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
@@ -51,16 +49,12 @@ func CreateChecklist(c *gin.Context) {
 // @Summary 更新清单条目勾选状态
 // @Security BearerAuth
 // @Tags 小程序-备忘
-// @Param id path int true "清单条目ID"
+// @Param id path string true "清单条目ID"
 // @Param body body object{checked=int} true "勾选状态(0/1)"
 // @Success 200 {object} response.Response
 // @Router /api/v1/checklist/{id}/item [put]
 func UpdateChecklistItem(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
+	id := c.Param("id")
 	var req struct {
 		Checked int `json:"checked"`
 	}
@@ -68,7 +62,7 @@ func UpdateChecklistItem(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if err := repository.UpdateChecklistItem(uint(id), req.Checked); err != nil {
+	if err := repository.UpdateChecklistItem(id, req.Checked); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}

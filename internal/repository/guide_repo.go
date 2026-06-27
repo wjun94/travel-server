@@ -48,9 +48,9 @@ func CreateGuideWithSections(guide *model.Guide, sections []model.GuideSection) 
 }
 
 // GetGuideByID 查询攻略详情（含板块）
-func GetGuideByID(id uint) (*model.Guide, error) {
+func GetGuideByID(id string) (*model.Guide, error) {
 	var guide model.Guide
-	err := database.DB.First(&guide, id).Error
+	err := database.DB.First(&guide, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -68,17 +68,17 @@ func ListGuides(page, pageSize int) ([]model.Guide, int64, error) {
 }
 
 // UpdateGuideStatus 审核攻略（修改状态）
-func UpdateGuideStatus(id uint, status int) error {
+func UpdateGuideStatus(id string, status int) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Update("status", status).Error
 }
 
 // UpdateGuide 更新攻略基本信息（支持零值更新）
-func UpdateGuide(id uint, updates map[string]interface{}) error {
+func UpdateGuide(id string, updates map[string]interface{}) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // IncrementGuideViewCount 增加浏览量
-func IncrementGuideViewCount(id uint) error {
+func IncrementGuideViewCount(id string) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).
 		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
 }
@@ -86,7 +86,7 @@ func IncrementGuideViewCount(id uint) error {
 // ==================== GuideSection 攻略板块 ====================
 
 // GetSectionsByGuideID 获取攻略的所有板块（按排序序号排列）
-func GetSectionsByGuideID(guideID uint) ([]model.GuideSection, error) {
+func GetSectionsByGuideID(guideID string) ([]model.GuideSection, error) {
 	var sections []model.GuideSection
 	err := database.DB.Where("guide_id = ?", guideID).
 		Order("sort_order asc").Find(&sections).Error
@@ -99,13 +99,13 @@ func CreateSection(section *model.GuideSection) error {
 }
 
 // UpdateSection 更新攻略板块
-func UpdateSection(id uint, updates map[string]interface{}) error {
+func UpdateSection(id string, updates map[string]interface{}) error {
 	return database.DB.Model(&model.GuideSection{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // DeleteSection 删除攻略板块
-func DeleteSection(id uint) error {
-	return database.DB.Delete(&model.GuideSection{}, id).Error
+func DeleteSection(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&model.GuideSection{}).Error
 }
 
 // BatchCreateSections 批量创建板块
@@ -114,7 +114,7 @@ func BatchCreateSections(sections []model.GuideSection) error {
 }
 
 // ReorderSections 重新排序板块
-func ReorderSections(guideID uint, sectionIDs []uint) error {
+func ReorderSections(guideID string, sectionIDs []string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		for i, id := range sectionIDs {
 			if err := tx.Model(&model.GuideSection{}).Where("id = ? AND guide_id = ?", id, guideID).

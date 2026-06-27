@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"travel-server/pkg/snowflake"
+)
 
 // SectionType 板块类型常量
 const (
@@ -26,11 +30,19 @@ var ValidSectionTypes = map[string]bool{
 
 // GuideSection 攻略板块表 — 攻略内的分类内容板块（交通、住宿、美食、景点、避坑等）
 type GuideSection struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	GuideID     uint      `json:"guideId"`                    // 所属攻略
-	SectionType string    `gorm:"size:30" json:"sectionType"` // 板块类型：overview/transport/hotel/food/attraction/itinerary/budget/tips/custom
+	ID          string    `gorm:"primaryKey" json:"id"`
+	GuideID     string    `json:"guideId"`                    // 所属攻略
+	SectionType string    `gorm:"size:30" json:"sectionType"` // 板块类型：transport/hotel/attraction/food/shopping/tips/custom
 	Title       string    `gorm:"size:100" json:"title"`      // 板块标题
 	Content     string    `gorm:"type:text" json:"content"`   // 板块内容（富文本/Markdown）
 	SortOrder   int       `json:"sortOrder"`                  // 排序序号
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+// BeforeCreate GORM 钩子
+func (gs *GuideSection) BeforeCreate() error {
+	if gs.ID == "" {
+		gs.ID = snowflake.GenerateID()
+	}
+	return nil
 }

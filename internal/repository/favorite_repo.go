@@ -11,13 +11,13 @@ func AddFavorite(fav *model.Favorite) error {
 }
 
 // RemoveFavorite 取消收藏
-func RemoveFavorite(userID, targetID uint, targetType string) error {
+func RemoveFavorite(userID, targetID string, targetType string) error {
 	return database.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
 		Delete(&model.Favorite{}).Error
 }
 
 // IsFavorited 是否已收藏
-func IsFavorited(userID, targetID uint, targetType string) bool {
+func IsFavorited(userID, targetID string, targetType string) bool {
 	var count int64
 	database.DB.Model(&model.Favorite{}).
 		Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
@@ -26,7 +26,7 @@ func IsFavorited(userID, targetID uint, targetType string) bool {
 }
 
 // ListUserFavorites 用户收藏列表
-func ListUserFavorites(userID uint, targetType string, page, pageSize int) ([]model.Favorite, int64, error) {
+func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]model.Favorite, int64, error) {
 	var favs []model.Favorite
 	var total int64
 	offset := (page - 1) * pageSize
