@@ -242,6 +242,10 @@ func AddTripItem(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	if item.ItemType != "" && !model.ValidItemTypes[item.ItemType] {
+		response.Fail(c, 400, "无效的行程项类型，可选：transport/attraction/meal/hotel/free")
+		return
+	}
 	if err := repository.CreateTripItem(&item); err != nil {
 		response.Fail(c, 500, "添加失败")
 		return
@@ -262,6 +266,10 @@ func UpdateTripItem(c *gin.Context) {
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if itemType, ok := updates["itemType"].(string); ok && itemType != "" && !model.ValidItemTypes[itemType] {
+		response.Fail(c, 400, "无效的行程项类型，可选：transport/attraction/meal/hotel/free")
 		return
 	}
 	if err := repository.UpdateTripItem(id, updates); err != nil {
