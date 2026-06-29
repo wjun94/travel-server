@@ -2,7 +2,9 @@ package miniapp
 
 import (
 	"strconv"
+	"strings"
 
+	"travel-server/internal/middleware"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/pkg/response"
@@ -10,19 +12,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetFeed 获取公开的攻略瀑布流
+// GetGuideFeed 攻略瀑布流（公开接口，登录后可标记当前用户是否点赞）
 // @Summary 攻略瀑布流
 // @Tags 小程序-攻略
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Param destination query string false "目的地筛选"
-// @Success 200 {object} response.Response{data=object{list=[]model.Guide,total=int}}
-// @Router /api/v1/feed [get]
-func GetFeed(c *gin.Context) {
+// @Success 200 {object} response.Response{data=object{list=[]model.GuideFeedItem,total=int}}
+// @Router /api/v1/guides [get]
+func GetGuideFeed(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	destination := c.Query("destination")
-	guides, total, err := repository.GetFeedGuides(page, pageSize, destination)
+
+	// 可选登录：如果带有效 token 则获取 userID 用于标记 isLiked
+	userID := ""
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if claims, err := middleware.ParseMiniAppToken(tokenString); err == nil {
+			userID = claims.UserID
+		}
+	}
+
+	guides, total, err := repository.GetGuideFeed(page, pageSize, destination, userID)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return

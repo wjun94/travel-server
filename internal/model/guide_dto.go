@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // CreateGuideReq 创建攻略请求 — 包含攻略基本信息 + 板块列表
@@ -118,4 +119,32 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Msg)
+}
+
+// GuideFeedItem 攻略瀑布流返回项
+type GuideFeedItem struct {
+	ID              string    `json:"id"`
+	UserID          string    `json:"userId"`
+	Title           string    `json:"title"`
+	CoverImage      string    `json:"coverImage"`
+	Destination     string    `json:"destination"`
+	Summary         string    `json:"summary"`
+	BudgetMin       *float64  `json:"budgetMin"`
+	BudgetMax       *float64  `json:"budgetMax"`
+	BestSeason      string    `json:"bestSeason"`
+	RecommendedDays *int      `json:"recommendedDays"`
+	Tags            string    `json:"tags"`
+	Difficulty      string    `json:"difficulty"`
+	CrowdType       string    `json:"crowdType"`
+	VideoURL        string    `json:"videoUrl"`
+	Images          string    `json:"images"`
+	IsOriginal      int       `json:"isOriginal"`
+	ViewCount       int       `json:"viewCount"`
+	LikeCount       int       `json:"likeCount"`
+	Status          int       `json:"status"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
+	AuthorName      string    `json:"authorName"`
+	AuthorAvatar    string    `json:"authorAvatar"`
+	IsLiked         bool      `json:"isLiked"`
 }

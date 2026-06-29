@@ -9,8 +9,8 @@ import (
 
 // ==================== Guide 攻略 ====================
 
-// GetFeedGuides 获取已发布的攻略（瀑布流）
-func GetFeedGuides(page, pageSize int, destination string) ([]model.Guide, int64, error) {
+// GetGuideFeed 获取已发布的攻略瀑布流（含作者信息、当前用户是否点赞）
+func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.GuideFeedItem, int64, error) {
 	var guides []model.Guide
 	var total int64
 	offset := (page - 1) * pageSize
@@ -20,7 +20,66 @@ func GetFeedGuides(page, pageSize int, destination string) ([]model.Guide, int64
 	}
 	query.Count(&total)
 	err := query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&guides).Error
-	return guides, total, err
+	if err != nil {
+		return nil, 0, err
+	}
+	// 批量获取作者信息
+	userIDs := make([]string, 0, len(guides))
+	guideIDs := make([]string, 0, len(guides))
+	userIDSet := make(map[string]bool)
+	for _, g := range guides {
+		if !userIDSet[g.UserID] {
+			userIDs = append(userIDs, g.UserID)
+			userIDSet[g.UserID] = true
+		}
+		guideIDs = append(guideIDs, g.ID)
+	}
+	var users []model.User
+	database.DB.Where("id IN ?", userIDs).Find(&users)
+	userMap := make(map[string]model.User)
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+	// 批量获取当前用户的点赞状态
+	likedSet := make(map[string]bool)
+	if userID != "" {
+		var favs []model.Favorite
+		database.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "guide", guideIDs).Find(&favs)
+		for _, f := range favs {
+			likedSet[f.TargetID] = true
+		}
+	}
+	// 组装返回结果
+	items := make([]model.GuideFeedItem, len(guides))
+	for i, g := range guides {
+		items[i] = model.GuideFeedItem{
+			ID:              g.ID,
+			UserID:          g.UserID,
+			Title:           g.Title,
+			CoverImage:      g.CoverImage,
+			Destination:     g.Destination,
+			Summary:         g.Summary,
+			BudgetMin:       g.BudgetMin,
+			BudgetMax:       g.BudgetMax,
+			BestSeason:      g.BestSeason,
+			RecommendedDays: g.RecommendedDays,
+			Tags:            g.Tags,
+			Difficulty:      g.Difficulty,
+			CrowdType:       g.CrowdType,
+			VideoURL:        g.VideoURL,
+			Images:          g.Images,
+			IsOriginal:      g.IsOriginal,
+			ViewCount:       g.ViewCount,
+			LikeCount:       g.LikeCount,
+			Status:          g.Status,
+			CreatedAt:       g.CreatedAt,
+			UpdatedAt:       g.UpdatedAt,
+			AuthorName:      userMap[g.UserID].Nickname,
+			AuthorAvatar:    userMap[g.UserID].AvatarURL,
+			IsLiked:         likedSet[g.ID],
+		}
+	}
+	return items, total, nil
 }
 
 // CreateGuide 创建攻略（仅基本信息）
