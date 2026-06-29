@@ -46,7 +46,7 @@ func main() {
 		// ==================== 公开接口（无需登录） ====================
 		api.POST("/user/login", miniapp.UserLogin)            // 微信登录
 		api.POST("/admin/login", admin.AdminLogin)            // 后台登录
-		api.GET("/guides", miniapp.GetGuideFeed)               // 攻略瀑布流
+		api.GET("/guides", miniapp.GetGuideFeed)              // 攻略瀑布流
 		api.GET("/nearby", miniapp.GetNearby)                 // 周边推荐
 		api.GET("/nearby/recommend", miniapp.GetTopRecommend) // TOP推荐
 		api.GET("/weather", handler.GetWeather)               // 天气查询
