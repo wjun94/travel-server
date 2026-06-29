@@ -3,6 +3,7 @@ package miniapp
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"travel-server/internal/middleware"
 	"travel-server/internal/model"
@@ -43,11 +44,11 @@ func GetGuideFeed(c *gin.Context) {
 	response.Success(c, gin.H{"list": guides, "total": total})
 }
 
-// CreateGuide 创建攻略（含板块）
+// CreateGuide 创建攻略（含每日行程）
 // @Summary 创建攻略
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param body body model.CreateGuideReq true "攻略内容（含板块列表）"
+// @Param body body model.CreateGuideReq true "攻略基本信息（可选传入每日行程）"
 // @Success 200 {object} response.Response
 // @Router /api/v1/guide [post]
 func CreateGuide(c *gin.Context) {
@@ -75,33 +76,54 @@ func CreateGuide(c *gin.Context) {
 		Tags:            req.Tags,
 		Difficulty:      req.Difficulty,
 		CrowdType:       req.CrowdType,
-		VideoURL:        req.VideoURL,
-		Images:          req.Images,
 		IsOriginal:      req.IsOriginal,
 		Status:          req.Status,
 	}
-	// 组装 Sections
-	sections := make([]model.GuideSection, len(req.Sections))
-	for i, s := range req.Sections {
-		sections[i] = model.GuideSection{
-			SectionType: s.SectionType,
-			Title:       s.Title,
-			Content:     s.Content,
+	// 组装每日行程（如果未传 days，自动创建第1天空天）
+	days := make([]model.GuideSection, 0)
+	if len(req.Days) > 0 {
+		for _, d := range req.Days {
+			day := model.GuideSection{
+				Title: d.Title,
+				Date:  d.Date,
+			}
+			// 组装行程项
+			items := make([]model.GuideDayItem, len(d.Items))
+			for j, it := range d.Items {
+				items[j] = model.GuideDayItem{
+					SectionType: it.SectionType,
+					Title:       it.Title,
+					Description: it.Description,
+					StartTime:   it.StartTime,
+					EndTime:     it.EndTime,
+					Latitude:    it.Latitude,
+					Longitude:   it.Longitude,
+					Address:     it.Address,
+				}
+			}
+			day.Items = items
+			days = append(days, day)
 		}
+	} else {
+		// 未传 days，自动创建第1天空天
+		days = append(days, model.GuideSection{
+			Title: "第1天",
+		})
 	}
+
 	// 事务写入
-	if err := repository.CreateGuideWithSections(&guide, sections); err != nil {
+	if err := repository.CreateGuideWithDays(&guide, days); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
 	}
 	response.Success(c, gin.H{"id": guide.ID})
 }
 
-// GetGuideDetail 获取攻略详情（含板块）
+// GetGuideDetail 获取攻略详情（含每日行程和行程项）
 // @Summary 攻略详情
 // @Tags 小程序-攻略
 // @Param id path string true "攻略ID"
-// @Success 200 {object} response.Response{data=object{guide=model.Guide,sections=[]model.GuideSection}}
+// @Success 200 {object} response.Response{data=object{guide=model.Guide,days=[]model.GuideSection}}
 // @Router /api/v1/guide/{id} [get]
 func GetGuideDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -110,12 +132,12 @@ func GetGuideDetail(c *gin.Context) {
 		response.Fail(c, 404, "攻略不存在")
 		return
 	}
-	sections, _ := repository.GetSectionsByGuideID(id)
+	days, _ := repository.GetDaysByGuideID(id)
 	// 增加浏览量（非作者）
 	if userID := c.MustGet("userID").(string); guide.UserID != userID {
 		_ = repository.IncrementGuideViewCount(id)
 	}
-	response.Success(c, gin.H{"guide": guide, "sections": sections})
+	response.Success(c, gin.H{"guide": guide, "days": days})
 }
 
 // UpdateGuide 更新攻略基本信息
@@ -189,12 +211,6 @@ func buildUpdateMap(req *model.UpdateGuideReq) map[string]interface{} {
 	if req.CrowdType != nil {
 		m["crowd_type"] = *req.CrowdType
 	}
-	if req.VideoURL != nil {
-		m["video_url"] = *req.VideoURL
-	}
-	if req.Images != nil {
-		m["images"] = *req.Images
-	}
 	if req.IsOriginal != nil {
 		m["is_original"] = *req.IsOriginal
 	}
@@ -204,17 +220,100 @@ func buildUpdateMap(req *model.UpdateGuideReq) map[string]interface{} {
 	return m
 }
 
-// ==================== 板块管理 ====================
+// ==================== 每日行程管理 ====================
 
-// CreateSection 添加攻略板块
-// @Summary 添加攻略板块
+// CreateGuideDay 添加一天行程到攻略
+// @Summary 添加攻略天数
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param body body model.CreateSectionReq true "板块内容"
+// @Param id path string true "攻略ID"
+// @Param body body object{title=string,date=string} true "天数信息"
 // @Success 200 {object} response.Response
-// @Router /api/v1/guide/section [post]
-func CreateSection(c *gin.Context) {
-	var req model.CreateSectionReq
+// @Router /api/v1/guide/{id}/day [post]
+func CreateGuideDay(c *gin.Context) {
+	guideID := c.Param("id")
+	// 校验攻略存在且是作者
+	guide, err := repository.GetGuideByID(guideID)
+	if err != nil {
+		response.Fail(c, 404, "攻略不存在")
+		return
+	}
+	if guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+	var req struct {
+		Date  *time.Time `json:"date"`
+		Title string     `json:"title"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	day := model.GuideSection{
+		GuideID: guideID,
+		Title:   req.Title,
+		Date:    req.Date,
+	}
+	if err := repository.CreateDay(&day); err != nil {
+		response.Fail(c, 500, "添加天数失败")
+		return
+	}
+	response.Success(c, day)
+}
+
+// DeleteGuideDay 删除一天行程（含其下所有行程项）
+// @Summary 删除天数
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param id path string true "天数ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/guide/day/{id} [delete]
+func DeleteGuideDay(c *gin.Context) {
+	dayID := c.Param("id")
+	day, err := repository.GetDayByID(dayID)
+	if err != nil {
+		response.Fail(c, 404, "天数不存在")
+		return
+	}
+	// 校验攻略归属
+	guide, err := repository.GetGuideByID(day.GuideID)
+	if err != nil || guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+	if err := repository.DeleteDay(dayID); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// ==================== 行程项管理 ====================
+
+// CreateGuideDayItem 添加行程项
+// @Summary 添加行程项
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param id path string true "天数ID"
+// @Param body body model.DayItemReq true "行程项内容"
+// @Success 200 {object} response.Response
+// @Router /api/v1/guide/day/{id}/item [post]
+func CreateGuideDayItem(c *gin.Context) {
+	dayID := c.Param("id")
+	// 校验天存在且属于当前用户
+	day, err := repository.GetDayByID(dayID)
+	if err != nil {
+		response.Fail(c, 404, "天数不存在")
+		return
+	}
+	guide, err := repository.GetGuideByID(day.GuideID)
+	if err != nil || guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+
+	var req model.DayItemReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
@@ -223,35 +322,52 @@ func CreateSection(c *gin.Context) {
 		response.Fail(c, 400, "无效的板块类型")
 		return
 	}
-	// 从原始 body 提取 guideId
-	var body struct {
-		GuideID string `json:"guideId"`
-	}
-	c.ShouldBindJSON(&body)
 
-	section := model.GuideSection{
-		GuideID:     body.GuideID,
+	item := model.GuideDayItem{
+		DayID:       dayID,
 		SectionType: req.SectionType,
 		Title:       req.Title,
-		Content:     req.Content,
+		Description: req.Description,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+		Latitude:    req.Latitude,
+		Longitude:   req.Longitude,
+		Address:     req.Address,
 	}
-	if err := repository.CreateSection(&section); err != nil {
-		response.Fail(c, 500, "添加失败")
+	if err := repository.CreateDayItem(&item); err != nil {
+		response.Fail(c, 500, "添加行程项失败")
 		return
 	}
-	response.Success(c, section)
+	response.Success(c, item)
 }
 
-// UpdateSection 更新攻略板块
-// @Summary 更新攻略板块
+// UpdateGuideDayItem 更新行程项
+// @Summary 更新行程项
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param id path string true "板块ID"
+// @Param id path string true "行程项ID"
 // @Param body body object true "更新数据"
 // @Success 200 {object} response.Response
-// @Router /api/v1/guide/section/{id} [put]
-func UpdateSection(c *gin.Context) {
+// @Router /api/v1/guide/day/item/{id} [put]
+func UpdateGuideDayItem(c *gin.Context) {
 	id := c.Param("id")
+	item, err := repository.GetDayItemByID(id)
+	if err != nil {
+		response.Fail(c, 404, "行程项不存在")
+		return
+	}
+	// 校验归属（通过 day -> guide -> user）
+	day, err := repository.GetDayByID(item.DayID)
+	if err != nil {
+		response.Fail(c, 404, "所属天数不存在")
+		return
+	}
+	guide, err := repository.GetGuideByID(day.GuideID)
+	if err != nil || guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -263,47 +379,40 @@ func UpdateSection(c *gin.Context) {
 			return
 		}
 	}
-	if err := repository.UpdateSection(id, updates); err != nil {
+	if err := repository.UpdateDayItem(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}
 	response.Success(c, nil)
 }
 
-// DeleteSection 删除攻略板块
-// @Summary 删除攻略板块
+// DeleteGuideDayItem 删除行程项
+// @Summary 删除行程项
 // @Security BearerAuth
 // @Tags 小程序-攻略
-// @Param id path string true "板块ID"
+// @Param id path string true "行程项ID"
 // @Success 200 {object} response.Response
-// @Router /api/v1/guide/section/{id} [delete]
-func DeleteSection(c *gin.Context) {
+// @Router /api/v1/guide/day/item/{id} [delete]
+func DeleteGuideDayItem(c *gin.Context) {
 	id := c.Param("id")
-	if err := repository.DeleteSection(id); err != nil {
+	item, err := repository.GetDayItemByID(id)
+	if err != nil {
+		response.Fail(c, 404, "行程项不存在")
+		return
+	}
+	// 校验归属
+	day, err := repository.GetDayByID(item.DayID)
+	if err != nil {
+		response.Fail(c, 404, "所属天数不存在")
+		return
+	}
+	guide, err := repository.GetGuideByID(day.GuideID)
+	if err != nil || guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+	if err := repository.DeleteDayItem(id); err != nil {
 		response.Fail(c, 500, "删除失败")
-		return
-	}
-	response.Success(c, nil)
-}
-
-// ReorderSections 板块拖拽排序
-// @Summary 板块排序
-// @Security BearerAuth
-// @Tags 小程序-攻略
-// @Param body body object{guideId=string,sectionIds=[]string} true "排序数据"
-// @Success 200 {object} response.Response
-// @Router /api/v1/guide/sections/reorder [put]
-func ReorderSections(c *gin.Context) {
-	var req struct {
-		GuideID    string   `json:"guideId"`
-		SectionIDs []string `json:"sectionIds"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
-	}
-	if err := repository.ReorderSections(req.GuideID, req.SectionIDs); err != nil {
-		response.Fail(c, 500, "排序失败")
 		return
 	}
 	response.Success(c, nil)

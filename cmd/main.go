@@ -64,10 +64,11 @@ func main() {
 			miniAuth.POST("/guide", miniapp.CreateGuide)
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)
-			miniAuth.POST("/guide/section", miniapp.CreateSection)
-			miniAuth.PUT("/guide/section/:id", miniapp.UpdateSection)
-			miniAuth.DELETE("/guide/section/:id", miniapp.DeleteSection)
-			miniAuth.PUT("/guide/sections/reorder", miniapp.ReorderSections)
+			miniAuth.POST("/guide/:id/day", miniapp.CreateGuideDay)            // 新增一天
+			miniAuth.DELETE("/guide/day/:id", miniapp.DeleteGuideDay)          // 删除一天
+			miniAuth.POST("/guide/day/:id/item", miniapp.CreateGuideDayItem)   // 新增行程项
+			miniAuth.PUT("/guide/day/item/:id", miniapp.UpdateGuideDayItem)    // 更新行程项
+			miniAuth.DELETE("/guide/day/item/:id", miniapp.DeleteGuideDayItem) // 删除行程项
 
 			// ---------- 行程 ----------
 			miniAuth.POST("/trip", miniapp.CreateTrip)

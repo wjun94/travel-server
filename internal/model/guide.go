@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Guide 攻略表 — 决策参考型内容，包含目的地综合信息
+// Guide 攻略表 — 每日行程型内容，包含目的地综合信息与每日行程安排
 type Guide struct {
 	ID              string         `gorm:"primaryKey" json:"id"`
 	UserID          string         `gorm:"size:191" json:"userId"`              // 作者
@@ -22,8 +22,6 @@ type Guide struct {
 	Tags            string         `gorm:"size:500" json:"tags"`                // 标签（JSON数组，如 ["亲子游","穷游"]）
 	Difficulty      string         `gorm:"size:20" json:"difficulty"`           // 难度：轻松/适中/挑战
 	CrowdType       string         `gorm:"size:100" json:"crowdType"`           // 适合人群：情侣/家庭/独行/朋友
-	VideoURL        string         `gorm:"size:500" json:"videoUrl"`            // 攻略视频链接
-	Images          string         `gorm:"type:text" json:"images"`             // 图集（JSON数组）
 	IsOriginal      int            `gorm:"default:1" json:"isOriginal"`         // 是否原创
 	ViewCount       int            `gorm:"default:0" json:"viewCount"`          // 浏览量
 	LikeCount       int            `gorm:"default:0" json:"likeCount"`          // 点赞数

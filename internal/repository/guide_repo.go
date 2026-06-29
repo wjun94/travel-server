@@ -66,8 +66,6 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 			Tags:            g.Tags,
 			Difficulty:      g.Difficulty,
 			CrowdType:       g.CrowdType,
-			VideoURL:        g.VideoURL,
-			Images:          g.Images,
 			IsOriginal:      g.IsOriginal,
 			ViewCount:       g.ViewCount,
 			LikeCount:       g.LikeCount,
@@ -87,18 +85,18 @@ func CreateGuide(guide *model.Guide) error {
 	return database.DB.Create(guide).Error
 }
 
-// CreateGuideWithSections 事务创建攻略 + 板块
-func CreateGuideWithSections(guide *model.Guide, sections []model.GuideSection) error {
+// CreateGuideWithDays 事务创建攻略 + 每日行程 + 行程项
+func CreateGuideWithDays(guide *model.Guide, days []model.GuideSection) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(guide).Error; err != nil {
 			return err
 		}
-		for i := range sections {
-			sections[i].GuideID = guide.ID
-			sections[i].SortOrder = i + 1
+		for i := range days {
+			days[i].GuideID = guide.ID
+			days[i].DayNumber = i + 1
 		}
-		if len(sections) > 0 {
-			if err := tx.Create(&sections).Error; err != nil {
+		if len(days) > 0 {
+			if err := tx.Create(&days).Error; err != nil {
 				return err
 			}
 		}
@@ -106,7 +104,7 @@ func CreateGuideWithSections(guide *model.Guide, sections []model.GuideSection) 
 	})
 }
 
-// GetGuideByID 查询攻略详情（含板块）
+// GetGuideByID 查询攻略详情
 func GetGuideByID(id string) (*model.Guide, error) {
 	var guide model.Guide
 	err := database.DB.First(&guide, "id = ?", id).Error
@@ -142,45 +140,106 @@ func IncrementGuideViewCount(id string) error {
 		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
 }
 
-// ==================== GuideSection 攻略板块 ====================
+// ==================== GuideDay（每日行程） ====================
 
-// GetSectionsByGuideID 获取攻略的所有板块（按排序序号排列）
-func GetSectionsByGuideID(guideID string) ([]model.GuideSection, error) {
-	var sections []model.GuideSection
+// GetDaysByGuideID 获取攻略的所有每日行程（含行程项）
+func GetDaysByGuideID(guideID string) ([]model.GuideSection, error) {
+	var days []model.GuideSection
 	err := database.DB.Where("guide_id = ?", guideID).
-		Order("sort_order asc").Find(&sections).Error
-	return sections, err
-}
-
-// CreateSection 创建攻略板块
-func CreateSection(section *model.GuideSection) error {
-	return database.DB.Create(section).Error
-}
-
-// UpdateSection 更新攻略板块
-func UpdateSection(id string, updates map[string]interface{}) error {
-	return database.DB.Model(&model.GuideSection{}).Where("id = ?", id).Updates(updates).Error
-}
-
-// DeleteSection 删除攻略板块
-func DeleteSection(id string) error {
-	return database.DB.Where("id = ?", id).Delete(&model.GuideSection{}).Error
-}
-
-// BatchCreateSections 批量创建板块
-func BatchCreateSections(sections []model.GuideSection) error {
-	return database.DB.Create(&sections).Error
-}
-
-// ReorderSections 重新排序板块
-func ReorderSections(guideID string, sectionIDs []string) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
-		for i, id := range sectionIDs {
-			if err := tx.Model(&model.GuideSection{}).Where("id = ? AND guide_id = ?", id, guideID).
-				Update("sort_order", i+1).Error; err != nil {
-				return err
-			}
+		Order("day_number asc").Find(&days).Error
+	if err != nil {
+		return nil, err
+	}
+	// 批量查询每个天的行程项
+	dayIDs := make([]string, len(days))
+	for i, d := range days {
+		dayIDs[i] = d.ID
+	}
+	if len(dayIDs) > 0 {
+		var items []model.GuideDayItem
+		database.DB.Where("day_id IN ?", dayIDs).Order("created_at asc").Find(&items)
+		itemMap := make(map[string][]model.GuideDayItem)
+		for _, it := range items {
+			itemMap[it.DayID] = append(itemMap[it.DayID], it)
 		}
-		return nil
+		for i := range days {
+			days[i].Items = itemMap[days[i].ID]
+		}
+	}
+	return days, nil
+}
+
+// GetDayByID 获取某天行程
+func GetDayByID(id string) (*model.GuideSection, error) {
+	var day model.GuideSection
+	err := database.DB.First(&day, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &day, nil
+}
+
+// GetNextDayNumber 获取攻略的下一个天数序号
+func GetNextDayNumber(guideID string) (int, error) {
+	var maxDay int
+	err := database.DB.Model(&model.GuideSection{}).
+		Where("guide_id = ?", guideID).
+		Select("COALESCE(MAX(day_number), 0)").
+		Scan(&maxDay).Error
+	return maxDay + 1, err
+}
+
+// CreateDay 创建每日行程（自动分配 DayNumber）
+func CreateDay(day *model.GuideSection) error {
+	nextNum, err := GetNextDayNumber(day.GuideID)
+	if err != nil {
+		return err
+	}
+	day.DayNumber = nextNum
+	return database.DB.Create(day).Error
+}
+
+// DeleteDay 删除每日行程（级联删除行程项）
+func DeleteDay(id string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("day_id = ?", id).Delete(&model.GuideDayItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&model.GuideSection{}, "id = ?", id).Error
 	})
+}
+
+// ==================== GuideDayItem（行程项） ====================
+
+// CreateDayItem 创建行程项
+func CreateDayItem(item *model.GuideDayItem) error {
+	return database.DB.Create(item).Error
+}
+
+// UpdateDayItem 更新行程项
+func UpdateDayItem(id string, updates map[string]interface{}) error {
+	return database.DB.Model(&model.GuideDayItem{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteDayItem 删除行程项
+func DeleteDayItem(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&model.GuideDayItem{}).Error
+}
+
+// GetDayItemByID 获取行程项
+func GetDayItemByID(id string) (*model.GuideDayItem, error) {
+	var item model.GuideDayItem
+	err := database.DB.First(&item, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+// GetItemsByDayID 获取某天的所有行程项
+func GetItemsByDayID(dayID string) ([]model.GuideDayItem, error) {
+	var items []model.GuideDayItem
+	err := database.DB.Where("day_id = ?", dayID).
+		Order("created_at asc").Find(&items).Error
+	return items, err
 }

@@ -6,32 +6,47 @@ import (
 	"time"
 )
 
-// CreateGuideReq 创建攻略请求 — 包含攻略基本信息 + 板块列表
+// ==================== 创建攻略 ====================
+
+// CreateGuideReq 创建攻略请求 — 包含攻略基本信息，可选每日行程
+// 不传 Days 时自动创建第1天空天
 type CreateGuideReq struct {
-	Title           string             `json:"title" binding:"required"`
-	CoverImage      string             `json:"coverImage" binding:"required"`
-	Destination     string             `json:"destination" binding:"required"`
-	Summary         string             `json:"summary" binding:"required"`
-	BudgetMin       *float64           `json:"budgetMin"`
-	BudgetMax       *float64           `json:"budgetMax"`
-	BestSeason      string             `json:"bestSeason"`
-	RecommendedDays *int               `json:"recommendedDays"`
-	Tags            string             `json:"tags"`
-	Difficulty      string             `json:"difficulty"`
-	CrowdType       string             `json:"crowdType"`
-	VideoURL        string             `json:"videoUrl"`
-	Images          string             `json:"images"`
-	IsOriginal      int                `json:"isOriginal"`
-	Status          int                `json:"status"` // 0草稿 / 1已发布
-	Sections        []CreateSectionReq `json:"sections" binding:"required,min=1"`
+	Title           string   `json:"title" binding:"required"`
+	CoverImage      string   `json:"coverImage" binding:"required"`
+	Destination     string   `json:"destination" binding:"required"`
+	Summary         string   `json:"summary" binding:"required"`
+	BudgetMin       *float64 `json:"budgetMin"`
+	BudgetMax       *float64 `json:"budgetMax"`
+	BestSeason      string   `json:"bestSeason"`
+	RecommendedDays *int     `json:"recommendedDays"`
+	Tags            string   `json:"tags"`
+	Difficulty      string   `json:"difficulty"`
+	CrowdType       string   `json:"crowdType"`
+	IsOriginal      int      `json:"isOriginal"`
+	Status          int      `json:"status"` // 0草稿 / 1已发布
+	Days            []DayReq `json:"days"`   // 可选的每日行程（不传则自动创建第1天）
 }
 
-// CreateSectionReq 创建板块请求
-type CreateSectionReq struct {
-	SectionType string `json:"sectionType" binding:"required"`
-	Title       string `json:"title" binding:"required"`
-	Content     string `json:"content" binding:"required"`
+// DayReq 创建每日行程请求
+type DayReq struct {
+	Date  *time.Time   `json:"date"`  // 当天的日期（可选）
+	Title string       `json:"title"` // 标题（如"第一天：出发"）
+	Items []DayItemReq `json:"items"` // 当天的行程项
 }
+
+// DayItemReq 创建行程项请求
+type DayItemReq struct {
+	SectionType string     `json:"sectionType" binding:"required"`
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	StartTime   *time.Time `json:"startTime"`
+	EndTime     *time.Time `json:"endTime"`
+	Latitude    *float64   `json:"latitude"`
+	Longitude   *float64   `json:"longitude"`
+	Address     string     `json:"address"`
+}
+
+// ==================== 更新攻略 ====================
 
 // UpdateGuideReq 更新攻略请求（所有字段可选）
 type UpdateGuideReq struct {
@@ -46,8 +61,6 @@ type UpdateGuideReq struct {
 	Tags            *string  `json:"tags"`
 	Difficulty      *string  `json:"difficulty"`
 	CrowdType       *string  `json:"crowdType"`
-	VideoURL        *string  `json:"videoUrl"`
-	Images          *string  `json:"images"`
 	IsOriginal      *int     `json:"isOriginal"`
 	Status          *int     `json:"status"`
 }
@@ -90,20 +103,16 @@ func ValidateCreateGuideReq(req *CreateGuideReq) *ValidationError {
 	if req.Status != 0 && req.Status != 1 {
 		return &ValidationError{Field: "status", Msg: "状态值无效"}
 	}
-	// sections: 至少 1 个板块，且每个板块的 type/title/content 不能为空
-	if len(req.Sections) == 0 {
-		return &ValidationError{Field: "sections", Msg: "至少需要1个内容板块"}
-	}
-	for i, sec := range req.Sections {
-		if !ValidSectionTypes[sec.SectionType] {
-			return &ValidationError{Field: fmt.Sprintf("sections[%d].sectionType", i),
-				Msg: fmt.Sprintf("无效的板块类型: %s", sec.SectionType)}
-		}
-		if strings.TrimSpace(sec.Title) == "" {
-			return &ValidationError{Field: fmt.Sprintf("sections[%d].title", i), Msg: "板块标题不能为空"}
-		}
-		if strings.TrimSpace(sec.Content) == "" {
-			return &ValidationError{Field: fmt.Sprintf("sections[%d].content", i), Msg: "板块内容不能为空"}
+	// days: 如果有传，校验每项
+	for i, d := range req.Days {
+		for j, it := range d.Items {
+			if !ValidSectionTypes[it.SectionType] {
+				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].sectionType", i, j),
+					Msg: fmt.Sprintf("无效的板块类型: %s", it.SectionType)}
+			}
+			if strings.TrimSpace(it.Title) == "" {
+				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].title", i, j), Msg: "行程项标题不能为空"}
+			}
 		}
 	}
 	return nil
@@ -136,8 +145,6 @@ type GuideFeedItem struct {
 	Tags            string    `json:"tags"`
 	Difficulty      string    `json:"difficulty"`
 	CrowdType       string    `json:"crowdType"`
-	VideoURL        string    `json:"videoUrl"`
-	Images          string    `json:"images"`
 	IsOriginal      int       `json:"isOriginal"`
 	ViewCount       int       `json:"viewCount"`
 	LikeCount       int       `json:"likeCount"`
