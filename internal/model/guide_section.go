@@ -61,6 +61,7 @@ type GuideDayItem struct {
 	Latitude    *float64   `gorm:"type:decimal(10,7)" json:"latitude"`
 	Longitude   *float64   `gorm:"type:decimal(10,7)" json:"longitude"`
 	Address     string     `gorm:"size:255" json:"address"`
+	Images      string     `gorm:"type:text" json:"images"` // 图片URL列表（JSON数组，最多9张）
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 

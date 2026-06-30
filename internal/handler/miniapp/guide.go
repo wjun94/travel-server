@@ -1,6 +1,7 @@
 package miniapp
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -100,6 +101,7 @@ func CreateGuide(c *gin.Context) {
 					Longitude:   it.Longitude,
 					Address:     it.Address,
 				}
+				_ = jsonMarshalImages(it.Images, &items[j].Images)
 			}
 			day.Items = items
 			days = append(days, day)
@@ -334,11 +336,29 @@ func CreateGuideDayItem(c *gin.Context) {
 		Longitude:   req.Longitude,
 		Address:     req.Address,
 	}
+	_ = jsonMarshalImages(req.Images, &item.Images)
 	if err := repository.CreateDayItem(&item); err != nil {
 		response.Fail(c, 500, "添加行程项失败")
 		return
 	}
 	response.Success(c, item)
+}
+
+// jsonMarshalImages 将 []string 序列化为 JSON 字符串存入 model
+func jsonMarshalImages(src []string, dst *string) error {
+	if len(src) == 0 {
+		*dst = ""
+		return nil
+	}
+	if len(src) > 9 {
+		src = src[:9]
+	}
+	data, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	*dst = string(data)
+	return nil
 }
 
 // UpdateGuideDayItem 更新行程项

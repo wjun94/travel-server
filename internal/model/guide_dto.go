@@ -44,6 +44,7 @@ type DayItemReq struct {
 	Latitude    *float64   `json:"latitude"`
 	Longitude   *float64   `json:"longitude"`
 	Address     string     `json:"address"`
+	Images      []string   `json:"images"` // 图片URL数组，最多9张
 }
 
 // ==================== 更新攻略 ====================
