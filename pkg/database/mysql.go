@@ -47,6 +47,7 @@ func InitMySQL() {
 		&model.User{},
 		&model.Guide{},
 		&model.GuideSection{},
+		&model.GuideDayItem{},
 		&model.Trip{},
 		&model.TripDay{},
 		&model.TripItem{},

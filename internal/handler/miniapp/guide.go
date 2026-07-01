@@ -2,6 +2,7 @@ package miniapp
 
 import (
 	"encoding/json"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/pkg/response"
+	"travel-server/pkg/snowflake"
 
 	"github.com/gin-gonic/gin"
 )
@@ -65,6 +67,7 @@ func CreateGuide(c *gin.Context) {
 	}
 	// 组装 Guide
 	guide := model.Guide{
+		ID:              snowflake.GenerateID(),
 		UserID:          c.MustGet("userID").(string),
 		Title:           req.Title,
 		CoverImage:      req.CoverImage,
@@ -118,7 +121,8 @@ func CreateGuide(c *gin.Context) {
 
 	// 事务写入
 	if err := repository.CreateGuideWithDays(&guide, days); err != nil {
-		response.Fail(c, 500, "创建失败")
+		log.Printf("创建攻略失败: %v", err)
+		response.Fail(c, 500, "创建失败: "+err.Error())
 		return
 	}
 	response.Success(c, gin.H{"id": guide.ID})

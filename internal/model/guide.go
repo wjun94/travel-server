@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 	"travel-server/pkg/snowflake"
 
@@ -34,6 +35,7 @@ type Guide struct {
 // BeforeCreate GORM 钩子
 func (g *Guide) BeforeCreate() error {
 	if g.ID == "" {
+		fmt.Println("Generating ID:-------------", snowflake.GenerateID())
 		g.ID = snowflake.GenerateID()
 	}
 	return nil

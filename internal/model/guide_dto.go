@@ -14,7 +14,7 @@ type CreateGuideReq struct {
 	Title           string   `json:"title" binding:"required"`
 	CoverImage      string   `json:"coverImage" binding:"required"`
 	Destination     string   `json:"destination" binding:"required"`
-	Summary         string   `json:"summary" binding:"required"`
+	Summary         string   `json:"summary"`
 	BudgetMin       *float64 `json:"budgetMin"`
 	BudgetMax       *float64 `json:"budgetMax"`
 	BestSeason      string   `json:"bestSeason"`
@@ -85,10 +85,10 @@ func ValidateCreateGuideReq(req *CreateGuideReq) *ValidationError {
 	if strings.TrimSpace(req.Destination) == "" {
 		return &ValidationError{Field: "destination", Msg: "目的地不能为空"}
 	}
-	// summary: 不能为空，长度 10~500
+	// summary: 非必填，填写时长度不超过150
 	s := strings.TrimSpace(req.Summary)
-	if len(s) < 10 || len(s) > 500 {
-		return &ValidationError{Field: "summary", Msg: "摘要长度需在10~500字符之间"}
+	if s != "" && len(s) > 150 {
+		return &ValidationError{Field: "summary", Msg: "摘要长度不能超过150字符"}
 	}
 	// budget_min / budget_max: 若填写，必须为正数，且 min ≤ max
 	if req.BudgetMin != nil && req.BudgetMax != nil {
