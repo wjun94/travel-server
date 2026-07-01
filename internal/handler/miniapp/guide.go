@@ -92,14 +92,17 @@ func CreateGuide(c *gin.Context) {
 			items := make([]model.GuideDayItem, len(d.Items))
 			for j, it := range d.Items {
 				items[j] = model.GuideDayItem{
-					SectionType: it.SectionType,
-					Title:       it.Title,
-					Description: it.Description,
-					StartTime:   it.StartTime,
-					EndTime:     it.EndTime,
-					Latitude:    it.Latitude,
-					Longitude:   it.Longitude,
-					Address:     it.Address,
+					SectionType:     it.SectionType,
+					Title:           it.Title,
+					Description:     it.Description,
+					StartTime:       it.StartTime,
+					EndTime:         it.EndTime,
+					Latitude:        it.Latitude,
+					Longitude:       it.Longitude,
+					Address:         it.Address,
+					NeedReservation: it.NeedReservation,
+					TicketChannel:   it.TicketChannel,
+					TicketPrice:     it.TicketPrice,
 				}
 				_ = jsonMarshalImages(it.Images, &items[j].Images)
 			}

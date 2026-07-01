@@ -36,15 +36,18 @@ type DayReq struct {
 
 // DayItemReq 创建行程项请求
 type DayItemReq struct {
-	SectionType string     `json:"sectionType" binding:"required"`
-	Title       string     `json:"title" binding:"required"`
-	Description string     `json:"description"`
-	StartTime   *time.Time `json:"startTime"`
-	EndTime     *time.Time `json:"endTime"`
-	Latitude    *float64   `json:"latitude"`
-	Longitude   *float64   `json:"longitude"`
-	Address     string     `json:"address"`
-	Images      []string   `json:"images"` // 图片URL数组，最多9张
+	SectionType     string     `json:"sectionType" binding:"required"`
+	Title           string     `json:"title" binding:"required"`
+	Description     string     `json:"description"`
+	StartTime       *time.Time `json:"startTime"`
+	EndTime         *time.Time `json:"endTime"`
+	Latitude        *float64   `json:"latitude"`
+	Longitude       *float64   `json:"longitude"`
+	Address         string     `json:"address"`
+	Images          []string   `json:"images"`          // 图片URL数组，最多9张
+	NeedReservation bool       `json:"needReservation"` // 是否需要预约/购票
+	TicketChannel   string     `json:"ticketChannel"`   // 购票渠道：公众号/小程序/线下
+	TicketPrice     *float64   `json:"ticketPrice"`     // 票价，nil=未填写，0=免费，>0=付费
 }
 
 // ==================== 更新攻略 ====================

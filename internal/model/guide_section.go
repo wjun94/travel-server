@@ -51,18 +51,21 @@ func (gs *GuideSection) BeforeCreate() error {
 
 // GuideDayItem 每日行程项表 — 某一天的具体活动项
 type GuideDayItem struct {
-	ID          string     `gorm:"primaryKey" json:"id"`
-	DayID       string     `gorm:"size:191;index" json:"dayId"`  // 所属天的ID
-	SectionType string     `gorm:"size:30" json:"sectionType"`   // 板块类型
-	Title       string     `gorm:"size:200" json:"title"`        // 活动标题
-	Description string     `gorm:"type:text" json:"description"` // 活动描述
-	StartTime   *time.Time `json:"startTime"`                    // 开始时间
-	EndTime     *time.Time `json:"endTime"`                      // 结束时间
-	Latitude    *float64   `gorm:"type:decimal(10,7)" json:"latitude"`
-	Longitude   *float64   `gorm:"type:decimal(10,7)" json:"longitude"`
-	Address     string     `gorm:"size:255" json:"address"`
-	Images      string     `gorm:"type:text" json:"images"` // 图片URL列表（JSON数组，最多9张）
-	CreatedAt   time.Time  `json:"createdAt"`
+	ID              string     `gorm:"primaryKey" json:"id"`
+	DayID           string     `gorm:"size:191;index" json:"dayId"`  // 所属天的ID
+	SectionType     string     `gorm:"size:30" json:"sectionType"`   // 板块类型
+	Title           string     `gorm:"size:200" json:"title"`        // 活动标题
+	Description     string     `gorm:"type:text" json:"description"` // 活动描述
+	StartTime       *time.Time `json:"startTime"`                    // 开始时间
+	EndTime         *time.Time `json:"endTime"`                      // 结束时间
+	Latitude        *float64   `gorm:"type:decimal(10,7)" json:"latitude"`
+	Longitude       *float64   `gorm:"type:decimal(10,7)" json:"longitude"`
+	Address         string     `gorm:"size:255" json:"address"`
+	Images          string     `gorm:"type:text" json:"images"`               // 图片URL列表（JSON数组，最多9张）
+	NeedReservation bool       `gorm:"default:false" json:"needReservation"`  // 是否需要预约/购票
+	TicketChannel   string     `gorm:"size:50" json:"ticketChannel"`          // 购票渠道：公众号/小程序/线下
+	TicketPrice     *float64   `gorm:"type:decimal(10,2)" json:"ticketPrice"` // 票价，nil=未填写，0=免费，>0=付费
+	CreatedAt       time.Time  `json:"createdAt"`
 }
 
 // BeforeCreate GORM 钩子
