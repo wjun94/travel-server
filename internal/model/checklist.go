@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Checklist 备忘清单
@@ -18,7 +20,7 @@ type Checklist struct {
 }
 
 // BeforeCreate GORM 钩子
-func (cl *Checklist) BeforeCreate() error {
+func (cl *Checklist) BeforeCreate(tx *gorm.DB) error {
 	if cl.ID == "" {
 		cl.ID = snowflake.GenerateID()
 	}
@@ -34,7 +36,7 @@ type ChecklistItem struct {
 }
 
 // BeforeCreate GORM 钩子
-func (ci *ChecklistItem) BeforeCreate() error {
+func (ci *ChecklistItem) BeforeCreate(tx *gorm.DB) error {
 	if ci.ID == "" {
 		ci.ID = snowflake.GenerateID()
 	}

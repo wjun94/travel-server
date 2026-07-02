@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Message 消息（私聊或系统通知）
@@ -18,7 +20,7 @@ type Message struct {
 }
 
 // BeforeCreate GORM 钩子
-func (m *Message) BeforeCreate() error {
+func (m *Message) BeforeCreate(tx *gorm.DB) error {
 	if m.ID == "" {
 		m.ID = snowflake.GenerateID()
 	}

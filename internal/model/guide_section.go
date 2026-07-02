@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // SectionType 每日行程项类型常量
@@ -42,7 +44,7 @@ type GuideSection struct {
 }
 
 // BeforeCreate GORM 钩子
-func (gs *GuideSection) BeforeCreate() error {
+func (gs *GuideSection) BeforeCreate(tx *gorm.DB) error {
 	if gs.ID == "" {
 		gs.ID = snowflake.GenerateID()
 	}
@@ -69,7 +71,7 @@ type GuideDayItem struct {
 }
 
 // BeforeCreate GORM 钩子
-func (gdi *GuideDayItem) BeforeCreate() error {
+func (gdi *GuideDayItem) BeforeCreate(tx *gorm.DB) error {
 	if gdi.ID == "" {
 		gdi.ID = snowflake.GenerateID()
 	}

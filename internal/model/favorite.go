@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Favorite 收藏表
@@ -16,7 +18,7 @@ type Favorite struct {
 }
 
 // BeforeCreate GORM 钩子
-func (f *Favorite) BeforeCreate() error {
+func (f *Favorite) BeforeCreate(tx *gorm.DB) error {
 	if f.ID == "" {
 		f.ID = snowflake.GenerateID()
 	}

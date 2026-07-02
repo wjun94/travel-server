@@ -79,7 +79,7 @@ func UpdateRole(c *gin.Context) {
 	}
 	role, err := repository.GetRoleByID(id)
 	if err != nil {
-		response.Fail(c, 404, "角色不存在")
+		response.Fail(c, 401, "角色不存在")
 		return
 	}
 	if req.Name != "" {

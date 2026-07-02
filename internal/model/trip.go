@@ -28,7 +28,7 @@ type Trip struct {
 }
 
 // BeforeCreate GORM 钩子
-func (t *Trip) BeforeCreate() error {
+func (t *Trip) BeforeCreate(tx *gorm.DB) error {
 	if t.ID == "" {
 		t.ID = snowflake.GenerateID()
 	}
@@ -46,7 +46,7 @@ type TripMember struct {
 }
 
 // BeforeCreate GORM 钩子
-func (tm *TripMember) BeforeCreate() error {
+func (tm *TripMember) BeforeCreate(tx *gorm.DB) error {
 	if tm.ID == "" {
 		tm.ID = snowflake.GenerateID()
 	}

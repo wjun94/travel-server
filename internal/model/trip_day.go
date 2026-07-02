@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // TripDay 行程日表
@@ -19,7 +21,7 @@ type TripDay struct {
 }
 
 // BeforeCreate GORM 钩子
-func (td *TripDay) BeforeCreate() error {
+func (td *TripDay) BeforeCreate(tx *gorm.DB) error {
 	if td.ID == "" {
 		td.ID = snowflake.GenerateID()
 	}

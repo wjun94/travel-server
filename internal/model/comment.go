@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Comment 评论表
@@ -19,7 +21,7 @@ type Comment struct {
 }
 
 // BeforeCreate GORM 钩子
-func (c *Comment) BeforeCreate() error {
+func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 	if c.ID == "" {
 		c.ID = snowflake.GenerateID()
 	}

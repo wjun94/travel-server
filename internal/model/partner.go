@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Partner 搭子组队信息
@@ -23,7 +25,7 @@ type Partner struct {
 }
 
 // BeforeCreate GORM 钩子
-func (p *Partner) BeforeCreate() error {
+func (p *Partner) BeforeCreate(tx *gorm.DB) error {
 	if p.ID == "" {
 		p.ID = snowflake.GenerateID()
 	}
@@ -41,7 +43,7 @@ type PartnerApplication struct {
 }
 
 // BeforeCreate GORM 钩子
-func (pa *PartnerApplication) BeforeCreate() error {
+func (pa *PartnerApplication) BeforeCreate(tx *gorm.DB) error {
 	if pa.ID == "" {
 		pa.ID = snowflake.GenerateID()
 	}

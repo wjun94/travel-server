@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Accounting 旅行记账
@@ -20,7 +22,7 @@ type Accounting struct {
 }
 
 // BeforeCreate GORM 钩子
-func (a *Accounting) BeforeCreate() error {
+func (a *Accounting) BeforeCreate(tx *gorm.DB) error {
 	if a.ID == "" {
 		a.ID = snowflake.GenerateID()
 	}

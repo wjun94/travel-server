@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Footprint 用户足迹（点亮城市）
@@ -18,7 +20,7 @@ type Footprint struct {
 }
 
 // BeforeCreate GORM 钩子
-func (f *Footprint) BeforeCreate() error {
+func (f *Footprint) BeforeCreate(tx *gorm.DB) error {
 	if f.ID == "" {
 		f.ID = snowflake.GenerateID()
 	}

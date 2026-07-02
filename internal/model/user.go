@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // User 用户表
@@ -19,7 +21,7 @@ type User struct {
 }
 
 // BeforeCreate GORM 钩子：创建前自动生成 8 位雪花短 ID
-func (u *User) BeforeCreate() error {
+func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = snowflake.GenerateShortID(8)
 	}

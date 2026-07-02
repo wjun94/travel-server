@@ -65,7 +65,7 @@ func GetAdminInfo(c *gin.Context) {
 	adminID, _ := c.Get("adminUserID") // AdminOnly 中间件注入
 	user, err := repository.GetAdminUserByID(adminID.(string))
 	if err != nil {
-		response.Fail(c, 404, "用户不存在")
+		response.Fail(c, 401, "用户不存在")
 		return
 	}
 	response.Success(c, gin.H{

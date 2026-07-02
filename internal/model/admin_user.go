@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // AdminUser 后台管理用户
@@ -19,7 +21,7 @@ type AdminUser struct {
 }
 
 // BeforeCreate GORM 钩子：创建前自动生成 6 位雪花短 ID
-func (a *AdminUser) BeforeCreate() error {
+func (a *AdminUser) BeforeCreate(tx *gorm.DB) error {
 	if a.ID == "" {
 		a.ID = snowflake.GenerateShortID(6)
 	}

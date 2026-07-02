@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // Recommendation 后台推荐内容（如 TOP 民宿）
@@ -20,7 +22,7 @@ type Recommendation struct {
 }
 
 // BeforeCreate GORM 钩子
-func (r *Recommendation) BeforeCreate() error {
+func (r *Recommendation) BeforeCreate(tx *gorm.DB) error {
 	if r.ID == "" {
 		r.ID = snowflake.GenerateID()
 	}

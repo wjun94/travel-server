@@ -84,7 +84,7 @@ func GetUserInfo(c *gin.Context) {
 	uid := c.MustGet("userID").(string)
 	user, err := repository.GetUserByID(uid)
 	if err != nil {
-		response.Fail(c, 404, "用户不存在")
+		response.Fail(c, 401, "用户不存在")
 		return
 	}
 	response.Success(c, user)

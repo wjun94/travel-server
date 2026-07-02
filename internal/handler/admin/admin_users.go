@@ -82,7 +82,7 @@ func UpdateAdminUser(c *gin.Context) {
 	}
 	user, err := repository.GetAdminUserByID(id)
 	if err != nil {
-		response.Fail(c, 404, "用户不存在")
+		response.Fail(c, 401, "用户不存在")
 		return
 	}
 	if req.RoleID != "" {

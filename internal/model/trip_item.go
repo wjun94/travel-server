@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"travel-server/pkg/snowflake"
+
+	"gorm.io/gorm"
 )
 
 // 行程项类型常量
@@ -51,7 +53,7 @@ type TripItem struct {
 }
 
 // BeforeCreate GORM 钩子
-func (ti *TripItem) BeforeCreate() error {
+func (ti *TripItem) BeforeCreate(tx *gorm.DB) error {
 	if ti.ID == "" {
 		ti.ID = snowflake.GenerateID()
 	}
