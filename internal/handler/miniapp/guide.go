@@ -106,6 +106,13 @@ func CreateGuide(c *gin.Context) {
 					NeedReservation: it.NeedReservation,
 					TicketChannel:   it.TicketChannel,
 					TicketPrice:     it.TicketPrice,
+					TransportMode:   it.TransportMode,
+					StartPoint:      it.StartPoint,
+					EndPoint:        it.EndPoint,
+					StartLat:        it.StartLat,
+					StartLng:        it.StartLng,
+					EndLat:          it.EndLat,
+					EndLng:          it.EndLng,
 				}
 				_ = jsonMarshalImages(it.Images, &items[j].Images)
 			}

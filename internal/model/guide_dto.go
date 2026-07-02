@@ -36,18 +36,25 @@ type DayReq struct {
 
 // DayItemReq 创建行程项请求
 type DayItemReq struct {
-	SectionType     string     `json:"sectionType" binding:"required"`
-	Title           string     `json:"title" binding:"required"`
-	Description     string     `json:"description"`
-	StartTime       *time.Time `json:"startTime"`
-	EndTime         *time.Time `json:"endTime"`
-	Latitude        *float64   `json:"latitude"`
-	Longitude       *float64   `json:"longitude"`
-	Address         string     `json:"address"`
-	Images          []string   `json:"images"`          // 图片URL数组，最多9张
-	NeedReservation bool       `json:"needReservation"` // 是否需要预约/购票
-	TicketChannel   string     `json:"ticketChannel"`   // 购票渠道：公众号/小程序/线下
-	TicketPrice     *float64   `json:"ticketPrice"`     // 票价，nil=未填写，0=免费，>0=付费
+	SectionType     string   `json:"sectionType" binding:"required"`
+	Title           string   `json:"title" binding:"required"`
+	Description     string   `json:"description"` // 活动描述/备注
+	StartTime       string   `json:"startTime"`   // 开始时间（直接保存前端字符串）
+	EndTime         string   `json:"endTime"`     // 结束时间（直接保存前端字符串）
+	Latitude        *float64 `json:"latitude"`
+	Longitude       *float64 `json:"longitude"`
+	Address         string   `json:"address"`
+	Images          []string `json:"images"`          // 图片URL数组，最多9张
+	NeedReservation bool     `json:"needReservation"` // 是否需要预约/购票
+	TicketChannel   string   `json:"ticketChannel"`   // 购票渠道：公众号/小程序/线下
+	TicketPrice     *float64 `json:"ticketPrice"`     // 票价，nil=未填写，0=免费，>0=付费
+	TransportMode   string   `json:"transportMode"`   // 交通方式（仅transport类型使用）
+	StartPoint      string   `json:"startPoint"`      // 起点名称（仅transport类型使用）
+	EndPoint        string   `json:"endPoint"`        // 终点名称（仅transport类型使用）
+	StartLat        *float64 `json:"startLat"`        // 起点纬度
+	StartLng        *float64 `json:"startLng"`        // 起点经度
+	EndLat          *float64 `json:"endLat"`          // 终点纬度
+	EndLng          *float64 `json:"endLng"`          // 终点经度
 }
 
 // ==================== 更新攻略 ====================
@@ -116,6 +123,11 @@ func ValidateCreateGuideReq(req *CreateGuideReq) *ValidationError {
 			}
 			if strings.TrimSpace(it.Title) == "" {
 				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].title", i, j), Msg: "行程项标题不能为空"}
+			}
+			// 交通类型需校验交通方式
+			if it.SectionType == "transport" && !ValidTransportModes[it.TransportMode] {
+				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].transportMode", i, j),
+					Msg: fmt.Sprintf("无效的交通方式: %s", it.TransportMode)}
 			}
 		}
 	}
