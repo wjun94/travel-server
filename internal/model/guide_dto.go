@@ -37,7 +37,7 @@ type DayReq struct {
 // DayItemReq 创建行程项请求
 type DayItemReq struct {
 	SectionType     string   `json:"sectionType" binding:"required"`
-	Title           string   `json:"title" binding:"required"`
+	Title           string   `json:"title"`
 	Description     string   `json:"description"` // 活动描述/备注
 	StartTime       string   `json:"startTime"`   // 开始时间（直接保存前端字符串）
 	EndTime         string   `json:"endTime"`     // 结束时间（直接保存前端字符串）
@@ -120,9 +120,6 @@ func ValidateCreateGuideReq(req *CreateGuideReq) *ValidationError {
 			if !ValidSectionTypes[it.SectionType] {
 				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].sectionType", i, j),
 					Msg: fmt.Sprintf("无效的板块类型: %s", it.SectionType)}
-			}
-			if strings.TrimSpace(it.Title) == "" {
-				return &ValidationError{Field: fmt.Sprintf("days[%d].items[%d].title", i, j), Msg: "行程项标题不能为空"}
 			}
 			// 交通类型需校验交通方式
 			if it.SectionType == "transport" && !ValidTransportModes[it.TransportMode] {
