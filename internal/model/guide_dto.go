@@ -29,7 +29,7 @@ type CreateGuideReq struct {
 
 // DayReq 创建每日行程请求
 type DayReq struct {
-	Date  *time.Time   `json:"date"`  // 当天的日期（可选）
+	Date  string       `json:"date"`  // 当天的日期（可选，直接保存前端字符串）
 	Title string       `json:"title"` // 标题（如"第一天：出发"）
 	Items []DayItemReq `json:"items"` // 当天的行程项
 }

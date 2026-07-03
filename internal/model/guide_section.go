@@ -55,12 +55,12 @@ var ValidTransportModes = map[string]bool{
 // GuideSection 攻略每日行程表 — 代表攻略中的一天
 // DayNumber 自动从1开始，无需手动排序
 type GuideSection struct {
-	ID        string     `gorm:"primaryKey" json:"id"`
-	GuideID   string     `gorm:"size:191;index" json:"guideId"` // 所属攻略
-	DayNumber int        `gorm:"not null" json:"dayNumber"`     // 第几天 (1,2,3...)
-	Date      *time.Time `json:"date"`                          // 当天的日期（可选）
-	Title     string     `gorm:"size:100" json:"title"`         // 标题（如"第一天：出发"）
-	CreatedAt time.Time  `json:"createdAt"`
+	ID        string    `gorm:"primaryKey" json:"id"`
+	GuideID   string    `gorm:"size:191;index" json:"guideId"` // 所属攻略
+	DayNumber int       `gorm:"not null" json:"dayNumber"`     // 第几天 (1,2,3...)
+	Date      string    `gorm:"size:50" json:"date"`           // 当天的日期（直接保存前端字符串）
+	Title     string    `gorm:"size:100" json:"title"`         // 标题（如"第一天：出发"）
+	CreatedAt time.Time `json:"createdAt"`
 
 	Items []GuideDayItem `gorm:"foreignKey:DayID" json:"items,omitempty"` // 当天行程项列表
 }
@@ -85,17 +85,17 @@ type GuideDayItem struct {
 	Latitude        *float64  `gorm:"type:decimal(10,7)" json:"latitude"`
 	Longitude       *float64  `gorm:"type:decimal(10,7)" json:"longitude"`
 	Address         string    `gorm:"size:255" json:"address"`
-	Images          string    `gorm:"type:text" json:"images"`               // 图片URL列表（JSON数组，最多9张）
-	NeedReservation bool      `gorm:"default:false" json:"needReservation"`  // 是否需要预约/购票
-	TicketChannel   string    `gorm:"size:50" json:"ticketChannel"`          // 购票渠道：公众号/小程序/线下
-	TicketPrice     *float64  `gorm:"type:decimal(10,2)" json:"ticketPrice"` // 票价，nil=未填写，0=免费，>0=付费
-	TransportMode   string    `gorm:"size:30" json:"transportMode"`          // 交通方式（仅transport类型使用）
-	StartPoint      string    `gorm:"size:255" json:"startPoint"`            // 起点名称（仅transport类型使用）
-	EndPoint        string    `gorm:"size:255" json:"endPoint"`              // 终点名称（仅transport类型使用）
-	StartLat        *float64  `gorm:"type:decimal(10,7)" json:"startLat"`    // 起点纬度
-	StartLng        *float64  `gorm:"type:decimal(10,7)" json:"startLng"`    // 起点经度
-	EndLat          *float64  `gorm:"type:decimal(10,7)" json:"endLat"`      // 终点纬度
-	EndLng          *float64  `gorm:"type:decimal(10,7)" json:"endLng"`      // 终点经度
+	Images          []string  `gorm:"type:text;serializer:json" json:"images"` // 图片URL列表（JSON数组，最多9张）
+	NeedReservation bool      `gorm:"default:false" json:"needReservation"`    // 是否需要预约/购票
+	TicketChannel   string    `gorm:"size:50" json:"ticketChannel"`            // 购票渠道：公众号/小程序/线下
+	TicketPrice     *float64  `gorm:"type:decimal(10,2)" json:"ticketPrice"`   // 票价，nil=未填写，0=免费，>0=付费
+	TransportMode   string    `gorm:"size:30" json:"transportMode"`            // 交通方式（仅transport类型使用）
+	StartPoint      string    `gorm:"size:255" json:"startPoint"`              // 起点名称（仅transport类型使用）
+	EndPoint        string    `gorm:"size:255" json:"endPoint"`                // 终点名称（仅transport类型使用）
+	StartLat        *float64  `gorm:"type:decimal(10,7)" json:"startLat"`      // 起点纬度
+	StartLng        *float64  `gorm:"type:decimal(10,7)" json:"startLng"`      // 起点经度
+	EndLat          *float64  `gorm:"type:decimal(10,7)" json:"endLat"`        // 终点纬度
+	EndLng          *float64  `gorm:"type:decimal(10,7)" json:"endLng"`        // 终点经度
 	CreatedAt       time.Time `json:"createdAt"`
 }
 

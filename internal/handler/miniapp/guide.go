@@ -1,11 +1,9 @@
 package miniapp
 
 import (
-	"encoding/json"
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"travel-server/internal/middleware"
 	"travel-server/internal/model"
@@ -94,6 +92,11 @@ func CreateGuide(c *gin.Context) {
 			// 组装行程项
 			items := make([]model.GuideDayItem, len(d.Items))
 			for j, it := range d.Items {
+				// 图片最多9张
+				images := it.Images
+				if len(images) > 9 {
+					images = images[:9]
+				}
 				items[j] = model.GuideDayItem{
 					SectionType:     it.SectionType,
 					Title:           it.Title,
@@ -103,6 +106,7 @@ func CreateGuide(c *gin.Context) {
 					Latitude:        it.Latitude,
 					Longitude:       it.Longitude,
 					Address:         it.Address,
+					Images:          images,
 					NeedReservation: it.NeedReservation,
 					TicketChannel:   it.TicketChannel,
 					TicketPrice:     it.TicketPrice,
@@ -114,7 +118,6 @@ func CreateGuide(c *gin.Context) {
 					EndLat:          it.EndLat,
 					EndLng:          it.EndLng,
 				}
-				_ = jsonMarshalImages(it.Images, &items[j].Images)
 			}
 			day.Items = items
 			days = append(days, day)
@@ -259,8 +262,8 @@ func CreateGuideDay(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Date  *time.Time `json:"date"`
-		Title string     `json:"title"`
+		Date  string `json:"date"`
+		Title string `json:"title"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -339,6 +342,11 @@ func CreateGuideDayItem(c *gin.Context) {
 		return
 	}
 
+	// 图片最多9张
+	images := req.Images
+	if len(images) > 9 {
+		images = images[:9]
+	}
 	item := model.GuideDayItem{
 		DayID:       dayID,
 		SectionType: req.SectionType,
@@ -349,30 +357,13 @@ func CreateGuideDayItem(c *gin.Context) {
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
 		Address:     req.Address,
+		Images:      images,
 	}
-	_ = jsonMarshalImages(req.Images, &item.Images)
 	if err := repository.CreateDayItem(&item); err != nil {
 		response.Fail(c, 500, "添加行程项失败")
 		return
 	}
 	response.Success(c, item)
-}
-
-// jsonMarshalImages 将 []string 序列化为 JSON 字符串存入 model
-func jsonMarshalImages(src []string, dst *string) error {
-	if len(src) == 0 {
-		*dst = ""
-		return nil
-	}
-	if len(src) > 9 {
-		src = src[:9]
-	}
-	data, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-	*dst = string(data)
-	return nil
 }
 
 // UpdateGuideDayItem 更新行程项
