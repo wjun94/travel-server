@@ -52,7 +52,9 @@ type Config struct {
 
 	// 第三方服务 Key
 	AmapKey        string // 高德地图 Web API Key
-	QWeatherKey    string // 和风天气 API Key
+	QWeatherKey    string // 和风天气PEM
+	QWeatherKID    string // 和风天气凭证ID
+	QWeatherPID    string // 和风天气项目ID
 	DeepSeekApiKey string // DeepSeek API Key
 }
 
@@ -96,6 +98,8 @@ func LoadConfig() {
 
 		AmapKey:        getEnv("AMAP_KEY", ""),
 		QWeatherKey:    getEnv("QWEATHER_KEY", ""),
+		QWeatherKID:    getEnv("QWEATHER_KID", ""),
+		QWeatherPID:    getEnv("QWEATHER_PID", ""),
 		DeepSeekApiKey: getEnv("DEEPSEEK_API_KEY", ""),
 	}
 	// 如果 QWeatherKey 看起来像一个文件路径且文件存在，优先从文件读取密钥内容
