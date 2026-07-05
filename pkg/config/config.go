@@ -4,6 +4,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config 应用配置结构体
@@ -51,6 +52,7 @@ type Config struct {
 
 	// 第三方服务 Key
 	AmapKey        string // 高德地图 Web API Key
+	QWeatherKey    string // 和风天气 API Key
 	DeepSeekApiKey string // DeepSeek API Key
 }
 
@@ -93,7 +95,16 @@ func LoadConfig() {
 		WechatPayNotifyURL:      getEnv("WECHATPAYNOTIFYURL", ""),
 
 		AmapKey:        getEnv("AMAP_KEY", ""),
+		QWeatherKey:    getEnv("QWEATHER_KEY", ""),
 		DeepSeekApiKey: getEnv("DEEPSEEK_API_KEY", ""),
+	}
+	// 如果 QWeatherKey 看起来像一个文件路径且文件存在，优先从文件读取密钥内容
+	if AppConfig.QWeatherKey != "" {
+		if _, err := os.Stat(AppConfig.QWeatherKey); err == nil {
+			if b, err := os.ReadFile(AppConfig.QWeatherKey); err == nil {
+				AppConfig.QWeatherKey = strings.TrimSpace(string(b))
+			}
+		}
 	}
 	AppConfig.SnowflakeMachineID = getEnvInt64("SNOWFLAKE_MACHINE_ID", 1)
 	AppConfig.Env = getEnv("ENV", "development")

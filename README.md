@@ -163,7 +163,8 @@ go run cmd/main.go
 | GET  | /api/v1/feed | 攻略瀑布流 |
 | GET  | /api/v1/nearby | 周边推荐 |
 | GET  | /api/v1/nearby/recommend | 本周 TOP 推荐 |
-| GET  | /api/v1/weather | 天气查询 |
+| GET  | /api/v1/weather | 高德天气查询 |
+| GET  | /api/v1/weather/qweather | 和风天气查询 |
 | GET  | /api/v1/comments | 评论列表 |
 | GET  | /api/v1/comment/replies | 子回复列表 |
 

@@ -12,8 +12,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "travel-server/docs"
-	"travel-server/internal/handler"
 	"travel-server/internal/handler/admin"
+	"travel-server/internal/handler/common"
 	"travel-server/internal/handler/miniapp"
 	"travel-server/internal/middleware"
 	"travel-server/pkg/config"
@@ -49,7 +49,8 @@ func main() {
 		api.GET("/guides", miniapp.GetGuideFeed)              // 攻略瀑布流
 		api.GET("/nearby", miniapp.GetNearby)                 // 周边推荐
 		api.GET("/nearby/recommend", miniapp.GetTopRecommend) // TOP推荐
-		api.GET("/weather", handler.GetWeather)               // 天气查询
+		api.GET("/weather", common.GetWeather)                // 天气查询
+		api.GET("/weather/qweather", common.GetQWeather)      // 天气查询（和风）
 		api.GET("/comments", miniapp.GetComments)             // 评论列表
 		api.GET("/comment/replies", miniapp.GetReplies)       // 子回复列表
 
@@ -159,7 +160,7 @@ func main() {
 	}
 
 	// WebSocket 协同编辑
-	r.GET("/ws", handler.WebSocketHandler)
+	r.GET("/ws", common.WebSocketHandler)
 
 	log.Println("Server running on :", config.AppConfig.ServerPort)
 	r.Run(":" + config.AppConfig.ServerPort)
