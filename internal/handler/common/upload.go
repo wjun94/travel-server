@@ -25,7 +25,7 @@ type UploadResponse struct {
 // @Accept multipart/form-data
 // @Produce json
 // @Param files formData file true "图片文件（支持多选）"
-// @Success 200 {object} utils.Response{data=[]UploadResponse}
+// @Success 200 {object} response.Response{data=[]UploadResponse}
 // @Router /api/v1/upload [post]
 func UploadImages(c *gin.Context) {
 	// 获取当前用户ID（可选，用于记录上传者）
@@ -70,7 +70,7 @@ func UploadImages(c *gin.Context) {
 		}
 
 		// 生成七牛云存储路径：前缀 + 时间戳_随机数_用户ID.扩展名
-		fileName := fmt.Sprintf("%d_%d_%d%s", time.Now().UnixNano(), userID, time.Now().Unix(), ext)
+		fileName := fmt.Sprintf("%d_%s_%d%s", time.Now().UnixNano(), userID, time.Now().Unix(), ext)
 		key := prefix + fileName
 
 		// 保存临时文件
@@ -99,7 +99,7 @@ func UploadImages(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "图片文件"
-// @Success 200 {object} utils.Response{data=UploadResponse}
+// @Success 200 {object} response.Response{data=UploadResponse}
 // @Router /api/v1/upload/single [post]
 func UploadSingleImage(c *gin.Context) {
 	// 类似 UploadImages 但只处理一个文件
@@ -133,7 +133,7 @@ func UploadSingleImage(c *gin.Context) {
 	}
 
 	// 生成文件名
-	fileName := fmt.Sprintf("%d_%d_%d%s", time.Now().UnixNano(), userID, time.Now().Unix(), ext)
+	fileName := fmt.Sprintf("%d_%s_%d%s", time.Now().UnixNano(), userID, time.Now().Unix(), ext)
 	key := prefix + fileName
 
 	// 保存临时文件
@@ -159,7 +159,7 @@ func UploadSingleImage(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param files formData file true "图片文件（支持多选）"
-// @Success 200 {object} utils.Response{data=[]UploadResponse}
+// @Success 200 {object} response.Response{data=[]UploadResponse}
 // @Router /api/v1/upload [post]
 func UploadAdminImages(c *gin.Context) {
 	form, err := c.MultipartForm()
@@ -221,7 +221,7 @@ func UploadAdminImages(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "图片文件"
-// @Success 200 {object} utils.Response{data=UploadResponse}
+// @Success 200 {object} response.Response{data=UploadResponse}
 // @Router /api/v1/upload/single [post]
 func UploadSingleAdminImage(c *gin.Context) {
 	// 获取上传的文件
