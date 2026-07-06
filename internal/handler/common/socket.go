@@ -55,6 +55,18 @@ func WebSocketHandler(c *gin.Context) {
 			service.ApplyTripEdit(tripID, msg)
 			// 广播给同房间其他连接
 			ws.WsHub.Broadcast("trip:"+tripID, msg, conn)
+		// ✨ 新增核心：处理实时聊天消息
+		case "send_message":
+			tripID, _ := msg["tripId"].(string)
+
+			// 1. 注入操作人 ID，让同房间其他人知道是谁发的
+			msg["senderId"] = userID
+
+			// 2. 消息持久化（可选：将其存入数据库聊天历史表，如 service.SaveChatMessage）
+			// service.SaveChatMessage(tripID, userID, msg["content"].(string))
+
+			// 3. 广播给该房间内【除自己以外】的所有人
+			ws.WsHub.Broadcast("trip:"+tripID, msg, conn)
 		}
 		_ = userID // 实际业务可记录操作人
 	}
