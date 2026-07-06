@@ -45,9 +45,11 @@ func WebSocketHandler(c *gin.Context) {
 		action, _ := msg["action"].(string)
 		switch action {
 		case "join_trip":
+			// 加入房间
 			tripID, _ := msg["tripId"].(string)
 			ws.WsHub.Join("trip:"+tripID, conn)
 		case "edit_trip":
+			// 数据广播与持久化
 			tripID, _ := msg["tripId"].(string)
 			// 持久化编辑
 			service.ApplyTripEdit(tripID, msg)

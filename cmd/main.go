@@ -160,7 +160,7 @@ func main() {
 	}
 
 	// WebSocket 协同编辑
-	r.GET("/ws", common.WebSocketHandler)
+	api.GET("/ws", common.WebSocketHandler)
 
 	log.Println("Server running on :", config.AppConfig.ServerPort)
 	r.Run(":" + config.AppConfig.ServerPort)
