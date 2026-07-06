@@ -18,6 +18,7 @@ import (
 	"travel-server/internal/middleware"
 	"travel-server/pkg/config"
 	"travel-server/pkg/database"
+	"travel-server/pkg/qiniu"
 )
 
 // @title           旅行搭子小程序 API
@@ -33,6 +34,7 @@ func main() {
 	config.LoadConfig()
 	database.InitMySQL()
 	database.InitRedis()
+	qiniu.InitQiniu() // 新增七牛云
 
 	// 创建 Gin 引擎 & 全局中间件
 	r := gin.Default()
@@ -57,6 +59,10 @@ func main() {
 		// ==================== 小程序端（需 JWT 登录） ====================
 		miniAuth := api.Group("", middleware.JWTAuth())
 		{
+			// ---------- 媒体/文件上传 ----------
+			miniAuth.POST("/upload/single", common.UploadSingleImage) // 单图（新增）
+			miniAuth.POST("/upload/batch", common.UploadImages)       // 批量上传(没用到)
+
 			// ---------- 用户 ----------
 			miniAuth.GET("/user/info", miniapp.GetUserInfo)
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)
@@ -123,6 +129,10 @@ func main() {
 		// ==================== 后台管理（需管理员 JWT） ====================
 		adminGroup := api.Group("/admin", middleware.AdminJWTAuth())
 		{
+			// ---------- 后台媒体/文件上传 ----------
+			adminGroup.POST("/upload/single", common.UploadSingleAdminImage) // 单图（新增）
+			adminGroup.POST("/upload/batch", common.UploadAdminImages)       // 批量上传(没用到)
+
 			// ---------- 认证 ----------
 			adminGroup.GET("/info", admin.GetAdminInfo)
 
