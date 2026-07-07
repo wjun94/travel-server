@@ -61,6 +61,7 @@ func main() {
 		{
 			// ---------- 媒体/文件上传 ----------
 			miniAuth.POST("/upload/single", common.UploadSingleImage) // 单图（新增）
+			miniAuth.DELETE("/image/delete", common.DeleteImage)      // 删除单照片
 			miniAuth.POST("/upload/batch", common.UploadImages)       // 批量上传(没用到)
 
 			// ---------- 用户 ----------
