@@ -42,3 +42,38 @@ func (ci *ChecklistItem) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// ==================== 系统预置分类 ====================
+
+// ChecklistCategory 系统预置的备忘清单分类（如"证件&手续类"）
+type ChecklistCategory struct {
+	ID        string                  `gorm:"primaryKey" json:"id"`
+	Name      string                  `gorm:"size:50" json:"name"`   // 分类名称
+	Type      int                     `gorm:"default:0" json:"type"` // 0基础分类 1场景分类
+	SortOrder int                     `gorm:"default:0" json:"sortOrder"`
+	Items     []ChecklistCategoryItem `gorm:"foreignKey:CategoryID" json:"items,omitempty"`
+	CreatedAt time.Time               `json:"createdAt"`
+}
+
+// ChecklistCategoryItem 系统预置分类下的条目
+type ChecklistCategoryItem struct {
+	ID         string `gorm:"primaryKey" json:"id"`
+	CategoryID string `gorm:"size:191;index" json:"categoryId"`
+	Text       string `gorm:"size:200" json:"text"`
+}
+
+// BeforeCreate GORM 钩子
+func (cc *ChecklistCategory) BeforeCreate(tx *gorm.DB) error {
+	if cc.ID == "" {
+		cc.ID = snowflake.GenerateID()
+	}
+	return nil
+}
+
+// BeforeCreate GORM 钩子
+func (cci *ChecklistCategoryItem) BeforeCreate(tx *gorm.DB) error {
+	if cci.ID == "" {
+		cci.ID = snowflake.GenerateID()
+	}
+	return nil
+}
