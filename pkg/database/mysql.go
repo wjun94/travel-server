@@ -64,6 +64,7 @@ func InitMySQL() {
 		&model.Recommendation{},
 		&model.Favorite{},
 		&model.Comment{},
+		&model.BrowseHistory{},
 		&model.AdminUser{},
 		&model.Role{},
 	)

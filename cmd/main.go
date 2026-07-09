@@ -6,6 +6,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -16,6 +17,7 @@ import (
 	"travel-server/internal/handler/common"
 	"travel-server/internal/handler/miniapp"
 	"travel-server/internal/middleware"
+	"travel-server/internal/repository"
 	"travel-server/pkg/config"
 	"travel-server/pkg/database"
 	"travel-server/pkg/qiniu"
@@ -39,6 +41,20 @@ func main() {
 	// 创建 Gin 引擎 & 全局中间件
 	r := gin.Default()
 	r.Use(middleware.Cors())
+
+	// 启动定时清理浏览历史（每天凌晨清理30天前的记录）
+	go func() {
+		for {
+			now := time.Now()
+			next := time.Date(now.Year(), now.Month(), now.Day(), 3, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				next = next.Add(24 * time.Hour)
+			}
+			time.Sleep(next.Sub(now))
+			repository.CleanupBrowseHistory(30)
+			log.Println("浏览历史清理完成")
+		}
+	}()
 
 	// Swagger 文档面板
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -129,6 +145,10 @@ func main() {
 			// ---------- 评论 ----------
 			miniAuth.POST("/comment", miniapp.CreateComment)
 			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
+
+			// ---------- 浏览历史 ----------
+			miniAuth.POST("/browse/history", miniapp.AddBrowseHistory)
+			miniAuth.GET("/browse/history", miniapp.GetBrowseHistory)
 		}
 
 		// ==================== 后台管理（需管理员 JWT） ====================
