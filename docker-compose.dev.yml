@@ -43,6 +43,8 @@ services:
       - "2346:2345"
     env_file:
       - .env.dev
+    environment:
+      - GOPROXY=https://goproxy.cn,direct
     volumes:
       - .:/app
       - /app/tmp

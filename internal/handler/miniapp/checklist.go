@@ -1,6 +1,8 @@
 package miniapp
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/model"
@@ -12,16 +14,20 @@ import (
 // @Summary 获取备忘清单
 // @Security BearerAuth
 // @Tags 小程序-备忘
-// @Success 200 {object} response.Response{data=[]model.Checklist}
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.Checklist,total=int}}
 // @Router /api/v1/checklist [get]
 func GetChecklists(c *gin.Context) {
 	uid := c.MustGet("userID").(string)
-	lists, err := repository.GetChecklistsByUser(uid)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	lists, total, err := repository.GetChecklistsByUser(uid, page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
-	response.Success(c, lists)
+	response.Success(c, gin.H{"list": lists, "total": total})
 }
 
 // CreateChecklist 创建新的备忘清单

@@ -1,5 +1,11 @@
 FROM golang:1.26.3-alpine
 
+# 安装必要工具（git 用于 Go 模块代理解析）
+RUN apk add --no-cache git
+
+# 设置 Go 代理（使用国内镜像加速，失败时直连）
+ENV GOPROXY=https://goproxy.cn,direct
+
 WORKDIR /app
 
 # 安装开发工具

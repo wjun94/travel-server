@@ -7,11 +7,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetChecklistsByUser 获取用户的备忘清单
-func GetChecklistsByUser(userID string) ([]model.Checklist, error) {
+// GetChecklistsByUser 获取用户的备忘清单（分页）
+func GetChecklistsByUser(userID string, page, pageSize int) ([]model.Checklist, int64, error) {
 	var lists []model.Checklist
-	err := database.DB.Where("user_id = ?", userID).Preload("Items").Find(&lists).Error
-	return lists, err
+	var total int64
+	offset := (page - 1) * pageSize
+	database.DB.Model(&model.Checklist{}).Where("user_id = ?", userID).Count(&total)
+	err := database.DB.Where("user_id = ?", userID).Order("created_at desc").Offset(offset).Limit(pageSize).Preload("Items").Find(&lists).Error
+	return lists, total, err
 }
 
 // CreateChecklist 创建清单
