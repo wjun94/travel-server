@@ -26,6 +26,16 @@ func GetBrowseHistory(userID string, page, pageSize int) ([]model.BrowseHistory,
 	return list, total, err
 }
 
+// DeleteBrowseHistory 删除单条浏览记录（校验归属）
+func DeleteBrowseHistory(id, userID string) error {
+	return database.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&model.BrowseHistory{}).Error
+}
+
+// ClearBrowseHistory 清空当前用户所有浏览记录
+func ClearBrowseHistory(userID string) error {
+	return database.DB.Where("user_id = ?", userID).Delete(&model.BrowseHistory{}).Error
+}
+
 // CleanupBrowseHistory 清理超过 retentionDays 的浏览历史
 func CleanupBrowseHistory(retentionDays int) {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)

@@ -149,6 +149,8 @@ func main() {
 			// ---------- 浏览历史 ----------
 			miniAuth.POST("/browse/history", miniapp.AddBrowseHistory)
 			miniAuth.GET("/browse/history", miniapp.GetBrowseHistory)
+			miniAuth.DELETE("/browse/history/clear", miniapp.ClearBrowseHistory)
+			miniAuth.DELETE("/browse/history/:id", miniapp.DeleteBrowseHistory)
 		}
 
 		// ==================== 后台管理（需管理员 JWT） ====================

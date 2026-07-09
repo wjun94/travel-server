@@ -65,3 +65,35 @@ func GetBrowseHistory(c *gin.Context) {
 	}
 	response.Success(c, gin.H{"list": list, "total": total})
 }
+
+// DeleteBrowseHistory 删除单条浏览记录
+// @Summary 删除单条浏览记录
+// @Security BearerAuth
+// @Tags 小程序-浏览历史
+// @Param id path string true "记录ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/browse/history/{id} [delete]
+func DeleteBrowseHistory(c *gin.Context) {
+	id := c.Param("id")
+	uid := c.MustGet("userID").(string)
+	if err := repository.DeleteBrowseHistory(id, uid); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// ClearBrowseHistory 清空用户所有浏览记录
+// @Summary 清空浏览记录
+// @Security BearerAuth
+// @Tags 小程序-浏览历史
+// @Success 200 {object} response.Response
+// @Router /api/v1/browse/history/clear [delete]
+func ClearBrowseHistory(c *gin.Context) {
+	uid := c.MustGet("userID").(string)
+	if err := repository.ClearBrowseHistory(uid); err != nil {
+		response.Fail(c, 500, "清空失败")
+		return
+	}
+	response.Success(c, nil)
+}
