@@ -110,7 +110,9 @@ func main() {
 			// ---------- 备忘清单 ----------
 			miniAuth.GET("/checklist", miniapp.GetChecklists)
 			miniAuth.GET("/checklist/categories", miniapp.GetChecklistCategories)
+			miniAuth.GET("/checklist/:id", miniapp.GetChecklistDetail)
 			miniAuth.POST("/checklist", miniapp.CreateChecklist)
+			miniAuth.PUT("/checklist/:id", miniapp.UpdateChecklist)
 			miniAuth.DELETE("/checklist/:id", miniapp.DeleteChecklist)
 			miniAuth.PUT("/checklist/:id/item", miniapp.UpdateChecklistItem)
 

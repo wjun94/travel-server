@@ -75,6 +75,50 @@ func UpdateChecklistItem(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// GetChecklistDetail 获取备忘清单详情
+// @Summary 获取清单详情
+// @Security BearerAuth
+// @Tags 小程序-备忘
+// @Param id path string true "清单ID"
+// @Success 200 {object} response.Response{data=model.Checklist}
+// @Router /api/v1/checklist/{id} [get]
+func GetChecklistDetail(c *gin.Context) {
+	id := c.Param("id")
+	uid := c.MustGet("userID").(string)
+	cl, err := repository.GetChecklistDetail(id, uid)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, cl)
+}
+
+// UpdateChecklist 更新备忘清单
+// @Summary 更新备忘清单
+// @Security BearerAuth
+// @Tags 小程序-备忘
+// @Param id path string true "清单ID"
+// @Param body body object{name=string,items=[]model.ChecklistItem} true "名称和条目"
+// @Success 200 {object} response.Response
+// @Router /api/v1/checklist/{id} [put]
+func UpdateChecklist(c *gin.Context) {
+	id := c.Param("id")
+	uid := c.MustGet("userID").(string)
+	var req struct {
+		Name  string                `json:"name"`
+		Items []model.ChecklistItem `json:"items"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := repository.UpdateChecklist(id, uid, req.Name, req.Items); err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
 // GetChecklistCategories 获取系统预置的备忘清单分类
 // @Summary 获取系统预置分类
 // @Tags 小程序-备忘
