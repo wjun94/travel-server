@@ -442,3 +442,39 @@ func DeleteGuideDayItem(c *gin.Context) {
 	}
 	response.Success(c, nil)
 }
+
+// ==================== 点赞 / 取消点赞 ====================
+
+// LikeGuide 点赞攻略
+// @Summary 点赞攻略
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param id path string true "攻略ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/guide/{id}/like [post]
+func LikeGuide(c *gin.Context) {
+	guideID := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.LikeGuide(userID, guideID); err != nil {
+		response.Fail(c, 400, err.Error())
+		return
+	}
+	response.Success(c, nil)
+}
+
+// UnlikeGuide 取消点赞攻略
+// @Summary 取消点赞攻略
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param id path string true "攻略ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/guide/{id}/like [delete]
+func UnlikeGuide(c *gin.Context) {
+	guideID := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.UnlikeGuide(userID, guideID); err != nil {
+		response.Fail(c, 400, err.Error())
+		return
+	}
+	response.Success(c, nil)
+}

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"fmt"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 
@@ -234,6 +236,48 @@ func GetDayItemByID(id string) (*model.GuideDayItem, error) {
 		return nil, err
 	}
 	return &item, nil
+}
+
+// ==================== 点赞 / 取消点赞 ====================
+
+// LikeGuide 点赞攻略
+func LikeGuide(userID, guideID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 检查是否已点赞
+		var count int64
+		tx.Model(&model.Favorite{}).
+			Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
+			Count(&count)
+		if count > 0 {
+			return fmt.Errorf("已点赞")
+		}
+		// 创建点赞记录
+		fav := model.Favorite{
+			UserID:     userID,
+			TargetType: "guide",
+			TargetID:   guideID,
+		}
+		if err := tx.Create(&fav).Error; err != nil {
+			return err
+		}
+		// 点赞数 +1
+		return tx.Model(&model.Guide{}).Where("id = ?", guideID).
+			UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
+	})
+}
+
+// UnlikeGuide 取消点赞攻略
+func UnlikeGuide(userID, guideID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
+			Delete(&model.Favorite{})
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("未点赞")
+		}
+		// 点赞数 -1（确保不小于 0）
+		return tx.Model(&model.Guide{}).Where("id = ?", guideID).
+			UpdateColumn("like_count", gorm.Expr("GREATEST(like_count - 1, 0)")).Error
+	})
 }
 
 // GetItemsByDayID 获取某天的所有行程项

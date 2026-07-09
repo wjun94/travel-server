@@ -90,6 +90,8 @@ func main() {
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)
 			miniAuth.POST("/guide/:id/day", miniapp.CreateGuideDay)            // 新增一天
 			miniAuth.DELETE("/guide/day/:id", miniapp.DeleteGuideDay)          // 删除一天
+			miniAuth.POST("/guide/:id/like", miniapp.LikeGuide)                // 点赞攻略
+			miniAuth.DELETE("/guide/:id/like", miniapp.UnlikeGuide)            // 取消点赞
 			miniAuth.POST("/guide/day/:id/item", miniapp.CreateGuideDayItem)   // 新增行程项
 			miniAuth.PUT("/guide/day/item/:id", miniapp.UpdateGuideDayItem)    // 更新行程项
 			miniAuth.DELETE("/guide/day/item/:id", miniapp.DeleteGuideDayItem) // 删除行程项
