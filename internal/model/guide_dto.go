@@ -11,20 +11,20 @@ import (
 // CreateGuideReq 创建攻略请求 — 包含攻略基本信息，可选每日行程
 // 不传 Days 时自动创建第1天空天
 type CreateGuideReq struct {
-	Title           string   `json:"title" binding:"required"`
-	CoverImage      string   `json:"coverImage" binding:"required"`
-	Destination     string   `json:"destination" binding:"required"`
-	Summary         string   `json:"summary"`
-	BudgetMin       *float64 `json:"budgetMin"`
-	BudgetMax       *float64 `json:"budgetMax"`
-	BestSeason      string   `json:"bestSeason"`
-	RecommendedDays *int     `json:"recommendedDays"`
-	Tags            string   `json:"tags"`
-	Difficulty      string   `json:"difficulty"`
-	CrowdType       string   `json:"crowdType"`
-	IsOriginal      int      `json:"isOriginal"`
-	Status          int      `json:"status"` // 0草稿 / 1已发布
-	Days            []DayReq `json:"days"`   // 可选的每日行程（不传则自动创建第1天）
+	Title           string   `json:"title" binding:"required"`       // 标题
+	CoverImage      string   `json:"coverImage" binding:"required"`  // 封面图
+	Destination     string   `json:"destination" binding:"required"` // 目的地
+	Summary         string   `json:"summary"`                        // 摘要
+	BudgetMin       *float64 `json:"budgetMin"`                      // 预算下限
+	BudgetMax       *float64 `json:"budgetMax"`                      // 预算上限
+	BestSeason      string   `json:"bestSeason"`                     // 最佳季节
+	RecommendedDays *int     `json:"recommendedDays"`                // 建议天数
+	Tags            string   `json:"tags"`                           // 标签（JSON数组）
+	Difficulty      string   `json:"difficulty"`                     // 难度：轻松/适中/挑战
+	CrowdType       string   `json:"crowdType"`                      // 适合人群：情侣/家庭/独行/朋友
+	IsOriginal      int      `json:"isOriginal"`                     // 是否原创
+	Status          int      `json:"status"`                         // 0草稿 / 1已发布
+	Days            []DayReq `json:"days"`                           // 可选的每日行程（不传则自动创建第1天）
 }
 
 // DayReq 创建每日行程请求
@@ -145,26 +145,18 @@ func (e *ValidationError) Error() string {
 
 // GuideFeedItem 攻略瀑布流返回项
 type GuideFeedItem struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"userId"`
-	Title           string    `json:"title"`
-	CoverImage      string    `json:"coverImage"`
-	Destination     string    `json:"destination"`
-	Summary         string    `json:"summary"`
-	BudgetMin       *float64  `json:"budgetMin"`
-	BudgetMax       *float64  `json:"budgetMax"`
-	BestSeason      string    `json:"bestSeason"`
-	RecommendedDays *int      `json:"recommendedDays"`
-	Tags            string    `json:"tags"`
-	Difficulty      string    `json:"difficulty"`
-	CrowdType       string    `json:"crowdType"`
-	IsOriginal      int       `json:"isOriginal"`
-	ViewCount       int       `json:"viewCount"`
-	LikeCount       int       `json:"likeCount"`
-	Status          int       `json:"status"`
-	CreatedAt       time.Time `json:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"`
-	AuthorName      string    `json:"authorName"`
-	AuthorAvatar    string    `json:"authorAvatar"`
-	IsLiked         bool      `json:"isLiked"`
+	ID           string    `json:"id"`           // 攻略ID
+	UserID       string    `json:"userId"`       // 作者ID
+	Title        string    `json:"title"`        // 标题
+	CoverImage   string    `json:"coverImage"`   // 封面图
+	Destination  string    `json:"destination"`  // 目的地
+	IsOriginal   int       `json:"isOriginal"`   // 是否原创
+	ViewCount    int       `json:"viewCount"`    // 预览数
+	LikeCount    int       `json:"likeCount"`    // 点赞数
+	TripDays     int       `json:"tripDays"`     // 行程天数
+	SectionCount int64     `json:"sectionCount"` // 行程项总数（不包含交通）
+	CreatedAt    time.Time `json:"createdAt"`    // 创建时间
+	AuthorName   string    `json:"authorName"`   // 作者昵称
+	AuthorAvatar string    `json:"authorAvatar"` // 作者头像
+	IsLiked      bool      `json:"isLiked"`      // 是否已点赞
 }

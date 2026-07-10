@@ -49,32 +49,58 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 			likedSet[f.TargetID] = true
 		}
 	}
+
+	// 批量查询行程天数（按 guide_id 统计不同 day_number）
+	type dayCount struct {
+		GuideID string
+		Days    int
+	}
+	var dayCounts []dayCount
+	database.DB.Model(&model.GuideSection{}).
+		Select("guide_id, COUNT(DISTINCT day_number) as days").
+		Where("guide_id IN ?", guideIDs).
+		Group("guide_id").
+		Find(&dayCounts)
+	dayMap := make(map[string]int)
+	for _, d := range dayCounts {
+		dayMap[d.GuideID] = d.Days
+	}
+
+	// 批量查询行程项总数（不包含交通）
+	type secCount struct {
+		GuideID string
+		Count   int64
+	}
+	var secCounts []secCount
+	database.DB.Table("guide_day_items gdi").
+		Select("gs.guide_id, COUNT(gdi.id) as count").
+		Joins("LEFT JOIN guide_sections gs ON gs.id = gdi.day_id").
+		Where("gs.guide_id IN ? AND gdi.section_type != ?", guideIDs, "transport").
+		Group("gs.guide_id").
+		Find(&secCounts)
+	secMap := make(map[string]int64)
+	for _, s := range secCounts {
+		secMap[s.GuideID] = s.Count
+	}
+
 	// 组装返回结果
 	items := make([]model.GuideFeedItem, len(guides))
 	for i, g := range guides {
 		items[i] = model.GuideFeedItem{
-			ID:              g.ID,
-			UserID:          g.UserID,
-			Title:           g.Title,
-			CoverImage:      g.CoverImage,
-			Destination:     g.Destination,
-			Summary:         g.Summary,
-			BudgetMin:       g.BudgetMin,
-			BudgetMax:       g.BudgetMax,
-			BestSeason:      g.BestSeason,
-			RecommendedDays: g.RecommendedDays,
-			Tags:            g.Tags,
-			Difficulty:      g.Difficulty,
-			CrowdType:       g.CrowdType,
-			IsOriginal:      g.IsOriginal,
-			ViewCount:       g.ViewCount,
-			LikeCount:       g.LikeCount,
-			Status:          g.Status,
-			CreatedAt:       g.CreatedAt,
-			UpdatedAt:       g.UpdatedAt,
-			AuthorName:      userMap[g.UserID].Nickname,
-			AuthorAvatar:    userMap[g.UserID].AvatarURL,
-			IsLiked:         likedSet[g.ID],
+			ID:           g.ID,
+			UserID:       g.UserID,
+			Title:        g.Title,
+			CoverImage:   g.CoverImage,
+			Destination:  g.Destination,
+			IsOriginal:   g.IsOriginal,
+			ViewCount:    g.ViewCount,
+			LikeCount:    g.LikeCount,
+			TripDays:     dayMap[g.ID],
+			SectionCount: secMap[g.ID],
+			CreatedAt:    g.CreatedAt,
+			AuthorName:   userMap[g.UserID].Nickname,
+			AuthorAvatar: userMap[g.UserID].AvatarURL,
+			IsLiked:      likedSet[g.ID],
 		}
 	}
 	return items, total, nil
