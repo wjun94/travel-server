@@ -5,6 +5,13 @@ import (
 	"travel-server/pkg/database"
 )
 
+// FavoriteItem 收藏项（含目标标题和封面图）
+type FavoriteItem struct {
+	model.Favorite
+	Title      string `json:"title"`
+	CoverImage string `json:"coverImage"`
+}
+
 // AddFavorite 添加收藏
 func AddFavorite(fav *model.Favorite) error {
 	return database.DB.Create(fav).Error
@@ -31,8 +38,8 @@ func IsFavorited(userID, targetID string, targetType string) bool {
 	return count > 0
 }
 
-// ListUserFavorites 用户收藏列表
-func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]model.Favorite, int64, error) {
+// ListUserFavorites 用户收藏列表（含目标标题和封面图）
+func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]FavoriteItem, int64, error) {
 	var favs []model.Favorite
 	var total int64
 	offset := (page - 1) * pageSize
@@ -42,5 +49,26 @@ func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]
 	}
 	query.Count(&total)
 	err := query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&favs).Error
-	return favs, total, err
+	if err != nil {
+		return nil, total, err
+	}
+	// 组装标题和封面图
+	items := make([]FavoriteItem, len(favs))
+	for i, f := range favs {
+		items[i] = FavoriteItem{Favorite: f}
+		switch f.TargetType {
+		case "guide":
+			var g struct{ Title, CoverImage string }
+			database.DB.Model(&model.Guide{}).Select("title", "cover_image").
+				Where("id = ?", f.TargetID).Scan(&g)
+			items[i].Title = g.Title
+			items[i].CoverImage = g.CoverImage
+		case "trip":
+			var t struct{ Title string }
+			database.DB.Model(&model.Trip{}).Select("title").
+				Where("id = ?", f.TargetID).Scan(&t)
+			items[i].Title = t.Title
+		}
+	}
+	return items, total, nil
 }
