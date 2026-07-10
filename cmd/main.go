@@ -154,6 +154,22 @@ func main() {
 			miniAuth.GET("/browse/history", miniapp.GetBrowseHistory)
 			miniAuth.DELETE("/browse/history/clear", miniapp.ClearBrowseHistory)
 			miniAuth.DELETE("/browse/history/:id", miniapp.DeleteBrowseHistory)
+
+			// ---------- 关注 ----------
+			miniAuth.POST("/follow/:id", miniapp.FollowUser)                    // 1.关注
+			miniAuth.DELETE("/follow/:id", miniapp.UnfollowUser)                // 2.取消关注
+			miniAuth.GET("/follow/following", miniapp.GetMyFollowingList)       // 3.我的关注
+			miniAuth.GET("/follow/followers", miniapp.GetMyFollowerList)        // 4.我的粉丝
+			miniAuth.GET("/follow/following/:id", miniapp.GetUserFollowingList) // 5.他人关注
+			miniAuth.GET("/follow/followers/:id", miniapp.GetUserFollowerList)  // 6.他人粉丝
+			miniAuth.GET("/follow/status/:id", miniapp.GetFollowStatus)         // 7.关系状态
+			miniAuth.GET("/follow/counts", miniapp.GetMyFollowCounts)           // 8.我的总数
+			miniAuth.GET("/follow/counts/:id", miniapp.GetUserFollowCounts)     // 9.他人总数
+			miniAuth.DELETE("/follow/followers/:id", miniapp.RemoveFollower)    // 10.移除粉丝
+			miniAuth.POST("/follow/block/:id", miniapp.BlockUser)               // 11.拉黑
+			miniAuth.DELETE("/follow/block/:id", miniapp.UnblockUser)           // 12.解除拉黑
+			miniAuth.GET("/follow/blacklist", miniapp.GetMyBlacklist)           // 13.我的黑名单
+			miniAuth.GET("/follow/blocked/:id", miniapp.IsBlockedByUser)        // 14.校验被对方拉黑
 		}
 
 		// ==================== 后台管理（需管理员 JWT） ====================
