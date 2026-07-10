@@ -81,6 +81,7 @@ func main() {
 			miniAuth.POST("/upload/batch", common.UploadImages)       // 批量上传(没用到)
 
 			// ---------- 用户 ----------
+			miniAuth.GET("/profile", miniapp.GetMyProfile) // 个人主页（攻略数/行程数/粉丝/关注）
 			miniAuth.GET("/user/info", miniapp.GetUserInfo)
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)
 

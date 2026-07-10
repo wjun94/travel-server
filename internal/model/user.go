@@ -27,5 +27,13 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = snowflake.GenerateShortID(8)
 	}
+	// 默认昵称：驴友 + ID 后 4 位
+	if u.Nickname == "" {
+		suffix := u.ID
+		if len(suffix) > 4 {
+			suffix = suffix[len(suffix)-4:]
+		}
+		u.Nickname = "驴友" + suffix
+	}
 	return nil
 }

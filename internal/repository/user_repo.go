@@ -5,6 +5,41 @@ import (
 	"travel-server/pkg/database"
 )
 
+// UserProfileStats 用户个人主页统计数据
+type UserProfileStats struct {
+	ID            string `json:"id"`
+	Nickname      string `json:"nickname"`
+	AvatarURL     string `json:"avatarUrl"`
+	GuideCount    int64  `json:"guideCount"`    // 已发布的攻略数
+	TripCount     int64  `json:"tripCount"`     // 行程数
+	FollowCount   int    `json:"followCount"`   // 关注数
+	FollowerCount int    `json:"followerCount"` // 粉丝数
+}
+
+// GetUserProfileStats 获取用户主页统计
+func GetUserProfileStats(userID string) (*UserProfileStats, error) {
+	var user model.User
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	var guideCount int64
+	database.DB.Model(&model.Guide{}).Where("user_id = ? AND status = 1", userID).Count(&guideCount)
+
+	var tripCount int64
+	database.DB.Model(&model.Trip{}).Where("user_id = ?", userID).Count(&tripCount)
+
+	return &UserProfileStats{
+		ID:            user.ID,
+		Nickname:      user.Nickname,
+		AvatarURL:     user.AvatarURL,
+		GuideCount:    guideCount,
+		TripCount:     tripCount,
+		FollowCount:   user.FollowCount,
+		FollowerCount: user.FollowerCount,
+	}, nil
+}
+
 // GetUserByOpenID 根据 OpenID 查找用户
 func GetUserByOpenID(openid string) (*model.User, error) {
 	var user model.User
