@@ -10,10 +10,16 @@ func AddFavorite(fav *model.Favorite) error {
 	return database.DB.Create(fav).Error
 }
 
-// RemoveFavorite 取消收藏
+// RemoveFavorite 取消收藏（支持按 targetID + targetType 或按 Favorite 记录ID）
 func RemoveFavorite(userID, targetID string, targetType string) error {
-	return database.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
-		Delete(&model.Favorite{}).Error
+	r := database.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
+		Delete(&model.Favorite{})
+	if r.RowsAffected == 0 && r.Error == nil {
+		// 未匹配到，尝试按记录ID删除
+		r = database.DB.Where("id = ? AND user_id = ?", targetID, userID).
+			Delete(&model.Favorite{})
+	}
+	return r.Error
 }
 
 // IsFavorited 是否已收藏

@@ -146,6 +146,7 @@ func main() {
 
 			// ---------- 评论 ----------
 			miniAuth.POST("/comment", miniapp.CreateComment)
+			miniAuth.DELETE("/comment/:id", miniapp.DeleteComment)
 			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
 
 			// ---------- 浏览历史 ----------

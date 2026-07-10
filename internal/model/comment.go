@@ -12,6 +12,7 @@ import (
 type Comment struct {
 	ID         string    `gorm:"primaryKey" json:"id"`
 	UserID     string    `gorm:"size:191" json:"userId"`     // 评论者
+	User       User      `gorm:"foreignKey:UserID" json:"-"` // 关联用户（Preload 用）
 	TargetType string    `gorm:"size:20" json:"targetType"`  // 目标类型：guide/trip
 	TargetID   string    `gorm:"size:191" json:"targetId"`   // 目标ID
 	ParentID   *string   `gorm:"size:191" json:"parentId"`   // 父评论ID（支持回复）

@@ -142,7 +142,7 @@ func CreateGuide(c *gin.Context) {
 // @Summary 攻略详情
 // @Tags 小程序-攻略
 // @Param id path string true "攻略ID"
-// @Success 200 {object} response.Response{data=object{guide=model.Guide,days=[]model.GuideSection}}
+// @Success 200 {object} response.Response{data=object{guide=model.Guide,days=[]model.GuideSection,favoriteCount=int,commentCount=int,isLiked=bool,isFavorited=bool}}
 // @Router /api/v1/guide/{id} [get]
 func GetGuideDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -152,11 +152,25 @@ func GetGuideDetail(c *gin.Context) {
 		return
 	}
 	days, _ := repository.GetDaysByGuideID(id)
+	userID := c.MustGet("userID").(string)
 	// 增加浏览量（非作者）
-	if userID := c.MustGet("userID").(string); guide.UserID != userID {
+	if guide.UserID != userID {
 		_ = repository.IncrementGuideViewCount(id)
 	}
-	response.Success(c, gin.H{"guide": guide, "days": days})
+	// 收藏数、评论数、点赞状态、收藏状态
+	favoriteCount := repository.GetGuideFavoriteCount(id)
+	commentCount := repository.GetGuideCommentCount(id)
+	isLiked := repository.IsGuideLikedByUser(userID, id)
+	isFavorited := repository.IsFavorited(userID, id, "guide")
+	response.Success(c, gin.H{
+		"guide":         guide,
+		"days":          days,
+		"likeCount":     guide.LikeCount,
+		"favoriteCount": favoriteCount,
+		"commentCount":  commentCount,
+		"isLiked":       isLiked,
+		"isFavorited":   isFavorited,
+	})
 }
 
 // UpdateGuide 更新攻略基本信息

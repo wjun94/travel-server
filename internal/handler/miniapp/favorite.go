@@ -18,12 +18,25 @@ import (
 // @Success 200 {object} response.Response
 // @Router /api/v1/favorite [post]
 func AddFavorite(c *gin.Context) {
-	var fav model.Favorite
-	if err := c.ShouldBindJSON(&fav); err != nil {
+	var req struct {
+		TargetType string `json:"targetType" binding:"required"`
+		TargetID   string `json:"targetId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	fav.UserID = c.MustGet("userID").(string)
+	userID := c.MustGet("userID").(string)
+	// 已收藏则直接返回成功（幂等）
+	if repository.IsFavorited(userID, req.TargetID, req.TargetType) {
+		response.Success(c, nil)
+		return
+	}
+	fav := model.Favorite{
+		UserID:     userID,
+		TargetType: req.TargetType,
+		TargetID:   req.TargetID,
+	}
 	if err := repository.AddFavorite(&fav); err != nil {
 		response.Fail(c, 500, "收藏失败")
 		return
@@ -44,7 +57,7 @@ func RemoveFavorite(c *gin.Context) {
 	targetType := c.Query("target_type")
 	userID := c.MustGet("userID").(string)
 	if err := repository.RemoveFavorite(userID, id, targetType); err != nil {
-		response.Fail(c, 500, "取消收藏失败")
+		response.Fail(c, 500, "取消失败")
 		return
 	}
 	response.Success(c, nil)

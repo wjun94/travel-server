@@ -42,6 +42,11 @@ func InitMySQL() {
 		log.Fatalf("数据库连接失败，已超出重试次数: %v", err)
 	}
 
+	// 迁移旧索引：删除旧的 uk_user_target（不含 user_id），AutoMigrate 会创建新索引
+	if err := DB.Migrator().DropIndex(&model.Favorite{}, "uk_user_target"); err != nil {
+		log.Printf("uk_user_target 索引无需迁移或已删除: %v", err)
+	}
+
 	// 自动创建/更新表结构
 	err = DB.AutoMigrate(
 		&model.User{},

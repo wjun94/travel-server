@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"fmt"
-
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 
@@ -142,6 +140,27 @@ func IncrementGuideViewCount(id string) error {
 		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
 }
 
+// GetGuideFavoriteCount 获取攻略收藏数
+func GetGuideFavoriteCount(guideID string) int64 {
+	var count int64
+	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ?", "guide", guideID).Count(&count)
+	return count
+}
+
+// GetGuideCommentCount 获取攻略评论数
+func GetGuideCommentCount(guideID string) int64 {
+	var count int64
+	database.DB.Model(&model.Comment{}).Where("target_type = ? AND target_id = ?", "guide", guideID).Count(&count)
+	return count
+}
+
+// IsGuideLikedByUser 判断用户是否已点赞攻略
+func IsGuideLikedByUser(userID, guideID string) bool {
+	var count int64
+	database.DB.Model(&model.Favorite{}).Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).Count(&count)
+	return count > 0
+}
+
 // ==================== GuideDay（每日行程） ====================
 
 // GetDaysByGuideID 获取攻略的所有每日行程（含行程项）
@@ -240,7 +259,7 @@ func GetDayItemByID(id string) (*model.GuideDayItem, error) {
 
 // ==================== 点赞 / 取消点赞 ====================
 
-// LikeGuide 点赞攻略
+// LikeGuide 点赞攻略（幂等：已点赞则直接成功）
 func LikeGuide(userID, guideID string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查是否已点赞
@@ -249,7 +268,7 @@ func LikeGuide(userID, guideID string) error {
 			Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
 			Count(&count)
 		if count > 0 {
-			return fmt.Errorf("已点赞")
+			return nil // 已点赞，直接成功
 		}
 		// 创建点赞记录
 		fav := model.Favorite{
@@ -266,13 +285,18 @@ func LikeGuide(userID, guideID string) error {
 	})
 }
 
-// UnlikeGuide 取消点赞攻略
+// UnlikeGuide 取消点赞攻略（兼容前端传参：支持 guideID 或 Favorite 记录ID）
 func UnlikeGuide(userID, guideID string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
 			Delete(&model.Favorite{})
 		if result.RowsAffected == 0 {
-			return fmt.Errorf("未点赞")
+			// 未匹配到，尝试按记录ID删除
+			result = tx.Where("id = ? AND user_id = ?", guideID, userID).
+				Delete(&model.Favorite{})
+			if result.RowsAffected == 0 {
+				return nil // 未点赞也视为成功（幂等）
+			}
 		}
 		// 点赞数 -1（确保不小于 0）
 		return tx.Model(&model.Guide{}).Where("id = ?", guideID).
