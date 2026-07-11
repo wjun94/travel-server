@@ -9,19 +9,28 @@ import (
 
 // Trip 行程表 — 执行计划型内容，按时间线组织
 type Trip struct {
-	ID          string         `gorm:"primaryKey" json:"id"`
-	UserID      string         `gorm:"size:191" json:"userId"`                // 创建者
-	GuideID     *string        `json:"guideId"`                               // 关联攻略（可为空）
-	Title       string         `gorm:"size:200" json:"title"`                 // 行程标题
-	Destination string         `gorm:"size:100" json:"destination"`           // 目的地
-	StartDate   string         `gorm:"type:date" json:"startDate"`            // 出发日期
-	EndDate     string         `gorm:"type:date" json:"endDate"`              // 结束日期
-	TotalBudget float64        `gorm:"type:decimal(10,2)" json:"totalBudget"` // 总预算
-	Status      int            `gorm:"default:0" json:"status"`               // 状态：0计划中/1进行中/2已完成
-	IsPublic    int            `gorm:"default:0" json:"isPublic"`             // 是否公开
-	CreatedAt   time.Time      `json:"createdAt"`
-	UpdatedAt   time.Time      `json:"updatedAt"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"` // 软删除
+	ID            string         `gorm:"primaryKey" json:"id"`
+	UserID        string         `gorm:"size:191" json:"userId"`                // 创建者
+	GuideID       *string        `json:"guideId"`                               // 关联攻略（可为空）
+	Title         string         `gorm:"size:200" json:"title"`                 // 行程标题
+	CoverImage    string         `gorm:"size:500" json:"coverImage"`            // 封面图
+	Country       string         `gorm:"size:50" json:"country"`                // 国家
+	Province      string         `gorm:"size:50" json:"province"`               // 省份
+	City          string         `gorm:"size:100" json:"city"`                  // 目的地城市
+	Destination   string         `gorm:"size:200" json:"destination"`           // 完整目的地（冗余字段，便于搜索）
+	StartDate     string         `gorm:"type:date" json:"startDate"`            // 出发日期
+	EndDate       string         `gorm:"type:date" json:"endDate"`              // 结束日期
+	TotalBudget   float64        `gorm:"type:decimal(10,2)" json:"totalBudget"` // 总预算
+	IsOverseas    int            `gorm:"default:0" json:"isOverseas"`           // 境内境外：0国内 1境外
+	Note          string         `gorm:"type:text" json:"note"`                 // 行程备注
+	ViewCount     int            `gorm:"default:0" json:"viewCount"`            // 浏览量
+	LikeCount     int            `gorm:"default:0" json:"likeCount"`            // 点赞数
+	FavoriteCount int            `gorm:"default:0" json:"favoriteCount"`        // 收藏数
+	Status        int            `gorm:"default:1" json:"status"`               // 状态：1草稿 2已发布 3已归档完结
+	IsPublic      int            `gorm:"default:0" json:"isPublic"`             // 是否公开（0私密 1公开）
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"` // 软删除
 
 	Days    []TripDay    `gorm:"foreignKey:TripID" json:"days,omitempty"`    // 行程日列表
 	Members []TripMember `gorm:"foreignKey:TripID" json:"members,omitempty"` // 同行者列表

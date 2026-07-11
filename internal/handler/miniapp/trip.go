@@ -104,7 +104,6 @@ func CreateTrip(c *gin.Context) {
 		return
 	}
 	trip.UserID = c.MustGet("userID").(string)
-	trip.Status = 0
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
@@ -159,6 +158,9 @@ func UpdateTrip(c *gin.Context) {
 	delete(updates, "id")
 	delete(updates, "user_id")
 	delete(updates, "created_at")
+	delete(updates, "view_count")
+	delete(updates, "like_count")
+	delete(updates, "favorite_count")
 
 	if err := repository.UpdateTrip(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")

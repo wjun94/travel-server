@@ -54,14 +54,14 @@ func AddFavorite(c *gin.Context) {
 func RemoveFavorite(c *gin.Context) {
 	var req struct {
 		TargetType string `json:"targetType" binding:"required"`
-		TargetID   string `json:"targetId" binding:"required"`
+		ID         string `json:"id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
 	userID := c.MustGet("userID").(string)
-	if err := repository.RemoveFavorite(userID, req.TargetID, req.TargetType); err != nil {
+	if err := repository.RemoveFavorite(userID, req.ID, req.TargetType); err != nil {
 		response.Fail(c, 500, "取消失败")
 		return
 	}
