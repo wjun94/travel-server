@@ -8,49 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// SectionType 每日行程项类型常量
-const (
-	SectionTransport  = "transport"  // 🚄 交通
-	SectionHotel      = "hotel"      // 🏨 住宿
-	SectionAttraction = "attraction" // 🏞️ 打卡地
-	SectionFood       = "food"       // 🍜 美食
-	SectionShopping   = "shopping"   // 🛍️ 购物
-	SectionTips       = "tips"       // ⚠️ 避坑
-)
-
-// ValidSectionTypes 合法的行程项类型集合
-var ValidSectionTypes = map[string]bool{
-	SectionTransport:  true,
-	SectionHotel:      true,
-	SectionAttraction: true,
-	SectionFood:       true,
-	SectionShopping:   true,
-	SectionTips:       true,
-}
-
-// TransportMode 交通方式常量
-const (
-	TransportTrain   = "train"   // 火车
-	TransportBus     = "bus"     // 汽车
-	TransportSubway  = "subway"  // 地铁
-	TransportPlane   = "plane"   // 飞机
-	TransportShip    = "ship"    // 轮船
-	TransportCityBus = "citybus" // 公交
-	TransportWalk    = "walk"    // 步行
-	TransportBike    = "bike"    // 骑车
-)
-
-// ValidTransportModes 合法的交通方式集合
-var ValidTransportModes = map[string]bool{
-	TransportTrain:   true,
-	TransportBus:     true,
-	TransportSubway:  true,
-	TransportPlane:   true,
-	TransportShip:    true,
-	TransportCityBus: true,
-	TransportWalk:    true,
-	TransportBike:    true,
-}
+// SectionType / TransportMode 常量及校验集合定义见 trip_item.go（与行程模块共享）
 
 // GuideSection 攻略每日行程表 — 代表攻略中的一天
 // DayNumber 自动从1开始，无需手动排序
