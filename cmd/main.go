@@ -142,7 +142,7 @@ func main() {
 
 			// ---------- 收藏 ----------
 			miniAuth.POST("/favorite", miniapp.AddFavorite)
-			miniAuth.DELETE("/favorite/:id", miniapp.RemoveFavorite)
+			miniAuth.POST("/favorite/remove", miniapp.RemoveFavorite)
 			miniAuth.GET("/favorites", miniapp.GetFavorites)
 
 			// ---------- 评论 ----------

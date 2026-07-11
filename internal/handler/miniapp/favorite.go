@@ -48,15 +48,20 @@ func AddFavorite(c *gin.Context) {
 // @Summary 取消收藏
 // @Security BearerAuth
 // @Tags 小程序-收藏
-// @Param id path string true "收藏目标ID"
-// @Param target_type query string true "收藏类型"
+// @Param body body object{targetId=string,targetType=string} true "收藏目标信息"
 // @Success 200 {object} response.Response
-// @Router /api/v1/favorite/{id} [delete]
+// @Router /api/v1/favorite/remove [post]
 func RemoveFavorite(c *gin.Context) {
-	id := c.Param("id")
-	targetType := c.Query("target_type")
+	var req struct {
+		TargetType string `json:"targetType" binding:"required"`
+		TargetID   string `json:"targetId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
 	userID := c.MustGet("userID").(string)
-	if err := repository.RemoveFavorite(userID, id, targetType); err != nil {
+	if err := repository.RemoveFavorite(userID, req.TargetID, req.TargetType); err != nil {
 		response.Fail(c, 500, "取消失败")
 		return
 	}
