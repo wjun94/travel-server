@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 )
@@ -17,16 +19,29 @@ func AddFavorite(fav *model.Favorite) error {
 	return database.DB.Create(fav).Error
 }
 
-// RemoveFavorite 取消收藏（支持按 targetID + targetType 或按 Favorite 记录ID）
+// RemoveFavorite 取消收藏
 func RemoveFavorite(userID, targetID string, targetType string) error {
+	// 按 targetID + targetType 匹配删除
 	r := database.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
 		Delete(&model.Favorite{})
-	if r.RowsAffected == 0 && r.Error == nil {
-		// 未匹配到，尝试按记录ID删除
-		r = database.DB.Where("id = ? AND user_id = ?", targetID, userID).
-			Delete(&model.Favorite{})
+	if r.Error != nil {
+		return r.Error
 	}
-	return r.Error
+	if r.RowsAffected > 0 {
+		return nil
+	}
+
+	// 兜底：按主键 ID 删除（前端可能传的是 Favorite 记录 ID）
+	r = database.DB.Where("id = ? AND user_id = ?", targetID, userID).
+		Delete(&model.Favorite{})
+	if r.Error != nil {
+		return r.Error
+	}
+	if r.RowsAffected > 0 {
+		return nil
+	}
+
+	return errors.New("未找到收藏记录")
 }
 
 // IsFavorited 是否已收藏
