@@ -59,7 +59,7 @@ func AIGenerateTrip(c *gin.Context) {
 	trip := model.Trip{
 		UserID:      uid,
 		Destination: req.Destination,
-		Status:      0,
+		Status:      1,
 	}
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "保存失败")
@@ -75,11 +75,10 @@ func AIGenerateTrip(c *gin.Context) {
 		repository.CreateTripDay(&day)
 		for _, item := range d.Items {
 			tripItem := model.TripItem{
-				TripDayID: day.ID,
-				StartTime: item.Time,
-				ItemType:  item.Type,
-				Title:     item.Name,
-				Status:    0,
+				TripDayID:   day.ID,
+				StartTime:   item.Time,
+				SectionType: item.Type,
+				Title:       item.Name,
 			}
 			repository.CreateTripItem(&tripItem)
 		}
@@ -244,8 +243,8 @@ func AddTripItem(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if item.ItemType != "" && !model.ValidItemTypes[item.ItemType] {
-		response.Fail(c, 400, "无效的行程项类型，可选：transport/attraction/meal/hotel/free")
+	if item.SectionType != "" && !model.ValidSectionTypes[item.SectionType] {
+		response.Fail(c, 400, "无效的行程项类型，可选：transport/hotel/attraction/food/shopping/tips")
 		return
 	}
 	if err := repository.CreateTripItem(&item); err != nil {
@@ -270,8 +269,8 @@ func UpdateTripItem(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if itemType, ok := updates["itemType"].(string); ok && itemType != "" && !model.ValidItemTypes[itemType] {
-		response.Fail(c, 400, "无效的行程项类型，可选：transport/attraction/meal/hotel/free")
+	if sectionType, ok := updates["sectionType"].(string); ok && sectionType != "" && !model.ValidSectionTypes[sectionType] {
+		response.Fail(c, 400, "无效的行程项类型，可选：transport/hotel/attraction/food/shopping/tips")
 		return
 	}
 	if err := repository.UpdateTripItem(id, updates); err != nil {
