@@ -18,8 +18,6 @@ type Trip struct {
 	Province      string         `gorm:"size:50" json:"province"`               // 省份
 	City          string         `gorm:"size:100" json:"city"`                  // 目的地城市
 	Destination   string         `gorm:"size:200" json:"destination"`           // 完整目的地（冗余字段，便于搜索）
-	StartDate     string         `gorm:"type:date" json:"startDate"`            // 出发日期
-	EndDate       string         `gorm:"type:date" json:"endDate"`              // 结束日期
 	TotalBudget   float64        `gorm:"type:decimal(10,2)" json:"totalBudget"` // 总预算
 	IsOverseas    int            `gorm:"default:0" json:"isOverseas"`           // 境内境外：0国内 1境外
 	Note          string         `gorm:"type:text" json:"note"`                 // 行程备注
