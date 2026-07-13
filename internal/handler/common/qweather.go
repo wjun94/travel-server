@@ -1,8 +1,10 @@
 package common
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -10,10 +12,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-resty/resty/v2" // 推荐使用 resty 方便处理 HTTP 请求，也可以用原生 net/http
+	"github.com/go-resty/resty/v2"
 	"github.com/golang-jwt/jwt/v5"
 
 	"travel-server/pkg/config"
+	"travel-server/pkg/database"
 	"travel-server/pkg/response"
 )
 
@@ -39,14 +42,27 @@ func GetQWeather(c *gin.Context) {
 		return
 	}
 
+	// Redis 缓存键
+	cacheKey := "weather:city:" + city
+	ctx := context.Background()
+
+	// 1. 尝试从 Redis 读取缓存
+	cached, err := database.RedisClient.Get(ctx, cacheKey).Result()
+	if err == nil && cached != "" {
+		var cachedResult map[string]interface{}
+		if json.Unmarshal([]byte(cached), &cachedResult) == nil {
+			response.Success(c, cachedResult)
+			return
+		}
+	}
+
 	kid := config.AppConfig.QWeatherKID
 	privateKeyPEM := config.AppConfig.QWeatherKey
 	qweatherPID := config.AppConfig.QWeatherPID
 
-	// 【修改点 1】统一使用你的专属 Host
 	apiBaseURL := "https://p86yw35uvq.re.qweatherapi.com"
 
-	// 1. 生成 JWT Token（两个接口通用）
+	// 2. 生成 JWT Token（两个接口通用）
 	token, err := generateQWeatherJWT(kid, qweatherPID, privateKeyPEM)
 	if err != nil {
 		response.Fail(c, http.StatusInternalServerError, "生成天气认证凭证失败: "+err.Error())
@@ -56,8 +72,7 @@ func GetQWeather(c *gin.Context) {
 	// 创建带 JWT Header 的客户端
 	client := resty.New().SetHeader("Authorization", "Bearer "+token)
 
-	// 2. 第一步：调用 GeoAPI 获取城市的 Location ID
-	// 【修改点 2】严格按照文档拼接专属 Host 和 /geo/v2/city/lookup 路径
+	// 3. 第一步：调用 GeoAPI 获取城市的 Location ID
 	geoURL := fmt.Sprintf("%s/geo/v2/city/lookup", apiBaseURL)
 	var geoResult QWeatherGeoResponse
 
@@ -71,7 +86,6 @@ func GetQWeather(c *gin.Context) {
 		return
 	}
 
-	// 如果返回的 Code 不是 200，打印出原始 Body 方便排查
 	if geoResult.Code != "200" || len(geoResult.Location) == 0 {
 		if geoResult.Code == "" {
 			fmt.Println("GeoAPI 原始返回内容:", respGeo.String())
@@ -83,7 +97,7 @@ func GetQWeather(c *gin.Context) {
 	}
 	locationID := geoResult.Location[0].ID
 
-	// 3. 第二步：调用 7 天天气预报接口
+	// 4. 第二步：调用 7 天天气预报接口
 	weatherURL := fmt.Sprintf("%s/v7/weather/7d", apiBaseURL)
 	var weatherResult map[string]interface{}
 
@@ -95,6 +109,11 @@ func GetQWeather(c *gin.Context) {
 	if err != nil || respWeather.StatusCode() != http.StatusOK {
 		response.Fail(c, http.StatusInternalServerError, "获取天气预报失败")
 		return
+	}
+
+	// 5. 写入 Redis 缓存，6 小时过期
+	if data, err := json.Marshal(weatherResult); err == nil {
+		database.RedisClient.Set(ctx, cacheKey, string(data), 6*time.Hour)
 	}
 
 	response.Success(c, weatherResult)

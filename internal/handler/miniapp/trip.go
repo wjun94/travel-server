@@ -57,9 +57,9 @@ func AIGenerateTrip(c *gin.Context) {
 
 	// 创建行程
 	trip := model.Trip{
-		UserID:      uid,
-		Destination: req.Destination,
-		Status:      1,
+		UserID:       uid,
+		Destinations: []string{req.Destination},
+		Status:       1,
 	}
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "保存失败")

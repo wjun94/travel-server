@@ -54,7 +54,7 @@ func ListPublicTrips(page, pageSize int, destination string) ([]model.Trip, int6
 	offset := (page - 1) * pageSize
 	query := database.DB.Model(&model.Trip{}).Where("is_public = ?", 1)
 	if destination != "" {
-		query = query.Where("destination LIKE ?", "%"+destination+"%")
+		query = query.Where("destinations LIKE ?", "%"+destination+"%")
 	}
 	query.Count(&total)
 	err := query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error

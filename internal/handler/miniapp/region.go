@@ -20,6 +20,7 @@ type CountryItem struct {
 // DestinationMatch 目的地匹配结果
 type DestinationMatch struct {
 	Type     string `json:"type"`               // 类型：国家/省/市/区/镇
+	TypeEn   string `json:"typeEn"`             // 类型英文：country/province/city/district/town
 	Name     string `json:"name"`               // 名称
 	Province string `json:"province,omitempty"` // 所属省份
 	City     string `json:"city,omitempty"`     // 所属城市/区（district/town类型时）
@@ -72,10 +73,11 @@ func SearchDestination(c *gin.Context) {
 			key := "country_" + country.Name
 			if !seen[key] {
 				results = append(results, DestinationMatch{
-					Type:  "国家",
-					Name:  country.Name,
-					Code:  country.Code,
-					Emoji: country.Emoji,
+					Type:   "国家",
+					TypeEn: "country",
+					Name:   country.Name,
+					Code:   country.Code,
+					Emoji:  country.Emoji,
 				})
 				seen[key] = true
 			}
@@ -100,8 +102,9 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 			key := "province_" + node.Name
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
-					Type: "省",
-					Name: node.Name,
+					Type:   "省",
+					TypeEn: "province",
+					Name:   node.Name,
 				})
 				seen[key] = true
 			}
@@ -114,6 +117,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
 					Type:     "市",
+					TypeEn:   "city",
 					Name:     node.Name,
 					Province: province,
 				})
@@ -128,6 +132,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
 					Type:     "区",
+					TypeEn:   "district",
 					Name:     node.Name,
 					Province: province,
 					City:     city,
@@ -143,6 +148,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
 					Type:     "镇",
+					TypeEn:   "town",
 					Name:     node.Name,
 					Province: province,
 					City:     city,
