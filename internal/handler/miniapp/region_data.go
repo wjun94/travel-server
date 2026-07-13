@@ -1,143 +1,89 @@
 package miniapp
 
-// provincialData 国内省级/城市数据
-var provincialData = []ProvinceCity{
-	{
-		Province: "北京",
-		Cities:   []string{"东城区", "西城区", "朝阳区", "海淀区", "丰台区", "石景山区", "通州区", "大兴区", "顺义区", "房山区", "昌平区", "密云区", "怀柔区", "延庆区", "平谷区", "门头沟区"},
-	},
-	{
-		Province: "上海",
-		Cities:   []string{"黄浦区", "徐汇区", "长宁区", "静安区", "普陀区", "虹口区", "杨浦区", "浦东新区", "闵行区", "宝山区", "嘉定区", "金山区", "松江区", "青浦区", "奉贤区", "崇明区"},
-	},
-	{
-		Province: "天津",
-		Cities:   []string{"和平区", "河东区", "河西区", "南开区", "河北区", "红桥区", "滨海新区", "东丽区", "西青区", "津南区", "北辰区", "武清区", "宝坻区", "宁河区", "静海区", "蓟州区"},
-	},
-	{
-		Province: "重庆",
-		Cities:   []string{"渝中区", "江北区", "南岸区", "沙坪坝区", "九龙坡区", "大渡口区", "北碚区", "渝北区", "巴南区", "万州区", "涪陵区", "黔江区", "永川区", "合川区", "江津区", "长寿区", "綦江区", "大足区", "铜梁区", "璧山区", "荣昌区", "开州区", "梁平区", "武隆区", "潼南区", "丰都县", "垫江县", "忠县", "云阳县", "奉节县", "巫山县", "巫溪县", "石柱土家族自治县", "秀山土家族苗族自治县", "酉阳土家族苗族自治县", "彭水苗族土家族自治县"},
-	},
-	{
-		Province: "河北",
-		Cities:   []string{"石家庄", "唐山", "秦皇岛", "邯郸", "邢台", "保定", "张家口", "承德", "沧州", "廊坊", "衡水"},
-	},
-	{
-		Province: "山西",
-		Cities:   []string{"太原", "大同", "阳泉", "长治", "晋城", "朔州", "晋中", "运城", "忻州", "临汾", "吕梁"},
-	},
-	{
-		Province: "内蒙古",
-		Cities:   []string{"呼和浩特", "包头", "乌海", "赤峰", "通辽", "鄂尔多斯", "呼伦贝尔", "巴彦淖尔", "乌兰察布", "兴安盟", "锡林郭勒盟", "阿拉善盟"},
-	},
-	{
-		Province: "辽宁",
-		Cities:   []string{"沈阳", "大连", "鞍山", "抚顺", "本溪", "丹东", "锦州", "营口", "阜新", "辽阳", "盘锦", "铁岭", "朝阳", "葫芦岛"},
-	},
-	{
-		Province: "吉林",
-		Cities:   []string{"长春", "吉林", "四平", "辽源", "通化", "白山", "松原", "白城", "延边"},
-	},
-	{
-		Province: "黑龙江",
-		Cities:   []string{"哈尔滨", "齐齐哈尔", "鸡西", "鹤岗", "双鸭山", "大庆", "伊春", "佳木斯", "七台河", "牡丹江", "黑河", "绥化", "大兴安岭"},
-	},
-	{
-		Province: "江苏",
-		Cities:   []string{"南京", "无锡", "徐州", "常州", "苏州", "南通", "连云港", "淮安", "盐城", "扬州", "镇江", "泰州", "宿迁"},
-	},
-	{
-		Province: "浙江",
-		Cities:   []string{"杭州", "宁波", "温州", "嘉兴", "湖州", "绍兴", "金华", "衢州", "舟山", "台州", "丽水"},
-	},
-	{
-		Province: "安徽",
-		Cities:   []string{"合肥", "芜湖", "蚌埠", "淮南", "马鞍山", "淮北", "铜陵", "安庆", "黄山", "滁州", "阜阳", "宿州", "六安", "亳州", "池州", "宣城"},
-	},
-	{
-		Province: "福建",
-		Cities:   []string{"福州", "厦门", "莆田", "三明", "泉州", "漳州", "南平", "龙岩", "宁德"},
-	},
-	{
-		Province: "江西",
-		Cities:   []string{"南昌", "景德镇", "萍乡", "九江", "新余", "鹰潭", "赣州", "吉安", "宜春", "抚州", "上饶"},
-	},
-	{
-		Province: "山东",
-		Cities:   []string{"济南", "青岛", "淄博", "枣庄", "东营", "烟台", "潍坊", "济宁", "泰安", "威海", "日照", "临沂", "德州", "聊城", "滨州", "菏泽"},
-	},
-	{
-		Province: "河南",
-		Cities:   []string{"郑州", "开封", "洛阳", "平顶山", "安阳", "鹤壁", "新乡", "焦作", "濮阳", "许昌", "漯河", "三门峡", "南阳", "商丘", "信阳", "周口", "驻马店", "济源"},
-	},
-	{
-		Province: "湖北",
-		Cities:   []string{"武汉", "黄石", "十堰", "宜昌", "襄阳", "鄂州", "荆门", "孝感", "荆州", "黄冈", "咸宁", "随州", "恩施", "仙桃", "潜江", "天门", "神农架"},
-	},
-	{
-		Province: "湖南",
-		Cities:   []string{"长沙", "株洲", "湘潭", "衡阳", "邵阳", "岳阳", "常德", "张家界", "益阳", "郴州", "永州", "怀化", "娄底", "湘西"},
-	},
-	{
-		Province: "广东",
-		Cities:   []string{"广州", "深圳", "珠海", "汕头", "佛山", "韶关", "湛江", "肇庆", "江门", "茂名", "惠州", "梅州", "汕尾", "河源", "阳江", "清远", "东莞", "中山", "潮州", "揭阳", "云浮"},
-	},
-	{
-		Province: "广西",
-		Cities:   []string{"南宁", "柳州", "桂林", "梧州", "北海", "防城港", "钦州", "贵港", "玉林", "百色", "贺州", "河池", "来宾", "崇左"},
-	},
-	{
-		Province: "海南",
-		Cities:   []string{"海口", "三亚", "三沙", "儋州", "五指山", "琼海", "文昌", "万宁", "东方", "定安", "屯昌", "澄迈", "临高", "白沙", "昌江", "乐东", "陵水", "保亭", "琼中"},
-	},
-	{
-		Province: "四川",
-		Cities:   []string{"成都", "自贡", "攀枝花", "泸州", "德阳", "绵阳", "广元", "遂宁", "内江", "乐山", "南充", "眉山", "宜宾", "广安", "达州", "雅安", "巴中", "资阳", "阿坝", "甘孜", "凉山"},
-	},
-	{
-		Province: "贵州",
-		Cities:   []string{"贵阳", "六盘水", "遵义", "安顺", "毕节", "铜仁", "黔西南", "黔东南", "黔南"},
-	},
-	{
-		Province: "云南",
-		Cities:   []string{"昆明", "曲靖", "玉溪", "保山", "昭通", "丽江", "普洱", "临沧", "楚雄", "红河", "文山", "西双版纳", "大理", "德宏", "怒江", "迪庆"},
-	},
-	{
-		Province: "西藏",
-		Cities:   []string{"拉萨", "日喀则", "昌都", "林芝", "山南", "那曲", "阿里"},
-	},
-	{
-		Province: "陕西",
-		Cities:   []string{"西安", "铜川", "宝鸡", "咸阳", "渭南", "延安", "汉中", "榆林", "安康", "商洛"},
-	},
-	{
-		Province: "甘肃",
-		Cities:   []string{"兰州", "嘉峪关", "金昌", "白银", "天水", "武威", "张掖", "平凉", "酒泉", "庆阳", "定西", "陇南", "临夏", "甘南"},
-	},
-	{
-		Province: "青海",
-		Cities:   []string{"西宁", "海东", "海北", "黄南", "海南", "果洛", "玉树", "海西"},
-	},
-	{
-		Province: "宁夏",
-		Cities:   []string{"银川", "石嘴山", "吴忠", "固原", "中卫"},
-	},
-	{
-		Province: "新疆",
-		Cities:   []string{"乌鲁木齐", "克拉玛依", "吐鲁番", "哈密", "昌吉", "博尔塔拉", "巴音郭楞", "阿克苏", "克孜勒苏", "喀什", "和田", "伊犁", "塔城", "阿勒泰"},
-	},
-	{
-		Province: "香港",
-		Cities:   []string{"中西区", "湾仔区", "东区", "南区", "油尖旺区", "深水埗区", "九龙城区", "黄大仙区", "观塘区", "荃湾区", "屯门区", "元朗区", "北区", "大埔区", "西贡区", "沙田区", "葵青区", "离岛区"},
-	},
-	{
-		Province: "澳门",
-		Cities:   []string{"花地玛堂区", "圣安多尼堂区", "大堂区", "望德堂区", "风顺堂区", "嘉模堂区", "路氹城", "圣方济各堂区"},
-	},
-	{
-		Province: "台湾",
-		Cities:   []string{"台北", "高雄", "基隆", "台中", "台南", "新竹", "嘉义", "新北", "桃园", "新竹市", "苗栗", "彰化", "南投", "云林", "嘉义市", "屏东", "宜兰", "花莲", "台东", "澎湖", "金门", "连江"},
-	},
+import (
+	"encoding/json"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+)
+
+// ✅ 修正1：添加Children字段匹配原始JSON结构
+type rawRegion struct {
+	Code     string      `json:"code"`
+	Name     string      `json:"name"`
+	Children []rawRegion `json:"children,omitempty"` // 关键修复：添加嵌套结构
+}
+
+// RegionNode 树形节点 (保持输出结构不变)
+type RegionNode struct {
+	ID       string       `json:"id"`
+	Name     string       `json:"name"`
+	Children []RegionNode `json:"children,omitempty"`
+}
+
+var (
+	regionTree []RegionNode
+	once       sync.Once
+)
+
+// loadRegionTree 从项目根目录的 data/pca-code.json 加载
+func loadRegionTree() []RegionNode {
+	once.Do(func() {
+		log.Println("🔍 开始加载省市区数据...")
+
+		// 获取当前工作目录
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("❌ 获取工作目录失败: %v", err)
+		}
+		log.Printf("📂 当前工作目录: %s", wd)
+
+		// 构建文件路径
+		filePath := filepath.Join(wd, "data", "pca-code.json")
+		log.Printf("📄 尝试读取文件: %s", filePath)
+
+		// 读取文件
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Fatalf("❌ 读取 pca-code.json 失败: %v", err)
+		}
+
+		// ✅ 修正2：直接解析为树形结构 (不再需要手动组装)
+		var rawTree []rawRegion
+		if err := json.Unmarshal(data, &rawTree); err != nil {
+			log.Fatalf("❌ 解析 pca-code.json 失败: %v", err)
+		}
+		log.Printf("✅ 成功加载 %d 个省级节点 (含子节点)", len(rawTree))
+
+		// ✅ 修正3：递归转换 rawRegion -> RegionNode
+		regionTree = convertToRegionNode(rawTree)
+		log.Printf("✅ 转换完成，共 %d 个省份", len(regionTree))
+	})
+	return regionTree
+}
+
+// 递归转换函数：rawRegion -> RegionNode
+func convertToRegionNode(raw []rawRegion) []RegionNode {
+	var result []RegionNode
+	for _, r := range raw {
+		// 转换当前节点
+		id, _ := strconv.ParseInt(r.Code, 10, 64) // 忽略错误（已在日志中处理）
+
+		node := RegionNode{
+			ID:   strconv.FormatInt(id, 10),
+			Name: r.Name,
+		}
+
+		// 递归转换子节点
+		if len(r.Children) > 0 {
+			node.Children = convertToRegionNode(r.Children)
+		}
+
+		result = append(result, node)
+	}
+	return result
 }
 
 // countryData 境外国家/地区列表

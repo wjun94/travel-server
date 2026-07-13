@@ -71,7 +71,7 @@ func main() {
 		api.GET("/weather/qweather", common.GetQWeather)           // 天气查询（和风）
 		api.GET("/comments", miniapp.GetComments)                  // 评论列表
 		api.GET("/comment/replies", miniapp.GetReplies)            // 子回复列表
-		api.GET("/regions/domestic", miniapp.GetDomesticRegions)   // 国内省/市列表
+		api.GET("/regions/all", miniapp.GetAllRegions)             // 国内省/市列表
 		api.GET("/regions/countries", miniapp.GetCountries)        // 境外国家列表
 		api.GET("/destinations/search", miniapp.SearchDestination) // 目的地搜索
 
