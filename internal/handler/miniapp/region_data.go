@@ -6,7 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
+	"unicode"
+
+	"github.com/mozillazg/go-pinyin"
 )
 
 // ✅ 修正1：添加Children字段匹配原始JSON结构
@@ -18,9 +22,11 @@ type rawRegion struct {
 
 // RegionNode 树形节点 (保持输出结构不变)
 type RegionNode struct {
-	ID       string       `json:"id"`
-	Name     string       `json:"name"`
-	Children []RegionNode `json:"children,omitempty"`
+	ID           string       `json:"id"`
+	Name         string       `json:"name"`
+	Pinyin       string       `json:"pinyin,omitempty"`       // 全拼（无音调）
+	FirstLetters string       `json:"firstLetters,omitempty"` // 首字母缩写
+	Children     []RegionNode `json:"children,omitempty"`
 }
 
 var (
@@ -64,6 +70,34 @@ func loadRegionTree() []RegionNode {
 	return regionTree
 }
 
+// toPinyin 将中文转换为全拼（无音调，小写，空格分隔）
+func toPinyin(s string) string {
+	py := pinyin.LazyConvert(s, nil)
+	return strings.Join(py, " ")
+}
+
+// toFirstLetters 将中文转换为首字母缩写（小写）
+func toFirstLetters(s string) string {
+	var sb strings.Builder
+	py := pinyin.LazyConvert(s, nil)
+	for _, p := range py {
+		if len(p) > 0 {
+			sb.WriteByte(p[0])
+		}
+	}
+	return sb.String()
+}
+
+// hasChinese 判断字符串是否包含中文
+func hasChinese(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) {
+			return true
+		}
+	}
+	return false
+}
+
 // 递归转换函数：rawRegion -> RegionNode
 func convertToRegionNode(raw []rawRegion) []RegionNode {
 	var result []RegionNode
@@ -72,8 +106,10 @@ func convertToRegionNode(raw []rawRegion) []RegionNode {
 		id, _ := strconv.ParseInt(r.Code, 10, 64) // 忽略错误（已在日志中处理）
 
 		node := RegionNode{
-			ID:   strconv.FormatInt(id, 10),
-			Name: r.Name,
+			ID:           strconv.FormatInt(id, 10),
+			Name:         r.Name,
+			Pinyin:       toPinyin(r.Name),
+			FirstLetters: toFirstLetters(r.Name),
 		}
 
 		// 递归转换子节点

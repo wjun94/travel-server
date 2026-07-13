@@ -20,7 +20,7 @@ type Trip struct {
 	Destinations  []string       `gorm:"type:text;serializer:json" json:"destinations"` // 完整目的地列表（冗余字段，便于搜索）
 	TotalBudget   float64        `gorm:"type:decimal(10,2)" json:"totalBudget"`         // 总预算
 	IsOverseas    int            `gorm:"default:0" json:"isOverseas"`                   // 境内境外：0国内 1境外
-	Note          string         `gorm:"type:text" json:"note"`                         // 行程备注
+	Summary       string         `gorm:"type:text" json:"summary"`                      // 行程备注
 	ViewCount     int            `gorm:"default:0" json:"viewCount"`                    // 浏览量
 	LikeCount     int            `gorm:"default:0" json:"likeCount"`                    // 点赞数
 	FavoriteCount int            `gorm:"default:0" json:"favoriteCount"`                // 收藏数

@@ -93,12 +93,26 @@ func SearchDestination(c *gin.Context) {
 	response.Success(c, results)
 }
 
+// matchesNode 判断 keyword 是否匹配节点（中文名、全拼、首字母缩写）
+func matchesNode(kwLower string, node *RegionNode) bool {
+	if contains(kwLower, node.Name) {
+		return true
+	}
+	// 如果关键词不含中文，尝试匹配拼音
+	if !hasChinese(kwLower) && node.Pinyin != "" {
+		if contains(kwLower, node.Pinyin) || contains(kwLower, node.FirstLetters) {
+			return true
+		}
+	}
+	return false
+}
+
 // searchNode 递归搜索树形节点中的匹配项
 func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower string, node RegionNode, depth int, province, city, district string) {
 	switch depth {
 	case 0:
 		// 省份级别
-		if contains(kwLower, node.Name) {
+		if matchesNode(kwLower, &node) {
 			key := "province_" + node.Name
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
@@ -112,7 +126,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 		province = node.Name
 	case 1:
 		// 城市级别
-		if contains(kwLower, node.Name) {
+		if matchesNode(kwLower, &node) {
 			key := "city_" + node.Name
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
@@ -127,7 +141,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 		city = node.Name
 	case 2:
 		// 区/县级别
-		if contains(kwLower, node.Name) {
+		if matchesNode(kwLower, &node) {
 			key := "district_" + node.Name
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
@@ -143,7 +157,7 @@ func searchNode(results *[]DestinationMatch, seen map[string]bool, kwLower strin
 		district = node.Name
 	default:
 		// 镇/街道级别（depth >= 3）
-		if contains(kwLower, node.Name) {
+		if matchesNode(kwLower, &node) {
 			key := "town_" + node.Name
 			if !seen[key] {
 				*results = append(*results, DestinationMatch{
