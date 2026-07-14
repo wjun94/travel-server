@@ -166,7 +166,7 @@ func CreateGuide(c *gin.Context) {
 // @Summary 攻略详情
 // @Tags 小程序-攻略
 // @Param id path string true "攻略ID"
-// @Success 200 {object} response.Response{data=object{guide=model.Guide,days=[]model.GuideSection,favoriteCount=int,commentCount=int,isLiked=bool,isFavorited=bool}}
+// @Success 200 {object} response.Response{data=object{id=string,userId=string,title=string,coverImage=string,destination=string,summary=string,budgetMin=float64,budgetMax=float64,bestSeason=string,recommendedDays=int,tags=string,difficulty=string,crowdType=string,isOriginal=int,viewCount=int,likeCount=int,status=int,createdAt=string,updatedAt=string,days=[]model.GuideSection,favoriteCount=int,commentCount=int,isLiked=bool,isFavorited=bool}}
 // @Router /api/v1/guide/{id} [get]
 func GetGuideDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -187,13 +187,30 @@ func GetGuideDetail(c *gin.Context) {
 	isLiked := repository.IsGuideLikedByUser(userID, id)
 	isFavorited := repository.IsFavorited(userID, id, "guide")
 	response.Success(c, gin.H{
-		"guide":         guide,
-		"days":          days,
-		"likeCount":     guide.LikeCount,
-		"favoriteCount": favoriteCount,
-		"commentCount":  commentCount,
-		"isLiked":       isLiked,
-		"isFavorited":   isFavorited,
+		"id":              guide.ID,
+		"userId":          guide.UserID,
+		"title":           guide.Title,
+		"coverImage":      guide.CoverImage,
+		"destination":     guide.Destination,
+		"summary":         guide.Summary,
+		"budgetMin":       guide.BudgetMin,
+		"budgetMax":       guide.BudgetMax,
+		"bestSeason":      guide.BestSeason,
+		"recommendedDays": guide.RecommendedDays,
+		"tags":            guide.Tags,
+		"difficulty":      guide.Difficulty,
+		"crowdType":       guide.CrowdType,
+		"isOriginal":      guide.IsOriginal,
+		"viewCount":       guide.ViewCount,
+		"likeCount":       guide.LikeCount,
+		"status":          guide.Status,
+		"createdAt":       guide.CreatedAt,
+		"updatedAt":       guide.UpdatedAt,
+		"days":            days,
+		"favoriteCount":   favoriteCount,
+		"commentCount":    commentCount,
+		"isLiked":         isLiked,
+		"isFavorited":     isFavorited,
 	})
 }
 
