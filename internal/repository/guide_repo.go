@@ -108,8 +108,9 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 	return items, total, nil
 }
 
-// GetPublicFeed 获取公开内容瀑布流（已发布攻略 + 公开行程，合并按创建时间倒序，支持目的地筛选）
-func GetPublicFeed(page, pageSize int, destination, userID string) ([]model.FeedItem, int64, error) {
+// GetPublicFeed 获取公开内容瀑布流（已发布攻略 + 公开行程，合并按时间/热度倒序，支持目的地/tab筛选）
+// tab 取值：recommend(推荐/默认) hot(热门) latest(最新) domestic(国内) overseas(国外)
+func GetPublicFeed(page, pageSize int, destination, userID, tab string) ([]model.FeedItem, int64, error) {
 	// 1. 查询已发布的攻略
 	guideQuery := database.DB.Model(&model.Guide{}).Where("status = ?", 1)
 	// 2. 查询公开的行程
@@ -120,14 +121,33 @@ func GetPublicFeed(page, pageSize int, destination, userID string) ([]model.Feed
 		tripQuery = tripQuery.Where("destinations LIKE ?", "%"+destination+"%")
 	}
 
+	// 按 tab 筛选及排序
+	var guideOrder, tripOrder string
+	switch tab {
+	case "hot":
+		guideOrder = "like_count desc"
+		tripOrder = "like_count desc"
+	case "domestic":
+		tripQuery = tripQuery.Where("is_overseas = ?", 0)
+		guideOrder = "created_at desc"
+		tripOrder = "created_at desc"
+	case "overseas":
+		tripQuery = tripQuery.Where("is_overseas = ?", 1)
+		guideOrder = "created_at desc"
+		tripOrder = "created_at desc"
+	default: // recommend / latest
+		guideOrder = "created_at desc"
+		tripOrder = "created_at desc"
+	}
+
 	var guideTotal, tripTotal int64
 	guideQuery.Count(&guideTotal)
 	tripQuery.Count(&tripTotal)
 
 	var guides []model.Guide
 	var trips []model.Trip
-	guideQuery.Order("created_at desc").Find(&guides)
-	tripQuery.Order("created_at desc").Find(&trips)
+	guideQuery.Order(guideOrder).Find(&guides)
+	tripQuery.Order(tripOrder).Find(&trips)
 
 	// 批量查询攻略的天数和行程项统计
 	guideIDs := make([]string, len(guides))
@@ -246,10 +266,16 @@ func GetPublicFeed(page, pageSize int, destination, userID string) ([]model.Feed
 		})
 	}
 
-	// 4. 按创建时间倒序排列
-	sort.Slice(allItems, func(i, j int) bool {
-		return allItems[i].CreatedAt.After(allItems[j].CreatedAt)
-	})
+	// 4. 合并排序（热门按点赞数倒序，其余按创建时间倒序）
+	if tab == "hot" {
+		sort.Slice(allItems, func(i, j int) bool {
+			return allItems[i].LikeCount > allItems[j].LikeCount
+		})
+	} else {
+		sort.Slice(allItems, func(i, j int) bool {
+			return allItems[i].CreatedAt.After(allItems[j].CreatedAt)
+		})
+	}
 
 	total := guideTotal + tripTotal
 	offset := (page - 1) * pageSize

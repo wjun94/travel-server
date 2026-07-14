@@ -14,18 +14,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetGuideFeed 公开内容瀑布流（已发布攻略 + 公开行程，合并按时间倒序）
+// GetGuideFeed 公开内容瀑布流（已发布攻略 + 公开行程，合并按时间/热度倒序）
 // @Summary 公开内容瀑布流
 // @Tags 小程序-攻略
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Param destination query string false "目的地筛选"
+// @Param category query string false "筛选：recommend(推荐默认) hot(热门) latest(最新) domestic(国内) overseas(国外)"
 // @Success 200 {object} response.Response{data=object{list=[]model.FeedItem,total=int}}
 // @Router /api/v1/guides [get]
 func GetGuideFeed(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	destination := c.Query("destination")
+	category := c.DefaultQuery("category", "recommend")
 
 	// 可选登录：如果带有效 token 则获取 userID 用于标记 isLiked
 	userID := ""
@@ -37,8 +39,8 @@ func GetGuideFeed(c *gin.Context) {
 		}
 	}
 
-	// 查询合并的公开内容（攻略+行程），按创建时间倒序
-	items, total, err := repository.GetPublicFeed(page, pageSize, destination, userID)
+	// 查询合并的公开内容（攻略+行程），按 tab 排序/筛选
+	items, total, err := repository.GetPublicFeed(page, pageSize, destination, userID, category)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
