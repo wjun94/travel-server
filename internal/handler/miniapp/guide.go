@@ -45,6 +45,27 @@ func GetGuideFeed(c *gin.Context) {
 	response.Success(c, gin.H{"list": guides, "total": total})
 }
 
+// GetMyGuides 我的攻略列表
+// @Summary 我的攻略列表
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.GuideFeedItem,total=int}}
+// @Router /api/v1/my/guides [get]
+func GetMyGuides(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	guides, total, err := repository.ListMyGuides(userID, page, pageSize)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, gin.H{"list": guides, "total": total})
+}
+
 // CreateGuide 创建攻略（含每日行程）
 // @Summary 创建攻略
 // @Security BearerAuth

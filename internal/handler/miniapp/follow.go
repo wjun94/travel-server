@@ -49,7 +49,7 @@ func UnfollowUser(c *gin.Context) {
 // @Tags 小程序-关注
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]repository.FollowItem,total=int}}
 // @Router /api/v1/follow/following [get]
 func GetMyFollowingList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -69,7 +69,7 @@ func GetMyFollowingList(c *gin.Context) {
 // @Tags 小程序-关注
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]repository.FollowItem,total=int}}
 // @Router /api/v1/follow/followers [get]
 func GetMyFollowerList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -90,7 +90,7 @@ func GetMyFollowerList(c *gin.Context) {
 // @Param id path string true "用户ID"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]repository.FollowItem,total=int}}
 // @Router /api/v1/follow/following/{id} [get]
 func GetUserFollowingList(c *gin.Context) {
 	targetUserID := c.Param("id")
@@ -112,7 +112,7 @@ func GetUserFollowingList(c *gin.Context) {
 // @Param id path string true "用户ID"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]repository.FollowItem,total=int}}
 // @Router /api/v1/follow/followers/{id} [get]
 func GetUserFollowerList(c *gin.Context) {
 	targetUserID := c.Param("id")
@@ -242,7 +242,7 @@ func UnblockUser(c *gin.Context) {
 // @Tags 小程序-关注
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]repository.BlacklistItem,total=int}}
 // @Router /api/v1/follow/blacklist [get]
 func GetMyBlacklist(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

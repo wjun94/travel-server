@@ -3,6 +3,7 @@ package miniapp
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -124,6 +125,27 @@ func GetTrip(c *gin.Context) {
 		return
 	}
 	response.Success(c, trip)
+}
+
+// GetMyTrips 我的行程列表
+// @Summary 我的行程列表
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.Trip,total=int}}
+// @Router /api/v1/my/trips [get]
+func GetMyTrips(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	trips, total, err := repository.ListUserTrips(userID, page, pageSize)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, gin.H{"list": trips, "total": total})
 }
 
 // UpdateTrip 更新行程基本信息

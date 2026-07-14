@@ -90,6 +90,7 @@ func main() {
 
 			// ---------- 攻略 ----------
 			miniAuth.POST("/guide", miniapp.CreateGuide)
+			miniAuth.GET("/my/guides", miniapp.GetMyGuides)
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)
 			miniAuth.POST("/guide/:id/day", miniapp.CreateGuideDay)            // 新增一天
@@ -102,6 +103,7 @@ func main() {
 
 			// ---------- 行程 ----------
 			miniAuth.POST("/trip", miniapp.CreateTrip)
+			miniAuth.GET("/my/trips", miniapp.GetMyTrips)
 			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip)
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)
 			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)

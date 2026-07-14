@@ -106,6 +106,75 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 	return items, total, nil
 }
 
+// ListMyGuides 我的攻略列表（含天数、行程项统计）
+func ListMyGuides(userID string, page, pageSize int) ([]model.GuideFeedItem, int64, error) {
+	var guides []model.Guide
+	var total int64
+	offset := (page - 1) * pageSize
+	database.DB.Model(&model.Guide{}).Where("user_id = ?", userID).Count(&total)
+	err := database.DB.Where("user_id = ?", userID).
+		Order("created_at desc").Offset(offset).Limit(pageSize).Find(&guides).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 批量查询天数统计
+	guideIDs := make([]string, len(guides))
+	for i, g := range guides {
+		guideIDs[i] = g.ID
+	}
+
+	type dayCount struct {
+		GuideID string
+		Days    int
+	}
+	var dayCounts []dayCount
+	database.DB.Model(&model.GuideSection{}).
+		Select("guide_id, COUNT(DISTINCT day_number) as days").
+		Where("guide_id IN ?", guideIDs).
+		Group("guide_id").
+		Find(&dayCounts)
+	dayMap := make(map[string]int)
+	for _, d := range dayCounts {
+		dayMap[d.GuideID] = d.Days
+	}
+
+	// 批量查询行程项总数（不包含交通）
+	type secCount struct {
+		GuideID string
+		Count   int64
+	}
+	var secCounts []secCount
+	database.DB.Table("guide_day_items gdi").
+		Select("gs.guide_id, COUNT(gdi.id) as count").
+		Joins("LEFT JOIN guide_sections gs ON gs.id = gdi.day_id").
+		Where("gs.guide_id IN ? AND gdi.section_type != ?", guideIDs, "transport").
+		Group("gs.guide_id").
+		Find(&secCounts)
+	secMap := make(map[string]int64)
+	for _, s := range secCounts {
+		secMap[s.GuideID] = s.Count
+	}
+
+	items := make([]model.GuideFeedItem, len(guides))
+	for i, g := range guides {
+		items[i] = model.GuideFeedItem{
+			ID:           g.ID,
+			UserID:       g.UserID,
+			Title:        g.Title,
+			CoverImage:   g.CoverImage,
+			Destination:  g.Destination,
+			IsOriginal:   g.IsOriginal,
+			ViewCount:    g.ViewCount,
+			LikeCount:    g.LikeCount,
+			TripDays:     dayMap[g.ID],
+			SectionCount: secMap[g.ID],
+			CreatedAt:    g.CreatedAt,
+		}
+	}
+	return items, total, nil
+}
+
 // CreateGuide 创建攻略（仅基本信息）
 func CreateGuide(guide *model.Guide) error {
 	return database.DB.Create(guide).Error
