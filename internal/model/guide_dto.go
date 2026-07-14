@@ -160,3 +160,22 @@ type GuideFeedItem struct {
 	AuthorAvatar string    `json:"authorAvatar"` // 作者头像
 	IsLiked      bool      `json:"isLiked"`      // 是否已点赞
 }
+
+// FeedItem 公共瀑布流返回项（攻略+行程统一展示）
+type FeedItem struct {
+	ID           string    `json:"id"`           // 内容ID
+	UserID       string    `json:"userId"`       // 作者ID
+	Title        string    `json:"title"`        // 标题
+	CoverImage   string    `json:"coverImage"`   // 封面图
+	Destinations []string  `json:"destinations"` // 目的地列表
+	Summary      string    `json:"summary"`      // 摘要/备注
+	ItemType     string    `json:"itemType"`     // 内容类型：guide(攻略) / trip(行程)
+	ViewCount    int       `json:"viewCount"`    // 浏览量
+	LikeCount    int       `json:"likeCount"`    // 点赞数
+	TripDays     int       `json:"tripDays"`     // 行程天数
+	SectionCount int64     `json:"sectionCount"` // 行程项总数（不包含交通，仅guide有效）
+	CreatedAt    time.Time `json:"createdAt"`    // 创建时间
+	AuthorName   string    `json:"authorName"`   // 作者昵称
+	AuthorAvatar string    `json:"authorAvatar"` // 作者头像
+	IsLiked      bool      `json:"isLiked"`      // 当前用户是否已点赞
+}

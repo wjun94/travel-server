@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"sort"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 
@@ -103,6 +105,198 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 			IsLiked:      likedSet[g.ID],
 		}
 	}
+	return items, total, nil
+}
+
+// GetPublicFeed 获取公开内容瀑布流（已发布攻略 + 公开行程，合并按创建时间倒序，支持目的地筛选）
+func GetPublicFeed(page, pageSize int, destination, userID string) ([]model.FeedItem, int64, error) {
+	// 1. 查询已发布的攻略
+	guideQuery := database.DB.Model(&model.Guide{}).Where("status = ?", 1)
+	// 2. 查询公开的行程
+	tripQuery := database.DB.Model(&model.Trip{}).Where("is_public = ?", 1)
+
+	if destination != "" {
+		guideQuery = guideQuery.Where("destination LIKE ?", "%"+destination+"%")
+		tripQuery = tripQuery.Where("destinations LIKE ?", "%"+destination+"%")
+	}
+
+	var guideTotal, tripTotal int64
+	guideQuery.Count(&guideTotal)
+	tripQuery.Count(&tripTotal)
+
+	var guides []model.Guide
+	var trips []model.Trip
+	guideQuery.Order("created_at desc").Find(&guides)
+	tripQuery.Order("created_at desc").Find(&trips)
+
+	// 批量查询攻略的天数和行程项统计
+	guideIDs := make([]string, len(guides))
+	for i, g := range guides {
+		guideIDs[i] = g.ID
+	}
+
+	type dayCount struct {
+		GuideID string
+		Days    int
+	}
+	var dayCounts []dayCount
+	if len(guideIDs) > 0 {
+		database.DB.Model(&model.GuideSection{}).
+			Select("guide_id, COUNT(DISTINCT day_number) as days").
+			Where("guide_id IN ?", guideIDs).
+			Group("guide_id").
+			Find(&dayCounts)
+	}
+	dayMap := make(map[string]int)
+	for _, d := range dayCounts {
+		dayMap[d.GuideID] = d.Days
+	}
+
+	type secCount struct {
+		GuideID string
+		Count   int64
+	}
+	var secCounts []secCount
+	if len(guideIDs) > 0 {
+		database.DB.Table("guide_day_items gdi").
+			Select("gs.guide_id, COUNT(gdi.id) as count").
+			Joins("LEFT JOIN guide_sections gs ON gs.id = gdi.day_id").
+			Where("gs.guide_id IN ? AND gdi.section_type != ?", guideIDs, "transport").
+			Group("gs.guide_id").
+			Find(&secCounts)
+	}
+	secMap := make(map[string]int64)
+	for _, s := range secCounts {
+		secMap[s.GuideID] = s.Count
+	}
+
+	// 3. 合并为 FeedItem 切片
+	allItems := make([]model.FeedItem, 0, len(guides)+len(trips))
+	for _, g := range guides {
+		allItems = append(allItems, model.FeedItem{
+			ID:           g.ID,
+			UserID:       g.UserID,
+			Title:        g.Title,
+			CoverImage:   g.CoverImage,
+			Destinations: []string{g.Destination},
+			Summary:      g.Summary,
+			ItemType:     "guide",
+			ViewCount:    g.ViewCount,
+			LikeCount:    g.LikeCount,
+			TripDays:     dayMap[g.ID],
+			SectionCount: secMap[g.ID],
+			CreatedAt:    g.CreatedAt,
+		})
+	}
+	// 批量查询行程的天数和行程项统计
+	tripIDs := make([]string, len(trips))
+	for i, t := range trips {
+		tripIDs[i] = t.ID
+	}
+
+	type tripDayCount struct {
+		TripID string
+		Days   int
+	}
+	var tripDayCounts []tripDayCount
+	if len(tripIDs) > 0 {
+		database.DB.Model(&model.TripDay{}).
+			Select("trip_id, COUNT(DISTINCT day_number) as days").
+			Where("trip_id IN ?", tripIDs).
+			Group("trip_id").
+			Find(&tripDayCounts)
+	}
+	tripDayMap := make(map[string]int)
+	for _, d := range tripDayCounts {
+		tripDayMap[d.TripID] = d.Days
+	}
+
+	type tripSecCount struct {
+		TripID string
+		Count  int64
+	}
+	var tripSecCounts []tripSecCount
+	if len(tripIDs) > 0 {
+		database.DB.Table("trip_items ti").
+			Select("td.trip_id, COUNT(ti.id) as count").
+			Joins("LEFT JOIN trip_days td ON td.id = ti.trip_day_id").
+			Where("td.trip_id IN ?", tripIDs).
+			Group("td.trip_id").
+			Find(&tripSecCounts)
+	}
+	tripSecMap := make(map[string]int64)
+	for _, s := range tripSecCounts {
+		tripSecMap[s.TripID] = s.Count
+	}
+
+	for _, t := range trips {
+		allItems = append(allItems, model.FeedItem{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Title:        t.Title,
+			CoverImage:   t.CoverImage,
+			Destinations: t.Destinations,
+			Summary:      t.Summary,
+			ItemType:     "trip",
+			ViewCount:    t.ViewCount,
+			LikeCount:    t.LikeCount,
+			TripDays:     tripDayMap[t.ID],
+			SectionCount: tripSecMap[t.ID],
+			CreatedAt:    t.CreatedAt,
+		})
+	}
+
+	// 4. 按创建时间倒序排列
+	sort.Slice(allItems, func(i, j int) bool {
+		return allItems[i].CreatedAt.After(allItems[j].CreatedAt)
+	})
+
+	total := guideTotal + tripTotal
+	offset := (page - 1) * pageSize
+	if offset > len(allItems) {
+		return []model.FeedItem{}, total, nil
+	}
+	end := offset + pageSize
+	if end > len(allItems) {
+		end = len(allItems)
+	}
+	items := allItems[offset:end]
+
+	// 5. 批量获取作者信息
+	userIDs := make([]string, 0)
+	itemIDs := make([]string, 0)
+	userIDSet := make(map[string]bool)
+	for i := range items {
+		if !userIDSet[items[i].UserID] {
+			userIDs = append(userIDs, items[i].UserID)
+			userIDSet[items[i].UserID] = true
+		}
+		itemIDs = append(itemIDs, items[i].ID)
+	}
+
+	var users []model.User
+	database.DB.Where("id IN ?", userIDs).Find(&users)
+	userMap := make(map[string]model.User)
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	// 6. 批量获取当前用户的点赞状态（攻略和行程共用 Favorite 表）
+	likedSet := make(map[string]bool)
+	if userID != "" {
+		var favs []model.Favorite
+		database.DB.Where("user_id = ? AND target_id IN ?", userID, itemIDs).Find(&favs)
+		for _, f := range favs {
+			likedSet[f.TargetID] = true
+		}
+	}
+
+	for i := range items {
+		items[i].AuthorName = userMap[items[i].UserID].Nickname
+		items[i].AuthorAvatar = userMap[items[i].UserID].AvatarURL
+		items[i].IsLiked = likedSet[items[i].ID]
+	}
+
 	return items, total, nil
 }
 

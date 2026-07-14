@@ -14,13 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetGuideFeed 攻略瀑布流（公开接口，登录后可标记当前用户是否点赞）
-// @Summary 攻略瀑布流
+// GetGuideFeed 公开内容瀑布流（已发布攻略 + 公开行程，合并按时间倒序）
+// @Summary 公开内容瀑布流
 // @Tags 小程序-攻略
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Param destination query string false "目的地筛选"
-// @Success 200 {object} response.Response{data=object{list=[]model.GuideFeedItem,total=int}}
+// @Success 200 {object} response.Response{data=object{list=[]model.FeedItem,total=int}}
 // @Router /api/v1/guides [get]
 func GetGuideFeed(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -37,12 +37,13 @@ func GetGuideFeed(c *gin.Context) {
 		}
 	}
 
-	guides, total, err := repository.GetGuideFeed(page, pageSize, destination, userID)
+	// 查询合并的公开内容（攻略+行程），按创建时间倒序
+	items, total, err := repository.GetPublicFeed(page, pageSize, destination, userID)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
-	response.Success(c, gin.H{"list": guides, "total": total})
+	response.Success(c, gin.H{"list": items, "total": total})
 }
 
 // GetMyGuides 我的攻略列表

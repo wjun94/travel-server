@@ -19,7 +19,7 @@ func GetTripByID(id string) (*model.Trip, error) {
 	var trip model.Trip
 	err := database.DB.
 		Preload("Days.Items", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort_order asc")
+			return db.Order("created_at asc")
 		}).
 		Preload("Members").
 		First(&trip, "id = ?", id).Error
@@ -34,6 +34,20 @@ func UpdateTrip(id string, updates map[string]interface{}) error {
 // DeleteTrip 软删除行程
 func DeleteTrip(id string) error {
 	return database.DB.Where("id = ?", id).Delete(&model.Trip{}).Error
+}
+
+// GetTripFavoriteCount 获取行程收藏数
+func GetTripFavoriteCount(tripID string) int64 {
+	var count int64
+	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ?", "trip", tripID).Count(&count)
+	return count
+}
+
+// GetTripCommentCount 获取行程评论数
+func GetTripCommentCount(tripID string) int64 {
+	var count int64
+	database.DB.Model(&model.Comment{}).Where("target_type = ? AND target_id = ?", "trip", tripID).Count(&count)
+	return count
 }
 
 // ListUserTrips 用户行程列表

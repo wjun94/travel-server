@@ -10,6 +10,7 @@ import (
 	"travel-server/internal/ai"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/pkg/database"
 	"travel-server/pkg/response"
 )
 
@@ -121,10 +122,45 @@ func GetTrip(c *gin.Context) {
 	id := c.Param("id")
 	trip, err := repository.GetTripByID(id)
 	if err != nil {
-		response.Fail(c, 404, "行程不存在")
+		response.Fail(c, 500, "行程不存在")
 		return
 	}
-	response.Success(c, trip)
+	userID := c.MustGet("userID").(string)
+
+	// 收藏数、评论数、点赞状态
+	favoriteCount := repository.GetTripFavoriteCount(id)
+	commentCount := repository.GetTripCommentCount(id)
+	isLiked := repository.IsFavorited(userID, id, "trip")
+
+	// 将 trip 展开到顶层，不嵌套在单独的 trip 字段里
+	result := gin.H{
+		"id":            trip.ID,
+		"userId":        trip.UserID,
+		"guideId":       trip.GuideID,
+		"title":         trip.Title,
+		"coverImage":    trip.CoverImage,
+		"countries":     trip.Countries,
+		"provinces":     trip.Provinces,
+		"cities":        trip.Cities,
+		"destinations":  trip.Destinations,
+		"totalBudget":   trip.TotalBudget,
+		"isOverseas":    trip.IsOverseas,
+		"summary":       trip.Summary,
+		"viewCount":     trip.ViewCount,
+		"likeCount":     trip.LikeCount,
+		"favoriteCount": favoriteCount,
+		"commentCount":  commentCount,
+		"status":        trip.Status,
+		"isPublic":      trip.IsPublic,
+		"createdAt":     trip.CreatedAt,
+		"updatedAt":     trip.UpdatedAt,
+		"days":          trip.Days,
+		"members":       trip.Members,
+		"isLiked":       isLiked,
+		"isFavorited":   isLiked,
+	}
+
+	response.Success(c, result)
 }
 
 // GetMyTrips 我的行程列表
@@ -145,7 +181,77 @@ func GetMyTrips(c *gin.Context) {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
-	response.Success(c, gin.H{"list": trips, "total": total})
+
+	// 批量查询行程的天数和行程项统计
+	tripIDs := make([]string, len(trips))
+	for i, t := range trips {
+		tripIDs[i] = t.ID
+	}
+
+	type tripDayCount struct {
+		TripID string
+		Days   int
+	}
+	var tripDayCounts []tripDayCount
+	if len(tripIDs) > 0 {
+		database.DB.Model(&model.TripDay{}).
+			Select("trip_id, COUNT(DISTINCT day_number) as days").
+			Where("trip_id IN ?", tripIDs).
+			Group("trip_id").
+			Find(&tripDayCounts)
+	}
+	dayMap := make(map[string]int)
+	for _, d := range tripDayCounts {
+		dayMap[d.TripID] = d.Days
+	}
+
+	type tripSecCount struct {
+		TripID string
+		Count  int64
+	}
+	var tripSecCounts []tripSecCount
+	if len(tripIDs) > 0 {
+		database.DB.Table("trip_items ti").
+			Select("td.trip_id, COUNT(ti.id) as count").
+			Joins("LEFT JOIN trip_days td ON td.id = ti.trip_day_id").
+			Where("td.trip_id IN ?", tripIDs).
+			Group("td.trip_id").
+			Find(&tripSecCounts)
+	}
+	secMap := make(map[string]int64)
+	for _, s := range tripSecCounts {
+		secMap[s.TripID] = s.Count
+	}
+
+	// 组装返回数据
+	list := make([]gin.H, 0, len(trips))
+	for _, t := range trips {
+		list = append(list, gin.H{
+			"id":            t.ID,
+			"userId":        t.UserID,
+			"guideId":       t.GuideID,
+			"title":         t.Title,
+			"coverImage":    t.CoverImage,
+			"countries":     t.Countries,
+			"provinces":     t.Provinces,
+			"cities":        t.Cities,
+			"destinations":  t.Destinations,
+			"totalBudget":   t.TotalBudget,
+			"isOverseas":    t.IsOverseas,
+			"summary":       t.Summary,
+			"viewCount":     t.ViewCount,
+			"likeCount":     t.LikeCount,
+			"favoriteCount": t.FavoriteCount,
+			"tripDays":      dayMap[t.ID],
+			"sectionCount":  secMap[t.ID],
+			"status":        t.Status,
+			"isPublic":      t.IsPublic,
+			"createdAt":     t.CreatedAt,
+			"updatedAt":     t.UpdatedAt,
+		})
+	}
+
+	response.Success(c, gin.H{"list": list, "total": total})
 }
 
 // UpdateTrip 更新行程基本信息

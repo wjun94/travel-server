@@ -64,7 +64,7 @@ func main() {
 		// ==================== 公开接口（无需登录） ====================
 		api.POST("/user/login", miniapp.UserLogin)                 // 微信登录
 		api.POST("/admin/login", admin.AdminLogin)                 // 后台登录
-		api.GET("/guides", miniapp.GetGuideFeed)                   // 攻略瀑布流
+		api.GET("/guide/feed", miniapp.GetGuideFeed)               // 攻略瀑布流
 		api.GET("/nearby", miniapp.GetNearby)                      // 周边推荐
 		api.GET("/nearby/recommend", miniapp.GetTopRecommend)      // TOP推荐
 		api.GET("/weather", common.GetWeather)                     // 天气查询
@@ -102,64 +102,64 @@ func main() {
 			miniAuth.DELETE("/guide/day/item/:id", miniapp.DeleteGuideDayItem) // 删除行程项
 
 			// ---------- 行程 ----------
-			miniAuth.POST("/trip", miniapp.CreateTrip)
-			miniAuth.GET("/my/trips", miniapp.GetMyTrips)
-			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip)
-			miniAuth.GET("/trip/:id", miniapp.GetTrip)
-			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)
-			miniAuth.POST("/trip/day", miniapp.AddTripDay)
-			miniAuth.PUT("/trip/day/:id", miniapp.UpdateTripDay)
-			miniAuth.DELETE("/trip/day/:id", miniapp.DeleteTripDay)
-			miniAuth.POST("/trip/item", miniapp.AddTripItem)
-			miniAuth.PUT("/trip/item/:id", miniapp.UpdateTripItem)
-			miniAuth.DELETE("/trip/item/:id", miniapp.DeleteTripItem)
-			miniAuth.POST("/trip/member", miniapp.InviteMember)
-			miniAuth.DELETE("/trip/member/:id", miniapp.RemoveMember)
+			miniAuth.POST("/trip", miniapp.CreateTrip)                 // 1.手动创建行程
+			miniAuth.GET("/my/trips", miniapp.GetMyTrips)              // 2.我的行程列表
+			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip) // 3.AI智能生成行程
+			miniAuth.GET("/trip/:id", miniapp.GetTrip)                 // 4.行程详情
+			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)              // 5.更新行程
+			miniAuth.POST("/trip/day", miniapp.AddTripDay)             // 6.添加行程日
+			miniAuth.PUT("/trip/day/:id", miniapp.UpdateTripDay)       // 7.更新行程日
+			miniAuth.DELETE("/trip/day/:id", miniapp.DeleteTripDay)    // 8.删除行程日
+			miniAuth.POST("/trip/item", miniapp.AddTripItem)           // 9.添加行程项
+			miniAuth.PUT("/trip/item/:id", miniapp.UpdateTripItem)     // 10.更新行程项
+			miniAuth.DELETE("/trip/item/:id", miniapp.DeleteTripItem)  // 11.删除行程项
+			miniAuth.POST("/trip/member", miniapp.InviteMember)        // 12.邀请同行者
+			miniAuth.DELETE("/trip/member/:id", miniapp.RemoveMember)  // 13.移除同行者
 
 			// ---------- 搭子 ----------
-			miniAuth.POST("/partner", miniapp.CreatePartner)
-			miniAuth.GET("/partner/list", miniapp.GetPartnerList)
-			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)
-			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication)
+			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 1.发布搭子
+			miniAuth.GET("/partner/list", miniapp.GetPartnerList)               // 2.搭子列表
+			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 3.申请加入
+			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 4.处理申请
 
 			// ---------- 消息 ----------
-			miniAuth.GET("/message/list", miniapp.GetMessageList)
-			miniAuth.POST("/message/send", miniapp.SendMessage)
+			miniAuth.GET("/message/list", miniapp.GetMessageList) // 1.消息列表
+			miniAuth.POST("/message/send", miniapp.SendMessage)   // 2.发送消息
 
 			// ---------- 记账 ----------
-			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)
-			miniAuth.POST("/account", miniapp.AddAccount)
-			miniAuth.POST("/account/import", miniapp.ImportWechatPay)
+			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)     // 1.查询行程账本
+			miniAuth.POST("/account", miniapp.AddAccount)             // 2.添加一笔账
+			miniAuth.POST("/account/import", miniapp.ImportWechatPay) // 3.导入微信账单
 
 			// ---------- 备忘清单 ----------
-			miniAuth.GET("/checklist", miniapp.GetChecklists)
-			miniAuth.GET("/checklist/categories", miniapp.GetChecklistCategories)
-			miniAuth.GET("/checklist/:id", miniapp.GetChecklistDetail)
-			miniAuth.POST("/checklist", miniapp.CreateChecklist)
-			miniAuth.PUT("/checklist/:id", miniapp.UpdateChecklist)
-			miniAuth.DELETE("/checklist/:id", miniapp.DeleteChecklist)
-			miniAuth.PUT("/checklist/:id/item", miniapp.UpdateChecklistItem)
+			miniAuth.GET("/checklist", miniapp.GetChecklists)                     // 1.清单列表
+			miniAuth.GET("/checklist/categories", miniapp.GetChecklistCategories) // 2.分类列表
+			miniAuth.GET("/checklist/:id", miniapp.GetChecklistDetail)            // 3.清单详情
+			miniAuth.POST("/checklist", miniapp.CreateChecklist)                  // 4.创建清单
+			miniAuth.PUT("/checklist/:id", miniapp.UpdateChecklist)               // 5.更新清单
+			miniAuth.DELETE("/checklist/:id", miniapp.DeleteChecklist)            // 6.删除清单
+			miniAuth.PUT("/checklist/:id/item", miniapp.UpdateChecklistItem)      // 7.更新清单条目
 
 			// ---------- 足迹 ----------
-			miniAuth.GET("/footprint", miniapp.GetFootprints)
-			miniAuth.POST("/footprint/sync", miniapp.SyncFootprint)
-			miniAuth.GET("/footprint/poster", miniapp.GeneratePoster)
+			miniAuth.GET("/footprint", miniapp.GetFootprints)         // 1.足迹列表
+			miniAuth.POST("/footprint/sync", miniapp.SyncFootprint)   // 2.同步足迹
+			miniAuth.GET("/footprint/poster", miniapp.GeneratePoster) // 3.生成足迹海报
 
 			// ---------- 收藏 ----------
-			miniAuth.POST("/favorite", miniapp.AddFavorite)
-			miniAuth.POST("/favorite/remove", miniapp.RemoveFavorite)
-			miniAuth.GET("/favorites", miniapp.GetFavorites)
+			miniAuth.POST("/favorite", miniapp.AddFavorite)           // 1.添加收藏
+			miniAuth.POST("/favorite/remove", miniapp.RemoveFavorite) // 2.取消收藏
+			miniAuth.GET("/favorites", miniapp.GetFavorites)          // 3.收藏列表
 
 			// ---------- 评论 ----------
-			miniAuth.POST("/comment", miniapp.CreateComment)
-			miniAuth.DELETE("/comment/:id", miniapp.DeleteComment)
-			miniAuth.POST("/comment/:id/like", miniapp.LikeComment)
+			miniAuth.POST("/comment", miniapp.CreateComment)        // 1.发表评论
+			miniAuth.DELETE("/comment/:id", miniapp.DeleteComment)  // 2.删除评论
+			miniAuth.POST("/comment/:id/like", miniapp.LikeComment) // 3.点赞评论
 
 			// ---------- 浏览历史 ----------
-			miniAuth.POST("/browse/history", miniapp.AddBrowseHistory)
-			miniAuth.GET("/browse/history", miniapp.GetBrowseHistory)
-			miniAuth.DELETE("/browse/history/clear", miniapp.ClearBrowseHistory)
-			miniAuth.DELETE("/browse/history/:id", miniapp.DeleteBrowseHistory)
+			miniAuth.POST("/browse/history", miniapp.AddBrowseHistory)           // 1.新增浏览记录
+			miniAuth.GET("/browse/history", miniapp.GetBrowseHistory)            // 2.浏览历史列表
+			miniAuth.DELETE("/browse/history/clear", miniapp.ClearBrowseHistory) // 3.清空历史
+			miniAuth.DELETE("/browse/history/:id", miniapp.DeleteBrowseHistory)  // 4.删除单条
 
 			// ---------- 关注 ----------
 			miniAuth.POST("/follow/:id", miniapp.FollowUser)                    // 1.关注
