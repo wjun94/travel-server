@@ -159,6 +159,18 @@ func GetTrip(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
+	// 作者信息
+	author, _ := repository.GetUserByID(trip.UserID)
+	authorName := ""
+	authorAvatar := ""
+	if author != nil {
+		authorName = author.Nickname
+		authorAvatar = author.AvatarURL
+	}
+	// 关注状态
+	followStatus, _ := repository.GetFollowStatus(userID, trip.UserID)
+	isFollowed := followStatus == 0 || followStatus == 2
+
 	// 收藏数、评论数、点赞状态
 	favoriteCount := repository.GetTripFavoriteCount(id)
 	commentCount := repository.GetTripCommentCount(id)
@@ -190,6 +202,10 @@ func GetTrip(c *gin.Context) {
 		"members":       trip.Members,
 		"isLiked":       isLiked,
 		"isFavorited":   isLiked,
+		"authorName":    authorName,
+		"authorAvatar":  authorAvatar,
+		"isFollowed":    isFollowed,
+		"isSelf":        userID == trip.UserID,
 	}
 
 	response.Success(c, result)
