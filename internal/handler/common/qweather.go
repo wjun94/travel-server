@@ -29,11 +29,47 @@ type QWeatherGeoResponse struct {
 	} `json:"location"`
 }
 
+// QWeatherDaily 和风7天预报每日数据
+// @Description 每日天气预报字段
+// @Description fxDate: 日期, tempMax: 最高温, tempMin: 最低温
+// @Description textDay: 白天天气, textNight: 夜间天气, iconDay: 天气图标编号
+// @Description windDirDay: 风向, humidity: 湿度百分比, precip: 降水量mm
+// @Description vis: 能见度km, uvIndex: 紫外线指数
+// @Description cloud: 云量（可能为空）
+type QWeatherDaily struct {
+	FxDate       string `json:"fxDate"`       // 日期
+	Sunrise      string `json:"sunrise"`      // 日出时间
+	Sunset       string `json:"sunset"`       // 日落时间
+	TempMax      string `json:"tempMax"`      // 最高温度
+	TempMin      string `json:"tempMin"`      // 最低温度
+	IconDay      string `json:"iconDay"`      // 白天天气图标代码
+	TextDay      string `json:"textDay"`      // 白天天气描述
+	IconNight    string `json:"iconNight"`    // 夜间天气图标代码
+	TextNight    string `json:"textNight"`    // 夜间天气描述
+	WindDirDay   string `json:"windDirDay"`   // 白天风向
+	WindScaleDay string `json:"windScaleDay"` // 白天风力等级
+	Humidity     string `json:"humidity"`     // 相对湿度
+	Precip       string `json:"precip"`       // 降水量
+	Vis          string `json:"vis"`          // 能见度
+	Cloud        string `json:"cloud"`        // 云量
+	UvIndex      string `json:"uvIndex"`      // 紫外线指数
+}
+
+// QWeatherResponse 和风天气7天预报完整返回
+// @Description code: 状态码200代表成功, updateTime: 接口更新时间
+// @Description fxLink: 天气网页跳转链接, daily: 7天预报数组
+type QWeatherResponse struct {
+	Code       string          `json:"code"`       // 状态码
+	UpdateTime string          `json:"updateTime"` // 最近更新时间
+	FxLink     string          `json:"fxLink"`     // 天气网页链接
+	Daily      []QWeatherDaily `json:"daily"`      // 7天预报列表
+}
+
 // GetQWeather 查询城市天气（和风天气 API）
 // @Summary 获取城市天气（和风）
 // @Tags 公共
 // @Param city query string true "城市名称"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=QWeatherResponse}
 // @Router /api/v1/weather/qweather [get]
 func GetQWeather(c *gin.Context) {
 	city := c.Query("city")
