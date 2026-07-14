@@ -109,7 +109,39 @@ func CreateTrip(c *gin.Context) {
 		response.Fail(c, 500, "创建失败")
 		return
 	}
-	response.Success(c, trip)
+	// 作者信息
+	author, _ := repository.GetUserByID(trip.UserID)
+	authorName := ""
+	authorAvatar := ""
+	if author != nil {
+		authorName = author.Nickname
+		authorAvatar = author.AvatarURL
+	}
+	response.Success(c, gin.H{
+		"id":            trip.ID,
+		"userId":        trip.UserID,
+		"guideId":       trip.GuideID,
+		"title":         trip.Title,
+		"coverImage":    trip.CoverImage,
+		"countries":     trip.Countries,
+		"provinces":     trip.Provinces,
+		"cities":        trip.Cities,
+		"destinations":  trip.Destinations,
+		"totalBudget":   trip.TotalBudget,
+		"isOverseas":    trip.IsOverseas,
+		"summary":       trip.Summary,
+		"viewCount":     trip.ViewCount,
+		"likeCount":     trip.LikeCount,
+		"favoriteCount": trip.FavoriteCount,
+		"status":        trip.Status,
+		"isPublic":      trip.IsPublic,
+		"createdAt":     trip.CreatedAt,
+		"updatedAt":     trip.UpdatedAt,
+		"authorName":    authorName,
+		"authorAvatar":  authorAvatar,
+		"isFollowed":    false,
+		"isSelf":        true,
+	})
 }
 
 // GetTrip 获取行程详情

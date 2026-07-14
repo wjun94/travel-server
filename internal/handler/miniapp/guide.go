@@ -181,6 +181,17 @@ func GetGuideDetail(c *gin.Context) {
 	if guide.UserID != userID {
 		_ = repository.IncrementGuideViewCount(id)
 	}
+	// 作者信息
+	author, _ := repository.GetUserByID(guide.UserID)
+	authorName := ""
+	authorAvatar := ""
+	if author != nil {
+		authorName = author.Nickname
+		authorAvatar = author.AvatarURL
+	}
+	// 关注状态
+	followStatus, _ := repository.GetFollowStatus(userID, guide.UserID)
+	isFollowed := followStatus == 0 || followStatus == 2
 	// 收藏数、评论数、点赞状态、收藏状态
 	favoriteCount := repository.GetGuideFavoriteCount(id)
 	commentCount := repository.GetGuideCommentCount(id)
@@ -211,6 +222,10 @@ func GetGuideDetail(c *gin.Context) {
 		"commentCount":    commentCount,
 		"isLiked":         isLiked,
 		"isFavorited":     isFavorited,
+		"authorName":      authorName,
+		"authorAvatar":    authorAvatar,
+		"isFollowed":      isFollowed,
+		"isSelf":          userID == guide.UserID,
 	})
 }
 
