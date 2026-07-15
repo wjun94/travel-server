@@ -1,6 +1,8 @@
 package miniapp
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/repository"
@@ -37,6 +39,29 @@ func MarkAllNotificationsRead(c *gin.Context) {
 		return
 	}
 	response.Success(c, nil)
+}
+
+// GetNotificationList 分页获取通知列表（type=0 全部，1搭子申请，2点赞，3新增关注，4系统通知）
+// @Summary 通知列表
+// @Security BearerAuth
+// @Tags 小程序-通知
+// @Param type query int false "通知类型：0全部 1搭子申请 2点赞 3新增关注 4系统通知"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.Notification,total=int64}}
+// @Router /api/v1/notification/list [get]
+func GetNotificationList(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	notiType, _ := strconv.Atoi(c.DefaultQuery("type", "0"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+
+	list, total, err := repository.ListNotifications(userID, notiType, page, pageSize)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, gin.H{"list": list, "total": total})
 }
 
 // GetUnreadNotificationCounts 获取所有类型的未读通知数量

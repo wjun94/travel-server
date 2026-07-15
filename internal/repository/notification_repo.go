@@ -10,6 +10,20 @@ func CreateNotification(n *model.Notification) error {
 	return database.DB.Create(n).Error
 }
 
+// ListNotifications 分页获取通知列表，type=0 表示全部
+func ListNotifications(userID string, notiType, page, pageSize int) ([]model.Notification, int64, error) {
+	var list []model.Notification
+	var total int64
+	offset := (page - 1) * pageSize
+	query := database.DB.Model(&model.Notification{}).Where("user_id = ?", userID)
+	if notiType > 0 {
+		query = query.Where("type = ?", notiType)
+	}
+	query.Count(&total)
+	err := query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}
+
 // MarkNotificationRead 标记单条通知为已读（需校验归属）
 func MarkNotificationRead(id, userID string) error {
 	return database.DB.Model(&model.Notification{}).

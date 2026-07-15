@@ -129,8 +129,9 @@ func main() {
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 1.未读通知数量
-			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 2.标记单条已读
-			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 3.全部已读
+			miniAuth.GET("/notification/list", miniapp.GetNotificationList)           // 2.通知列表（按type筛选）
+			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 3.标记单条已读
+			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 4.全部已读
 
 			// ---------- 记账 ----------
 			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)     // 1.查询行程账本
