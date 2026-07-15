@@ -169,7 +169,7 @@ func GetTrip(c *gin.Context) {
 	}
 	// 关注状态
 	followStatus, _ := repository.GetFollowStatus(userID, trip.UserID)
-	isFollowed := followStatus == 0 || followStatus == 2
+	isFollowed := followStatus == 1 || followStatus == 2
 
 	// 收藏数、评论数、点赞状态
 	favoriteCount := repository.GetTripFavoriteCount(id)
