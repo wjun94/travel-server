@@ -42,7 +42,7 @@ func GetConversationList(userID string) ([]ConversationItem, error) {
 	var msgs []msgRow
 	database.DB.Model(&model.Message{}).
 		Select("from_user_id, to_user_id, content, created_at").
-		Where("from_user_id = ? OR to_user_id = ?", userID, userID).
+		Where("(from_user_id = ? OR to_user_id = ?) AND type = 1", userID, userID).
 		Order("created_at desc").
 		Find(&msgs)
 
@@ -82,7 +82,7 @@ func GetConversationList(userID string) ([]ConversationItem, error) {
 	for _, oid := range otherIDs {
 		var cnt int64
 		database.DB.Model(&model.Message{}).
-			Where("from_user_id = ? AND to_user_id = ? AND is_read = 0", oid, userID).
+			Where("from_user_id = ? AND to_user_id = ? AND is_read = 0 AND type = 1", oid, userID).
 			Count(&cnt)
 		unreadMap[oid] = cnt
 	}

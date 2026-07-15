@@ -125,7 +125,7 @@ func main() {
 			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 1.消息列表
 			miniAuth.POST("/message/send", miniapp.SendMessage)                 // 2.发送消息
-			miniAuth.GET("/message/conversations", miniapp.GetConversationList) // 3.会话列表
+			miniAuth.GET("/message/conversations", miniapp.GetConversationList) // 3.消息中心聊天会话列表
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 1.未读通知数量

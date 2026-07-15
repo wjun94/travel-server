@@ -46,9 +46,9 @@ func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, 
 		Where("user_id = ? AND type = 3 AND is_read = 0", userID).
 		Count(&followCount)
 
-	// 4. 系统通知
-	database.DB.Model(&model.Message{}).
-		Where("to_user_id = ? AND type = 2 AND is_read = 0", userID).
+	// 4. 系统通知（Notification type=4）
+	database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = 4 AND is_read = 0", userID).
 		Count(&systemNotifyCount)
 
 	return
