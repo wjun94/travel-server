@@ -5,6 +5,7 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/pkg/database"
 	"travel-server/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -13,16 +14,21 @@ import (
 // CommentVO 评论视图（含用户信息）
 type CommentVO struct {
 	model.Comment
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatarUrl"`
+	Nickname        string `json:"nickname"`
+	AvatarURL       string `json:"avatarUrl"`
+	ReplyCount      int64  `json:"replyCount"`      // 子回复数量
+	ReplyToNickname string `json:"replyToNickname"` // 被回复人昵称（仅回复列表有效）
+	IsAuthor        bool   `json:"isAuthor"`        // 是否是发帖人
 }
 
 // toCommentVO 将 Comment 转为 CommentVO
-func toCommentVO(c model.Comment) CommentVO {
+func toCommentVO(c model.Comment, replyCount int64, replyToNickname string) CommentVO {
 	return CommentVO{
-		Comment:   c,
-		Nickname:  c.User.Nickname,
-		AvatarURL: c.User.AvatarURL,
+		Comment:         c,
+		Nickname:        c.User.Nickname,
+		AvatarURL:       c.User.AvatarURL,
+		ReplyCount:      replyCount,
+		ReplyToNickname: replyToNickname,
 	}
 }
 
@@ -98,9 +104,17 @@ func GetComments(c *gin.Context) {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
+
+	// 批量查询子回复数
+	ids := make([]string, len(comments))
+	for i, c := range comments {
+		ids[i] = c.ID
+	}
+	replyCounts := repository.GetReplyCounts(ids)
+
 	list := make([]CommentVO, len(comments))
 	for i, c := range comments {
-		list[i] = toCommentVO(c)
+		list[i] = toCommentVO(c, replyCounts[c.ID], "")
 	}
 	response.Success(c, gin.H{"list": list, "total": total})
 }
@@ -118,9 +132,67 @@ func GetReplies(c *gin.Context) {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
+
+	// 查发帖人（评论所属的攻略/行程作者）
+	var targetAuthorID string
+	if len(replies) > 0 {
+		r := replies[0]
+		switch r.TargetType {
+		case "guide":
+			var guide model.Guide
+			database.DB.Select("user_id").Where("id = ?", r.TargetID).First(&guide)
+			targetAuthorID = guide.UserID
+		case "trip":
+			var trip model.Trip
+			database.DB.Select("user_id").Where("id = ?", r.TargetID).First(&trip)
+			targetAuthorID = trip.UserID
+		}
+	}
+
+	// 批量查被回复人的昵称
+	parentIDs := make([]string, 0, len(replies))
+	for _, r := range replies {
+		if r.ParentID != nil {
+			parentIDs = append(parentIDs, *r.ParentID)
+		}
+	}
+	replyToMap := make(map[string]string)
+	if len(parentIDs) > 0 {
+		type parentInfo struct {
+			ID     string
+			UserID string
+		}
+		var parents []parentInfo
+		database.DB.Model(&model.Comment{}).
+			Select("id, user_id").
+			Where("id IN ?", parentIDs).
+			Find(&parents)
+
+		userIDs := make([]string, len(parents))
+		for i, p := range parents {
+			userIDs[i] = p.UserID
+		}
+		var users []model.User
+		database.DB.Select("id, nickname").Where("id IN ?", userIDs).Find(&users)
+
+		userNicknames := make(map[string]string)
+		for _, u := range users {
+			userNicknames[u.ID] = u.Nickname
+		}
+		for _, p := range parents {
+			replyToMap[p.ID] = userNicknames[p.UserID]
+		}
+	}
+
 	list := make([]CommentVO, len(replies))
 	for i, r := range replies {
-		list[i] = toCommentVO(r)
+		nickname := ""
+		if r.ParentID != nil {
+			nickname = replyToMap[*r.ParentID]
+		}
+		isAuthor := targetAuthorID != "" && r.UserID == targetAuthorID
+		list[i] = toCommentVO(r, 0, nickname)
+		list[i].IsAuthor = isAuthor
 	}
 	response.Success(c, list)
 }

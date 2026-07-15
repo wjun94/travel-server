@@ -25,12 +25,72 @@ func GetCommentsByTarget(targetType string, targetID string, page, pageSize int)
 	return comments, total, err
 }
 
-// GetRepliesByParentID 获取子回复
+// GetRepliesByParentID 获取子回复（递归查全部后代）
 func GetRepliesByParentID(parentID string) ([]model.Comment, error) {
-	var replies []model.Comment
-	err := database.DB.Where("parent_id = ?", parentID).
-		Order("created_at asc").Preload("User").Find(&replies).Error
-	return replies, err
+	allReplies := make([]model.Comment, 0)
+	currentIDs := []string{parentID}
+	for len(currentIDs) > 0 {
+		var replies []model.Comment
+		err := database.DB.Where("parent_id IN ?", currentIDs).
+			Order("created_at asc").Preload("User").Find(&replies).Error
+		if err != nil {
+			return nil, err
+		}
+		if len(replies) == 0 {
+			break
+		}
+		allReplies = append(allReplies, replies...)
+		currentIDs = make([]string, len(replies))
+		for i, r := range replies {
+			currentIDs[i] = r.ID
+		}
+	}
+	return allReplies, nil
+}
+
+// GetReplyCounts 批量查询多条评论的回复数（递归查全部后代，与 GetRepliesByParentID 保持一致）
+func GetReplyCounts(parentIDs []string) map[string]int64 {
+	result := make(map[string]int64)
+	if len(parentIDs) == 0 {
+		return result
+	}
+	for _, pid := range parentIDs {
+		result[pid] = 0
+	}
+
+	// childID → 最初的顶级评论ID
+	childToTop := make(map[string]string)
+
+	currentIDs := parentIDs
+	for len(currentIDs) > 0 {
+		type replyRow struct {
+			ParentID string
+			ID       string
+		}
+		var direct []replyRow
+		database.DB.Model(&model.Comment{}).
+			Select("parent_id, id").
+			Where("parent_id IN ?", currentIDs).
+			Find(&direct)
+		if len(direct) == 0 {
+			break
+		}
+
+		nextIDs := make([]string, 0, len(direct))
+		for _, r := range direct {
+			// 找出这条回复归属的顶级评论
+			topID, ok := childToTop[r.ParentID]
+			if !ok {
+				topID = r.ParentID // ParentID 本身就在 parentIDs 中
+			}
+			childToTop[r.ID] = topID
+			result[topID]++
+			nextIDs = append(nextIDs, r.ID)
+		}
+		currentIDs = nextIDs
+	}
+
+	return result
 }
 
 // DeleteComment 删除评论（校验用户归属，级联删除子回复）
