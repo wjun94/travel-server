@@ -529,6 +529,16 @@ func LikeGuide(c *gin.Context) {
 		response.Fail(c, 400, err.Error())
 		return
 	}
+	// 通知攻略作者（非本人点赞才通知）
+	guide, _ := repository.GetGuideByID(guideID)
+	if guide != nil && guide.UserID != userID {
+		repository.CreateNotification(&model.Notification{
+			UserID:    guide.UserID,
+			Type:      2,
+			RelatedID: guideID,
+			Content:   "您的攻略收到一个赞",
+		})
+	}
 	response.Success(c, nil)
 }
 

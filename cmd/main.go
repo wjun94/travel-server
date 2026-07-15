@@ -123,8 +123,14 @@ func main() {
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 4.处理申请
 
 			// ---------- 消息 ----------
-			miniAuth.GET("/message/list", miniapp.GetMessageList) // 1.消息列表
-			miniAuth.POST("/message/send", miniapp.SendMessage)   // 2.发送消息
+			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 1.消息列表
+			miniAuth.POST("/message/send", miniapp.SendMessage)                 // 2.发送消息
+			miniAuth.GET("/message/conversations", miniapp.GetConversationList) // 3.会话列表
+
+			// ---------- 通知 ----------
+			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 1.未读通知数量
+			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 2.标记单条已读
+			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 3.全部已读
 
 			// ---------- 记账 ----------
 			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)     // 1.查询行程账本

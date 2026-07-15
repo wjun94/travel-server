@@ -210,5 +210,17 @@ func LikeComment(c *gin.Context) {
 		response.Fail(c, 500, "点赞失败")
 		return
 	}
+	// 通知评论作者（通过直接查库获取评论所属用户）
+	var comment model.Comment
+	database.DB.Select("user_id").First(&comment, "id = ?", id)
+	userID := c.MustGet("userID").(string)
+	if comment.UserID != "" && comment.UserID != userID {
+		repository.CreateNotification(&model.Notification{
+			UserID:    comment.UserID,
+			Type:      2,
+			RelatedID: id,
+			Content:   "您的评论收到一个赞",
+		})
+	}
 	response.Success(c, nil)
 }

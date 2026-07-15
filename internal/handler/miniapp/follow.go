@@ -3,6 +3,7 @@ package miniapp
 import (
 	"strconv"
 
+	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/pkg/response"
 
@@ -22,6 +23,15 @@ func FollowUser(c *gin.Context) {
 	if err := repository.FollowUser(userID, followerID); err != nil {
 		response.Fail(c, 400, err.Error())
 		return
+	}
+	// 通知被关注者（非本人关注才通知）
+	if userID != followerID {
+		repository.CreateNotification(&model.Notification{
+			UserID:    userID,
+			Type:      3,
+			RelatedID: followerID,
+			Content:   "有人关注了你",
+		})
 	}
 	response.Success(c, nil)
 }

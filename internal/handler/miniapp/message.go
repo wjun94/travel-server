@@ -39,8 +39,8 @@ func GetMessageList(c *gin.Context) {
 // @Router /api/v1/message/send [post]
 func SendMessage(c *gin.Context) {
 	var req struct {
-		ToUserID string `json:"toUserId"`
-		Content  string `json:"content"`
+		ToUserID string `json:"toUserId" binding:"required"`
+		Content  string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -57,4 +57,20 @@ func SendMessage(c *gin.Context) {
 		return
 	}
 	response.Success(c, msg)
+}
+
+// GetConversationList 获取会话列表（消息中心）
+// @Summary 会话列表
+// @Security BearerAuth
+// @Tags 小程序-消息
+// @Success 200 {object} response.Response{data=[]repository.ConversationItem}
+// @Router /api/v1/message/conversations [get]
+func GetConversationList(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	list, err := repository.GetConversationList(userID)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, list)
 }

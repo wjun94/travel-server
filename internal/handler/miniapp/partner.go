@@ -78,6 +78,16 @@ func ApplyPartner(c *gin.Context) {
 		response.Fail(c, 500, "申请失败")
 		return
 	}
+	// 通知搭子发起人
+	partner, _ := repository.GetPartnerByID(id)
+	if partner != nil && partner.UserID != app.ApplicantID {
+		repository.CreateNotification(&model.Notification{
+			UserID:    partner.UserID,
+			Type:      1,
+			RelatedID: app.ID,
+			Content:   "您的搭子收到一条新申请",
+		})
+	}
 	response.Success(c, nil)
 }
 
