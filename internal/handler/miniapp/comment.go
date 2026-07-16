@@ -61,6 +61,36 @@ func CreateComment(c *gin.Context) {
 		response.Fail(c, 500, "评论失败")
 		return
 	}
+
+	// 通知被评论/回复的人
+	targetUserID := ""
+	if req.ParentID != nil && *req.ParentID != "" {
+		// 回复子评论：通知父评论作者
+		var parent model.Comment
+		database.DB.Select("user_id").First(&parent, "id = ?", *req.ParentID)
+		targetUserID = parent.UserID
+	} else {
+		// 顶级评论：通知攻略/行程作者
+		switch req.TargetType {
+		case "guide":
+			var guide model.Guide
+			database.DB.Select("user_id").Where("id = ?", req.TargetID).First(&guide)
+			targetUserID = guide.UserID
+		case "trip":
+			var trip model.Trip
+			database.DB.Select("user_id").Where("id = ?", req.TargetID).First(&trip)
+			targetUserID = trip.UserID
+		}
+	}
+	if targetUserID != "" && targetUserID != comment.UserID {
+		repository.CreateNotification(&model.Notification{
+			UserID:    targetUserID,
+			Type:      5,
+			RelatedID: comment.ID,
+			Content:   "您的内容收到一条新评论",
+		})
+	}
+
 	response.Success(c, comment)
 }
 

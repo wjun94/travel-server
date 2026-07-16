@@ -5,6 +5,7 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/pkg/database"
 	"travel-server/pkg/response"
 )
 
@@ -72,5 +73,28 @@ func GetConversationList(c *gin.Context) {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
-	response.Success(c, list)
+
+	// 查询最新系统通知
+	var latestNoti model.Notification
+	database.DB.Where("user_id = ? AND type = 4", userID).
+		Order("created_at desc").First(&latestNoti)
+	var unreadSys int64
+	database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = 4 AND is_read = 0", userID).Count(&unreadSys)
+
+	// 在列表首部插入系统通知会话项（无通知记录时不显示）
+	result := make([]repository.ConversationItem, 0, len(list)+1)
+	if latestNoti.ID != "" {
+		result = append(result, repository.ConversationItem{
+			UserID:      "",
+			Nickname:    "系统通知",
+			AvatarURL:   "travel/img/notify.png",
+			LastContent: latestNoti.Content,
+			LastTime:    latestNoti.CreatedAt,
+			UnreadCount: unreadSys,
+		})
+	}
+	result = append(result, list...)
+
+	response.Success(c, result)
 }

@@ -39,7 +39,7 @@ func MarkAllNotificationsRead(userID string) error {
 }
 
 // GetUnreadCounts 获取当前用户各类未读通知的数量
-func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, systemNotifyCount int64, err error) {
+func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount int64, err error) {
 	// 1. 搭子申请：我的搭子的待审核申请数
 	var partnerIDs []string
 	database.DB.Model(&model.Partner{}).Select("id").
@@ -60,7 +60,12 @@ func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, 
 		Where("user_id = ? AND type = 3 AND is_read = 0", userID).
 		Count(&followCount)
 
-	// 4. 系统通知（Notification type=4）
+	// 4. 评论通知（Notification type=5）
+	database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = 5 AND is_read = 0", userID).
+		Count(&commentCount)
+
+	// 5. 系统通知（Notification type=4）
 	database.DB.Model(&model.Notification{}).
 		Where("user_id = ? AND type = 4 AND is_read = 0", userID).
 		Count(&systemNotifyCount)

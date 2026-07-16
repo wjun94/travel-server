@@ -41,11 +41,11 @@ func MarkAllNotificationsRead(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// GetNotificationList 分页获取通知列表（type=0 全部，1搭子申请，2点赞，3新增关注，4系统通知）
+// GetNotificationList 分页获取通知列表（type=0 全部，1搭子申请，2点赞，3新增关注，4系统通知，5评论）
 // @Summary 通知列表
 // @Security BearerAuth
 // @Tags 小程序-通知
-// @Param type query int false "通知类型：0全部 1搭子申请 2点赞 3新增关注 4系统通知"
+// @Param type query int false "通知类型：0全部 1搭子申请 2点赞 3新增关注 4系统通知 5评论"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Success 200 {object} response.Response{data=object{list=[]model.Notification,total=int64}}
@@ -68,17 +68,18 @@ func GetNotificationList(c *gin.Context) {
 // @Summary 未读通知数量
 // @Security BearerAuth
 // @Tags 小程序-通知
-// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64}}
+// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,commentCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64}}
 // @Router /api/v1/notification/unread [get]
 func GetUnreadNotificationCounts(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
-	partnerApplyCount, likeCount, followCount, systemNotifyCount, err := repository.GetUnreadCounts(userID)
+	partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, err := repository.GetUnreadCounts(userID)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
 	response.Success(c, gin.H{
 		"partnerApplyCount": partnerApplyCount,
+		"commentCount":      commentCount,
 		"likeCount":         likeCount,
 		"followCount":       followCount,
 		"systemNotifyCount": systemNotifyCount,
