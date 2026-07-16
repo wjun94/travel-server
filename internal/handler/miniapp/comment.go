@@ -246,10 +246,11 @@ func LikeComment(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	if comment.UserID != "" && comment.UserID != userID {
 		repository.CreateNotification(&model.Notification{
-			UserID:    comment.UserID,
-			Type:      2,
-			RelatedID: id,
-			Content:   "您的评论收到一个赞",
+			UserID:     comment.UserID,
+			FromUserID: userID,
+			Type:       5,
+			RelatedID:  id,
+			Content:    "您的评论收到一个赞",
 		})
 	}
 	response.Success(c, nil)

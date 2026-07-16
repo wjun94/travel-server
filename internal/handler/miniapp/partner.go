@@ -82,10 +82,11 @@ func ApplyPartner(c *gin.Context) {
 	partner, _ := repository.GetPartnerByID(id)
 	if partner != nil && partner.UserID != app.ApplicantID {
 		repository.CreateNotification(&model.Notification{
-			UserID:    partner.UserID,
-			Type:      1,
-			RelatedID: app.ID,
-			Content:   "您的搭子收到一条新申请",
+			UserID:     partner.UserID,
+			FromUserID: app.ApplicantID,
+			Type:       1,
+			RelatedID:  app.ID,
+			Content:    "您的搭子收到一条新申请",
 		})
 	}
 	response.Success(c, nil)

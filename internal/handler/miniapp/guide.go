@@ -533,10 +533,11 @@ func LikeGuide(c *gin.Context) {
 	guide, _ := repository.GetGuideByID(guideID)
 	if guide != nil && guide.UserID != userID {
 		repository.CreateNotification(&model.Notification{
-			UserID:    guide.UserID,
-			Type:      2,
-			RelatedID: guideID,
-			Content:   "您的攻略收到一个赞",
+			UserID:     guide.UserID,
+			FromUserID: userID,
+			Type:       2,
+			RelatedID:  guideID,
+			Content:    "您的攻略收到一个赞",
 		})
 	}
 	response.Success(c, nil)

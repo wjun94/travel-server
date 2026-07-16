@@ -28,10 +28,11 @@ func FollowUser(c *gin.Context) {
 	// 通知被关注者（非本人关注才通知）
 	if userID != followerID {
 		if err := repository.CreateNotification(&model.Notification{
-			UserID:    userID,
-			Type:      3,
-			RelatedID: followerID,
-			Content:   "有人关注了你",
+			UserID:     userID,
+			FromUserID: followerID,
+			Type:       3,
+			RelatedID:  followerID,
+			Content:    "有人关注了你",
 		}); err != nil {
 			// 通知创建失败不影响主流程
 			log.Printf("创建关注通知失败: %v", err)
