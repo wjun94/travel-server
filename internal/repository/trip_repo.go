@@ -61,6 +61,17 @@ func ListUserTrips(userID string, page, pageSize int) ([]model.Trip, int64, erro
 	return trips, total, err
 }
 
+// ListUserPublishedTrips 他人已公开的行程列表
+func ListUserPublishedTrips(userID string, page, pageSize int) ([]model.Trip, int64, error) {
+	var trips []model.Trip
+	var total int64
+	offset := (page - 1) * pageSize
+	database.DB.Model(&model.Trip{}).Where("user_id = ? AND is_public = 1", userID).Count(&total)
+	err := database.DB.Where("user_id = ? AND is_public = 1", userID).
+		Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error
+	return trips, total, err
+}
+
 // ListPublicTrips 公开行程列表
 func ListPublicTrips(page, pageSize int, destination string) ([]model.Trip, int64, error) {
 	var trips []model.Trip
