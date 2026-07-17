@@ -52,7 +52,7 @@ func GetUserProfile(c *gin.Context) {
 // @Param target_type query string false "收藏类型(guide/trip)"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,targetType=string,targetId=string,createdAt=string,title=string,coverImage=string},total=int64}}
 // @Router /api/v1/profile/{id}/favorites [get]
 func GetUserFavorites(c *gin.Context) {
 	userID := c.Param("id")
