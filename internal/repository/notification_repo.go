@@ -24,11 +24,11 @@ func ListNotifications(userID string, notiType, page, pageSize int) ([]model.Not
 	return list, total, err
 }
 
-// MarkNotificationRead 标记单条通知为已读（需校验归属）
-func MarkNotificationRead(id, userID string) error {
+// MarkNotificationRead 标记单条通知为已读/未读（需校验归属）
+func MarkNotificationRead(id, userID string, isRead int) error {
 	return database.DB.Model(&model.Notification{}).
 		Where("id = ? AND user_id = ?", id, userID).
-		Update("is_read", 1).Error
+		Update("is_read", isRead).Error
 }
 
 // MarkAllNotificationsRead 标记当前用户所有通知为已读

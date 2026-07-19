@@ -12,6 +12,13 @@ func CreateMessage(msg *model.Message) error {
 	return database.DB.Create(msg).Error
 }
 
+// MarkMessagesAsRead 标记两个用户之间的私聊消息为已读（from → to 的消息）
+func MarkMessagesAsRead(fromUserID, toUserID string) error {
+	return database.DB.Model(&model.Message{}).
+		Where("from_user_id = ? AND to_user_id = ? AND type = 1 AND is_read = 0", fromUserID, toUserID).
+		Update("is_read", 1).Error
+}
+
 // GetMessagesBetweenUsers 获取两个用户之间的私聊记录
 func GetMessagesBetweenUsers(user1, user2 string) ([]model.Message, error) {
 	var msgs []model.Message

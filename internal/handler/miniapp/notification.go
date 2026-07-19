@@ -11,17 +11,19 @@ import (
 	"travel-server/pkg/response"
 )
 
-// MarkNotificationRead 标记单条通知为已读
-// @Summary 标记已读
+// MarkNotificationRead 标记单条通知为已读/未读
+// @Summary 标记已读/未读
 // @Security BearerAuth
 // @Tags 小程序-通知
 // @Param id path string true "通知ID"
+// @Param isRead query int false "0未读 1已读（默认1）"
 // @Success 200 {object} response.Response
 // @Router /api/v1/notification/read/{id} [put]
 func MarkNotificationRead(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.MustGet("userID").(string)
-	if err := repository.MarkNotificationRead(id, userID); err != nil {
+	isRead, _ := strconv.Atoi(c.DefaultQuery("isRead", "1"))
+	if err := repository.MarkNotificationRead(id, userID, isRead); err != nil {
 		response.Fail(c, 500, "操作失败")
 		return
 	}

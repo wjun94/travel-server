@@ -1,6 +1,8 @@
 package miniapp
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"travel-server/internal/model"
@@ -9,12 +11,25 @@ import (
 	"travel-server/pkg/response"
 )
 
+// MessageVO 消息视图对象（含发送者信息）
+type MessageVO struct {
+	ID         string    `json:"id"`
+	FromUserID string    `json:"fromUserId"`
+	ToUserID   string    `json:"toUserId"`
+	Content    string    `json:"content"`
+	Type       int       `json:"type"`
+	IsRead     int       `json:"isRead"`
+	CreatedAt  time.Time `json:"createdAt"`
+	AvatarURL  string    `json:"avatarUrl"`
+	Nickname   string    `json:"nickname"`
+}
+
 // GetMessageList 获取与指定用户的私聊记录
 // @Summary 获取消息列表
 // @Security BearerAuth
 // @Tags 小程序-消息
 // @Param targetUserId query string true "对方用户ID"
-// @Success 200 {object} response.Response{data=[]model.Message}
+// @Success 200 {object} response.Response{data=[]MessageVO}
 // @Router /api/v1/message/list [get]
 func GetMessageList(c *gin.Context) {
 	uid := c.MustGet("userID").(string)
@@ -28,7 +43,46 @@ func GetMessageList(c *gin.Context) {
 		response.Fail(c, 500, "获取消息失败")
 		return
 	}
-	response.Success(c, msgs)
+
+	// 标记对方发给当前用户的未读消息为已读
+	_ = repository.MarkMessagesAsRead(targetID, uid)
+
+	// 收集所有发送者ID
+	userIDs := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, msg := range msgs {
+		if !seen[msg.FromUserID] {
+			seen[msg.FromUserID] = true
+			userIDs = append(userIDs, msg.FromUserID)
+		}
+	}
+
+	// 批量查询用户信息
+	var users []model.User
+	database.DB.Select("id, nickname, avatar_url").Where("id IN ?", userIDs).Find(&users)
+	userMap := make(map[string]model.User)
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	// 构造带用户信息的响应
+	result := make([]MessageVO, 0, len(msgs))
+	for _, msg := range msgs {
+		u := userMap[msg.FromUserID]
+		result = append(result, MessageVO{
+			ID:         msg.ID,
+			FromUserID: msg.FromUserID,
+			ToUserID:   msg.ToUserID,
+			Content:    msg.Content,
+			Type:       msg.Type,
+			IsRead:     msg.IsRead,
+			CreatedAt:  msg.CreatedAt,
+			AvatarURL:  u.AvatarURL,
+			Nickname:   u.Nickname,
+		})
+	}
+
+	response.Success(c, result)
 }
 
 // SendMessage 发送私聊消息
