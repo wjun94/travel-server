@@ -39,7 +39,8 @@ func CreatePartner(c *gin.Context) {
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
-// @Success 200 {object} response.Response
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]model.Partner,total=int64}}
 // @Router /api/v1/partner/list [get]
 func GetPartnerList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
