@@ -57,22 +57,22 @@ func GetPartnerList(c *gin.Context) {
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param id path string true "搭子ID"
-// @Param body body object{message=string} true "申请留言"
+// @Param body body object{remark=string} true "申请留言"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner/{id}/apply [post]
 func ApplyPartner(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
-		Message string `json:"message"`
+		Remark string `json:"remark"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
 	app := model.PartnerApplication{
-		PartnerID:   id,
-		ApplicantID: c.MustGet("userID").(string),
-		Message:     req.Message,
+		PartnerID: id,
+		UserID:    c.MustGet("userID").(string),
+		Remark:    req.Remark,
 	}
 	if err := repository.CreateApplication(&app); err != nil {
 		response.Fail(c, 500, "申请失败")
@@ -80,10 +80,10 @@ func ApplyPartner(c *gin.Context) {
 	}
 	// 通知搭子发起人
 	partner, _ := repository.GetPartnerByID(id)
-	if partner != nil && partner.UserID != app.ApplicantID {
+	if partner != nil && partner.UserID != app.UserID {
 		repository.CreateNotification(&model.Notification{
 			UserID:     partner.UserID,
-			FromUserID: app.ApplicantID,
+			FromUserID: app.UserID,
 			Type:       1,
 			RelatedID:  app.ID,
 			Content:    "您的搭子收到一条新申请",

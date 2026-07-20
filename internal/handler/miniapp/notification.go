@@ -134,16 +134,16 @@ func GetNotificationList(c *gin.Context) {
 			ids = append(ids, id)
 		}
 		var apps []struct {
-			ID          string
-			PartnerID   string
-			ApplicantID string
+			ID        string
+			PartnerID string
+			UserID    string
 		}
-		database.DB.Model(&model.PartnerApplication{}).Select("id, partner_id, applicant_id").Where("id IN ?", ids).Find(&apps)
+		database.DB.Model(&model.PartnerApplication{}).Select("id, partner_id, user_id").Where("id IN ?", ids).Find(&apps)
 		for _, a := range apps {
 			appMap[a.ID] = a.PartnerID
-			appUserMap[a.ID] = a.ApplicantID
-			if a.ApplicantID != "" {
-				fromIDs[a.ApplicantID] = struct{}{}
+			appUserMap[a.ID] = a.UserID
+			if a.UserID != "" {
+				fromIDs[a.UserID] = struct{}{}
 			}
 		}
 	}
