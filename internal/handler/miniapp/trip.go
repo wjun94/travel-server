@@ -18,14 +18,13 @@ import (
 // @Summary AI生成行程
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param body body object{destination=string,days=int,tags=[]string} true "生成参数"
+// @Param body body object{destination=string,days=int} true "生成参数"
 // @Success 200 {object} response.Response{data=model.Trip}
 // @Router /api/v1/trip/ai-generate [post]
 func AIGenerateTrip(c *gin.Context) {
 	var req struct {
-		Destination string   `json:"destination"`
-		Days        int      `json:"days"`
-		Tags        []string `json:"tags"`
+		Destination string `json:"destination" binding:"required"`
+		Days        int    `json:"days" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -33,7 +32,7 @@ func AIGenerateTrip(c *gin.Context) {
 	}
 	uid := c.MustGet("userID").(string)
 
-	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, "")
+	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days)
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
@@ -45,10 +44,12 @@ func AIGenerateTrip(c *gin.Context) {
 		Days []struct {
 			Day   int `json:"day"`
 			Items []struct {
-				Time     string `json:"time"`
-				Name     string `json:"name"`
-				Type     string `json:"type"`
-				Duration string `json:"duration"`
+				Time        string `json:"time"`
+				Name        string `json:"name"`
+				Type        string `json:"type"`
+				Duration    string `json:"duration"`
+				Address     string `json:"address"`
+				Description string `json:"description"`
 			} `json:"items"`
 		} `json:"days"`
 	}
@@ -60,6 +61,7 @@ func AIGenerateTrip(c *gin.Context) {
 	// 创建行程
 	trip := model.Trip{
 		UserID:       uid,
+		Title:        req.Destination + "行程",
 		Destinations: []string{req.Destination},
 		Status:       1,
 	}
@@ -73,6 +75,7 @@ func AIGenerateTrip(c *gin.Context) {
 		day := model.TripDay{
 			TripID:    trip.ID,
 			DayNumber: d.Day,
+			Title:     fmt.Sprintf("第%d天", d.Day),
 		}
 		repository.CreateTripDay(&day)
 		for _, item := range d.Items {
@@ -81,6 +84,8 @@ func AIGenerateTrip(c *gin.Context) {
 				StartTime:   item.Time,
 				SectionType: item.Type,
 				Title:       item.Name,
+				Address:     item.Address,
+				Description: item.Description,
 			}
 			repository.CreateTripItem(&tripItem)
 		}
