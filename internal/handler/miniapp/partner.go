@@ -40,9 +40,10 @@ func CreatePartner(c *gin.Context) {
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]model.Partner,total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,isApplied=bool,isSelf=bool},total=int64}}
 // @Router /api/v1/partner/list [get]
 func GetPartnerList(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	list, total, err := repository.GetPartnerList(page, pageSize)
@@ -50,7 +51,98 @@ func GetPartnerList(c *gin.Context) {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
-	response.Success(c, gin.H{"list": list, "total": total})
+
+	// 批量查询当前用户是否已申请
+	partnerIDs := make([]string, len(list))
+	for i, p := range list {
+		partnerIDs[i] = p.ID
+	}
+	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, partnerIDs)
+
+	type partnerVO struct {
+		model.Partner
+		IsApplied bool `json:"isApplied"`
+		IsSelf    bool `json:"isSelf"`
+	}
+	result := make([]partnerVO, len(list))
+	for i, p := range list {
+		result[i] = partnerVO{
+			Partner:   p,
+			IsApplied: appliedMap[p.ID],
+			IsSelf:    userID == p.UserID,
+		}
+	}
+
+	response.Success(c, gin.H{"list": result, "total": total})
+}
+
+// GetPartnerDetail 获取搭子详情
+// @Summary 搭子详情
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response{data=object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorName=string,authorAvatar=string,isFollowed=bool,isSelf=bool,isApplied=bool}}
+// @Router /api/v1/partner/{id} [get]
+func GetPartnerDetail(c *gin.Context) {
+	id := c.Param("id")
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	userID := c.MustGet("userID").(string)
+
+	// 作者信息
+	author, _ := repository.GetUserByID(partner.UserID)
+	authorName := ""
+	authorAvatar := ""
+	if author != nil {
+		authorName = author.Nickname
+		authorAvatar = author.AvatarURL
+	}
+	// 关注状态
+	followStatus, _ := repository.GetFollowStatus(userID, partner.UserID)
+	isFollowed := followStatus == 1 || followStatus == 2
+
+	// 当前用户是否已申请
+	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, []string{id})
+	isApplied := appliedMap[id]
+
+	response.Success(c, gin.H{
+		"id":              partner.ID,
+		"userId":          partner.UserID,
+		"tripId":          partner.TripID,
+		"type":            partner.Type,
+		"title":           partner.Title,
+		"cover":           partner.Cover,
+		"destination":     partner.Destination,
+		"longitude":       partner.Longitude,
+		"latitude":        partner.Latitude,
+		"startDate":       partner.StartDate,
+		"endDate":         partner.EndDate,
+		"days":            partner.Days,
+		"travelTags":      partner.TravelTags,
+		"desc":            partner.Desc,
+		"requirement":     partner.Requirement,
+		"maxMembers":      partner.MaxMembers,
+		"currentMembers":  partner.CurrentMembers,
+		"genderLimit":     partner.GenderLimit,
+		"minAge":          partner.MinAge,
+		"maxAge":          partner.MaxAge,
+		"budgetPerPerson": partner.BudgetPerPerson,
+		"officialPrice":   partner.OfficialPrice,
+		"status":          partner.Status,
+		"isPublic":        partner.IsPublic,
+		"viewCount":       partner.ViewCount,
+		"sortWeight":      partner.SortWeight,
+		"createdAt":       partner.CreatedAt,
+		"updatedAt":       partner.UpdatedAt,
+		"authorName":      authorName,
+		"authorAvatar":    authorAvatar,
+		"isFollowed":      isFollowed,
+		"isSelf":          userID == partner.UserID,
+		"isApplied":       isApplied,
+	})
 }
 
 // ApplyPartner 申请加入某个搭子

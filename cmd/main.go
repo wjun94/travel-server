@@ -122,6 +122,7 @@ func main() {
 			// ---------- 搭子 ----------
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
 			miniAuth.GET("/partner/list", miniapp.GetPartnerList)               // 搭子列表
+			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请
 

@@ -49,6 +49,25 @@ func UpdateApplicationStatus(id string, status int) error {
 	return database.DB.Model(&model.PartnerApplication{}).Where("id = ?", id).Update("status", status).Error
 }
 
+// GetUserAppliedPartnerIDs 获取当前用户已申请过的搭子ID集合（待审核+通过）
+func GetUserAppliedPartnerIDs(userID string, partnerIDs []string) (map[string]bool, error) {
+	var apps []model.PartnerApplication
+	result := make(map[string]bool, len(partnerIDs))
+	if len(partnerIDs) == 0 {
+		return result, nil
+	}
+	if err := database.DB.Model(&model.PartnerApplication{}).
+		Select("partner_id").
+		Where("user_id = ? AND partner_id IN ? AND status IN (0, 1)", userID, partnerIDs).
+		Find(&apps).Error; err != nil {
+		return nil, err
+	}
+	for _, app := range apps {
+		result[app.PartnerID] = true
+	}
+	return result, nil
+}
+
 // GetPartners 获取搭子列表（分页）
 func GetPartners(page, pageSize int) ([]model.Partner, int64, error) {
 	var list []model.Partner
