@@ -15,13 +15,11 @@ type Partner struct {
 	TripID string `gorm:"size:64;index;default:''" json:"tripId"` // 绑定行程ID，无行程为空
 	Type   int    `gorm:"default:0;comment:0用户搭子 1官方活动" json:"type"`
 	// 基础展示
-	Title       string  `gorm:"size:255" json:"title"`         // 搭子招募标题
-	Cover       string  `gorm:"size:512" json:"cover"`         // 封面图
-	CityCode    string  `gorm:"size:64;index" json:"cityCode"` // 城市编码，用于同城筛选
-	CityName    string  `gorm:"size:64" json:"cityName"`       // 城市名称
-	Destination string  `gorm:"size:255" json:"destination"`   // 目的地详细文本
-	Longitude   float64 `json:"longitude"`                     // 经度 同城匹配
-	Latitude    float64 `json:"latitude"`                      // 纬度
+	Title       string  `gorm:"size:255" json:"title"`             // 搭子招募标题
+	Cover       string  `gorm:"size:512" json:"cover"`             // 封面图
+	Destination string  `gorm:"size:255;index" json:"destination"` // 目的地
+	Longitude   float64 `json:"longitude"`                         // 经度 同城匹配
+	Latitude    float64 `json:"latitude"`                          // 纬度
 	// 出行时间
 	StartDate *time.Time `gorm:"index" json:"startDate"` // 出发日期
 	EndDate   *time.Time `json:"endDate"`                // 结束日期
