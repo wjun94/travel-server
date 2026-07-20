@@ -83,6 +83,9 @@ func GetNotificationList(c *gin.Context) {
 			commentIDs[n.RelatedID] = struct{}{}
 		case 1:
 			appIDs[n.RelatedID] = struct{}{}
+		case 3:
+			// RelatedID 即关注者ID，加入用户查询集合
+			fromIDs[n.RelatedID] = struct{}{}
 		}
 	}
 
@@ -169,18 +172,18 @@ func GetNotificationList(c *gin.Context) {
 		AvatarURL string `json:"avatarUrl"`
 	}
 	type itemVO struct {
-		ID             string     `json:"id"`
-		UserID         string     `json:"userId"`                   // 通知接收者ID
-		FromUserID     string     `json:"fromUserId"`               // 通知触发者ID
-		Type           int        `json:"type"`                     // 1搭子申请 2攻略点赞 3新增关注 4系统通知 5评论点赞
-		RelatedID      string     `json:"relatedId"`                // 原始关联单据ID
-		TargetID       string     `json:"targetId"`                 // 用于前端跳转的目标ID
-		TargetType     string     `json:"targetType"`               // 跳转目标类型：guide/trip/partner/user
-		IsRead         int        `json:"isRead"`                   // 0未读 1已读
-		Content        string     `json:"content"`                  // 通知摘要文字
-		CreatedAt      string     `json:"createdAt"`                // 创建时间（ISO8601）
-		FromUser       fromUserVO `json:"fromUser"`                 // 触发者信息
-		CommentContent string     `json:"commentContent,omitempty"` // type=5 时的原评论内容，已删除则显示"原评论已删除"
+		ID             string      `json:"id"`
+		UserID         string      `json:"userId"`                   // 通知接收者ID
+		FromUserID     string      `json:"fromUserId"`               // 通知触发者ID
+		Type           int         `json:"type"`                     // 1搭子申请 2攻略点赞 3新增关注 4系统通知 5评论点赞
+		RelatedID      string      `json:"relatedId"`                // 原始关联单据ID
+		TargetID       string      `json:"targetId"`                 // 用于前端跳转的目标ID
+		TargetType     string      `json:"targetType"`               // 跳转目标类型：guide/trip/partner/user
+		IsRead         int         `json:"isRead"`                   // 0未读 1已读
+		Content        string      `json:"content"`                  // 通知摘要文字
+		CreatedAt      string      `json:"createdAt"`                // 创建时间（ISO8601）
+		FromUser       *fromUserVO `json:"fromUser"`                 // 触发者信息，null表示无触发者
+		CommentContent string      `json:"commentContent,omitempty"` // type=5 时的原评论内容，已删除则显示"原评论已删除"
 	}
 	items := make([]itemVO, 0, len(list))
 	for _, n := range list {
@@ -200,9 +203,9 @@ func GetNotificationList(c *gin.Context) {
 				}
 			}
 		}
-		fu := fromUserVO{}
+		var fu *fromUserVO
 		if u, ok := userMap[fromUserID]; ok {
-			fu = fromUserVO{
+			fu = &fromUserVO{
 				ID:        u.ID,
 				Nickname:  u.Nickname,
 				AvatarURL: u.AvatarURL,
