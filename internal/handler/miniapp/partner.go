@@ -2,6 +2,7 @@ package miniapp
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -11,18 +12,74 @@ import (
 	"travel-server/pkg/response"
 )
 
+// CreatePartnerReq 发布搭子请求
+type CreatePartnerReq struct {
+	Title           string  `json:"title"`
+	Cover           string  `json:"cover"`
+	Destination     string  `json:"destination"`
+	Longitude       float64 `json:"longitude"`
+	Latitude        float64 `json:"latitude"`
+	StartDate       string  `json:"startDate"` // YYYY-MM-DD
+	EndDate         string  `json:"endDate"`   // YYYY-MM-DD
+	Days            int     `json:"days"`
+	TravelTags      string  `json:"travelTags"`
+	Desc            string  `json:"desc"`
+	Requirement     string  `json:"requirement"`
+	MaxMembers      int     `json:"maxMembers"`
+	GenderLimit     int     `json:"genderLimit"`
+	MinAge          int     `json:"minAge"`
+	MaxAge          int     `json:"maxAge"`
+	BudgetPerPerson int     `json:"budgetPerPerson"`
+	OfficialPrice   float64 `json:"officialPrice"`
+	IsPublic        int     `json:"isPublic"`
+	TripID          string  `json:"tripId"`
+}
+
+// parseDate 将 YYYY-MM-DD 格式的字符串解析为 time.Time
+func parseDate(s string) *time.Time {
+	if s == "" {
+		return nil
+	}
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
 // CreatePartner 发布搭子信息
 // @Summary 发布搭子
 // @Security BearerAuth
 // @Tags 小程序-搭子
-// @Param body body model.Partner true "搭子信息"
+// @Param body body CreatePartnerReq true "搭子信息"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner [post]
 func CreatePartner(c *gin.Context) {
-	var p model.Partner
-	if err := c.ShouldBindJSON(&p); err != nil {
+	var req CreatePartnerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
+	}
+	p := model.Partner{
+		Title:           req.Title,
+		Cover:           req.Cover,
+		Destination:     req.Destination,
+		Longitude:       req.Longitude,
+		Latitude:        req.Latitude,
+		StartDate:       parseDate(req.StartDate),
+		EndDate:         parseDate(req.EndDate),
+		Days:            req.Days,
+		TravelTags:      req.TravelTags,
+		Desc:            req.Desc,
+		Requirement:     req.Requirement,
+		MaxMembers:      req.MaxMembers,
+		GenderLimit:     req.GenderLimit,
+		MinAge:          req.MinAge,
+		MaxAge:          req.MaxAge,
+		BudgetPerPerson: req.BudgetPerPerson,
+		OfficialPrice:   req.OfficialPrice,
+		IsPublic:        req.IsPublic,
+		TripID:          req.TripID,
 	}
 	p.UserID = c.MustGet("userID").(string)
 	p.Status = 0         // 默认招募中
