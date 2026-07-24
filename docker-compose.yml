@@ -40,7 +40,6 @@ services:
     restart: unless-stopped
     ports:
       - "8082:8080"
-      - "2346:2345"
     env_file:
       - .env.prod
     environment:

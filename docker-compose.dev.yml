@@ -40,7 +40,6 @@ services:
     restart: unless-stopped
     ports:
       - "9000:8080"
-      - "2346:2345"
     env_file:
       - .env.dev
     environment:
