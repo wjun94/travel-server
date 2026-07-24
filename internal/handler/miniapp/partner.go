@@ -97,7 +97,7 @@ func CreatePartner(c *gin.Context) {
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,isApplied=bool,isSelf=bool},total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool},total=int64}}
 // @Router /api/v1/partner/list [get]
 func GetPartnerList(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -109,24 +109,44 @@ func GetPartnerList(c *gin.Context) {
 		return
 	}
 
-	// 批量查询当前用户是否已申请
+	// 批量查询用户信息与关系状态
 	partnerIDs := make([]string, len(list))
+	userIDs := make([]string, 0, len(list))
 	for i, p := range list {
 		partnerIDs[i] = p.ID
+		userIDs = append(userIDs, p.UserID)
 	}
+	userMap := repository.GetUsersByIDs(userIDs)
 	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, partnerIDs)
+	followMap := repository.GetFollowStatusMap(userID, userIDs)
 
 	type partnerVO struct {
 		model.Partner
-		IsApplied bool `json:"isApplied"`
-		IsSelf    bool `json:"isSelf"`
+		AuthorID     string `json:"authorId"`
+		AuthorName   string `json:"authorName"`
+		AuthorAvatar string `json:"authorAvatar"`
+		IsApplied    bool   `json:"isApplied"`
+		IsSelf       bool   `json:"isSelf"`
+		IsFollowed   bool   `json:"isFollowed"`
 	}
 	result := make([]partnerVO, len(list))
 	for i, p := range list {
+		u := userMap[p.UserID]
+		status := followMap[p.UserID]
+		authorName := ""
+		authorAvatar := ""
+		if u != nil {
+			authorName = u.Nickname
+			authorAvatar = u.AvatarURL
+		}
 		result[i] = partnerVO{
-			Partner:   p,
-			IsApplied: appliedMap[p.ID],
-			IsSelf:    userID == p.UserID,
+			Partner:      p,
+			AuthorID:     p.UserID,
+			AuthorName:   authorName,
+			AuthorAvatar: authorAvatar,
+			IsApplied:    appliedMap[p.ID],
+			IsSelf:       userID == p.UserID,
+			IsFollowed:   status == 1 || status == 2,
 		}
 	}
 

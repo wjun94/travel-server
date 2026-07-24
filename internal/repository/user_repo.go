@@ -124,6 +124,20 @@ func GetUserByID(id string) (*model.User, error) {
 	return &user, err
 }
 
+// GetUsersByIDs 批量查询用户信息
+func GetUsersByIDs(ids []string) map[string]*model.User {
+	result := make(map[string]*model.User, len(ids))
+	if len(ids) == 0 {
+		return result
+	}
+	var users []model.User
+	database.DB.Where("id IN ?", ids).Find(&users)
+	for i := range users {
+		result[users[i].ID] = &users[i]
+	}
+	return result
+}
+
 // ListUsers 分页获取用户列表
 func ListUsers(page, pageSize int) ([]model.User, int64, error) {
 	var users []model.User

@@ -229,6 +229,56 @@ func GetFollowStatus(currentUserID, targetUserID string) (int, error) {
 	return 0, nil
 }
 
+// GetFollowStatusMap 批量查询当前用户对多个目标用户的关注状态
+// 返回 map[targetUserID]status，status 含义同 GetFollowStatus
+func GetFollowStatusMap(currentUserID string, targetUserIDs []string) map[string]int {
+	result := make(map[string]int, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		result[id] = 0
+	}
+	if len(targetUserIDs) == 0 || currentUserID == "" {
+		return result
+	}
+
+	// 查所有关注记录：我关注了谁
+	var follows []struct {
+		UserID string
+	}
+	database.DB.Model(&model.Follow{}).
+		Where("user_id IN ? AND follower_id = ? AND status = 0", targetUserIDs, currentUserID).
+		Find(&follows)
+	for _, f := range follows {
+		result[f.UserID] = 1
+	}
+
+	// 查谁关注了我
+	var followers []struct {
+		UserID string
+	}
+	database.DB.Model(&model.Follow{}).
+		Where("user_id = ? AND follower_id IN ? AND status = 0", currentUserID, targetUserIDs).
+		Find(&followers)
+	for _, f := range followers {
+		if result[f.UserID] == 1 {
+			result[f.UserID] = 2 // 互相关注
+		}
+	}
+
+	// 查拉黑关系
+	var blocks []struct {
+		UserID string
+	}
+	database.DB.Model(&model.Follow{}).
+		Where("(user_id IN ? AND follower_id = ? AND status = 1) OR (user_id = ? AND follower_id IN ? AND status = 1)",
+			targetUserIDs, currentUserID, currentUserID, targetUserIDs).
+		Find(&blocks)
+	for _, b := range blocks {
+		result[b.UserID] = 3
+	}
+
+	return result
+}
+
 // ==================== 8. 我的关注粉丝总数 ====================
 
 func GetMyCounts(userID string) (int, int, error) {
