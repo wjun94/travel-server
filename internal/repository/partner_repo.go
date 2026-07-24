@@ -80,3 +80,13 @@ func GetPartners(page, pageSize int) ([]model.Partner, int64, error) {
 	err = database.DB.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
 	return list, total, err
 }
+
+// GetMyPartners 获取当前用户创建的搭子列表
+func GetMyPartners(userID string, page, pageSize int) ([]model.Partner, int64, error) {
+	var list []model.Partner
+	var total int64
+	offset := (page - 1) * pageSize
+	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&total)
+	err := database.DB.Where("user_id = ?", userID).Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	return list, total, err
+}

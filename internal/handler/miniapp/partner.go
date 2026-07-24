@@ -91,16 +91,14 @@ func CreatePartner(c *gin.Context) {
 	response.Success(c, p)
 }
 
-// GetPartnerList 获取搭子列表
+// GetPartnerList 获取搭子列表（公共接口，未登录也可浏览）
 // @Summary 搭子列表
-// @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool},total=int64}}
 // @Router /api/v1/partner/list [get]
 func GetPartnerList(c *gin.Context) {
-	userID := c.MustGet("userID").(string)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	list, total, err := repository.GetPartnerList(page, pageSize)
@@ -109,16 +107,28 @@ func GetPartnerList(c *gin.Context) {
 		return
 	}
 
-	// 批量查询用户信息与关系状态
-	partnerIDs := make([]string, len(list))
+	// 批量查询用户信息
 	userIDs := make([]string, 0, len(list))
-	for i, p := range list {
-		partnerIDs[i] = p.ID
+	for _, p := range list {
 		userIDs = append(userIDs, p.UserID)
 	}
 	userMap := repository.GetUsersByIDs(userIDs)
-	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, partnerIDs)
-	followMap := repository.GetFollowStatusMap(userID, userIDs)
+
+	// 如果已登录，额外查询申请状态和关注状态
+	userIDVal, loggedIn := c.Get("userID")
+	var partnerIDs []string
+	var appliedMap map[string]bool
+	var followMap map[string]int
+	currentUserID := ""
+	if loggedIn {
+		currentUserID = userIDVal.(string)
+		partnerIDs = make([]string, len(list))
+		for i, p := range list {
+			partnerIDs[i] = p.ID
+		}
+		appliedMap, _ = repository.GetUserAppliedPartnerIDs(currentUserID, partnerIDs)
+		followMap = repository.GetFollowStatusMap(currentUserID, userIDs)
+	}
 
 	type partnerVO struct {
 		model.Partner
@@ -132,7 +142,6 @@ func GetPartnerList(c *gin.Context) {
 	result := make([]partnerVO, len(list))
 	for i, p := range list {
 		u := userMap[p.UserID]
-		status := followMap[p.UserID]
 		authorName := ""
 		authorAvatar := ""
 		if u != nil {
@@ -144,9 +153,52 @@ func GetPartnerList(c *gin.Context) {
 			AuthorID:     p.UserID,
 			AuthorName:   authorName,
 			AuthorAvatar: authorAvatar,
-			IsApplied:    appliedMap[p.ID],
-			IsSelf:       userID == p.UserID,
-			IsFollowed:   status == 1 || status == 2,
+			IsApplied:    loggedIn && appliedMap[p.ID],
+			IsSelf:       loggedIn && currentUserID == p.UserID,
+			IsFollowed:   loggedIn && (followMap[p.UserID] == 1 || followMap[p.UserID] == 2),
+		}
+	}
+
+	response.Success(c, gin.H{"list": result, "total": total})
+}
+
+// GetMyPartners 我发布的搭子列表
+// @Summary 我发布的搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,title=string,cover=string,destination=string,longitude=float64,latitude=float64,startDate=string,endDate=string,days=int,travelTags=string,desc=string,requirement=string,maxMembers=int,currentMembers=int,genderLimit=int,minAge=int,maxAge=int,budgetPerPerson=int,officialPrice=float64,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool},total=int64}}
+// @Router /api/v1/my/partners [get]
+func GetMyPartners(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	list, total, err := repository.GetMyPartners(userID, page, pageSize)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+
+	type partnerVO struct {
+		model.Partner
+		AuthorID     string `json:"authorId"`
+		AuthorName   string `json:"authorName"`
+		AuthorAvatar string `json:"authorAvatar"`
+		IsApplied    bool   `json:"isApplied"`
+		IsSelf       bool   `json:"isSelf"`
+		IsFollowed   bool   `json:"isFollowed"`
+	}
+	result := make([]partnerVO, len(list))
+	for i, p := range list {
+		result[i] = partnerVO{
+			Partner:      p,
+			AuthorID:     p.UserID,
+			AuthorName:   "",
+			AuthorAvatar: "",
+			IsApplied:    false,
+			IsSelf:       true,
+			IsFollowed:   false,
 		}
 	}
 

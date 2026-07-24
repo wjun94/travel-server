@@ -74,6 +74,7 @@ func main() {
 		api.GET("/regions/all", miniapp.GetAllRegions)             // 国内省/市列表
 		api.GET("/regions/countries", miniapp.GetCountries)        // 境外国家列表
 		api.GET("/destinations/search", miniapp.SearchDestination) // 目的地搜索
+		api.GET("/partner/list", miniapp.GetPartnerList)           // 搭子列表（公共）
 
 		// ==================== 小程序端（需 JWT 登录） ====================
 		miniAuth := api.Group("", middleware.JWTAuth())
@@ -121,7 +122,7 @@ func main() {
 
 			// ---------- 搭子 ----------
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
-			miniAuth.GET("/partner/list", miniapp.GetPartnerList)               // 搭子列表
+			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请

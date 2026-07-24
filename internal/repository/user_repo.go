@@ -12,6 +12,7 @@ type UserProfileStats struct {
 	AvatarURL     string `json:"avatarUrl"`
 	GuideCount    int64  `json:"guideCount"`    // 已发布的攻略数
 	TripCount     int64  `json:"tripCount"`     // 行程数
+	PartnerCount  int64  `json:"partnerCount"`  // 搭子数
 	FollowCount   int    `json:"followCount"`   // 关注数
 	FollowerCount int    `json:"followerCount"` // 粉丝数
 }
@@ -23,6 +24,7 @@ type UserPublicProfile struct {
 	AvatarURL     string `json:"avatarUrl"`
 	GuideCount    int64  `json:"guideCount"`    // 已发布的攻略数
 	TripCount     int64  `json:"tripCount"`     // 行程数
+	PartnerCount  int64  `json:"partnerCount"`  // 搭子数
 	FollowCount   int    `json:"followCount"`   // 关注数
 	FollowerCount int    `json:"followerCount"` // 粉丝数
 	TotalLikes    int64  `json:"totalLikes"`    // 总获赞数
@@ -44,12 +46,16 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 	var tripCount int64
 	database.DB.Model(&model.Trip{}).Where("user_id = ?", userID).Count(&tripCount)
 
+	var partnerCount int64
+	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&partnerCount)
+
 	return &UserProfileStats{
 		ID:            user.ID,
 		Nickname:      user.Nickname,
 		AvatarURL:     user.AvatarURL,
 		GuideCount:    guideCount,
 		TripCount:     tripCount,
+		PartnerCount:  partnerCount,
 		FollowCount:   user.FollowCount,
 		FollowerCount: user.FollowerCount,
 	}, nil
@@ -67,6 +73,9 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 
 	var tripCount int64
 	database.DB.Model(&model.Trip{}).Where("user_id = ?", userID).Count(&tripCount)
+
+	var partnerCount int64
+	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&partnerCount)
 
 	// 获赞总数（用户所有已发布攻略的点赞数之和）
 	var totalLikes int64
@@ -93,6 +102,7 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 		AvatarURL:     user.AvatarURL,
 		GuideCount:    guideCount,
 		TripCount:     tripCount,
+		PartnerCount:  partnerCount,
 		FollowCount:   user.FollowCount,
 		FollowerCount: user.FollowerCount,
 		TotalLikes:    totalLikes,
