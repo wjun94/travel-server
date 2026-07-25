@@ -6,18 +6,17 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "travel-server/docs"
+	"travel-server/internal/cron"
 	"travel-server/internal/handler/admin"
 	"travel-server/internal/handler/common"
 	"travel-server/internal/handler/miniapp"
 	"travel-server/internal/middleware"
-	"travel-server/internal/repository"
 	"travel-server/pkg/config"
 	"travel-server/pkg/database"
 	"travel-server/pkg/qiniu"
@@ -42,19 +41,8 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.Cors())
 
-	// 启动定时清理浏览历史（每天凌晨清理30天前的记录）
-	go func() {
-		for {
-			now := time.Now()
-			next := time.Date(now.Year(), now.Month(), now.Day(), 3, 0, 0, 0, now.Location())
-			if next.Before(now) {
-				next = next.Add(24 * time.Hour)
-			}
-			time.Sleep(next.Sub(now))
-			repository.CleanupBrowseHistory(30)
-			log.Println("浏览历史清理完成")
-		}
-	}()
+	// 启动定时任务（浏览历史清理、过期搭子自动关闭等）
+	cron.Start()
 
 	// Swagger 文档面板
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -126,6 +114,7 @@ func main() {
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请
+			miniAuth.PUT("/partner/:id/cancel", miniapp.CancelPartner)          // 取消搭子
 
 			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 消息列表

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 )
@@ -89,4 +91,32 @@ func GetMyPartners(userID string, page, pageSize int) ([]model.Partner, int64, e
 	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&total)
 	err := database.DB.Where("user_id = ?", userID).Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
 	return list, total, err
+}
+
+// CancelPartner 发起人主动取消搭子（状态置为2），并拒绝所有待审核申请
+func CancelPartner(id, userID string) error {
+	tx := database.DB.Begin()
+	// 拒绝待审核申请
+	tx.Model(&model.PartnerApplication{}).
+		Where("partner_id = ? AND status = 0", id).
+		Update("status", 2)
+	// 更新搭子状态
+	err := tx.Model(&model.Partner{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Update("status", 2).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
+}
+
+// AutoCloseExpiredPartners 系统自动关闭过期未满员搭子（状态置为3），返回受影响条数
+// 条件：status=0、StartDate < now、MinMembers > 0、CurrentMembers < MinMembers
+func AutoCloseExpiredPartners() int64 {
+	now := time.Now()
+	result := database.DB.Model(&model.Partner{}).
+		Where("status = 0 AND start_date IS NOT NULL AND start_date < ? AND min_members > 0 AND current_members < min_members", now).
+		Update("status", 3)
+	return result.RowsAffected
 }

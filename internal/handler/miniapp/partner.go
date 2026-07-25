@@ -14,25 +14,45 @@ import (
 
 // CreatePartnerReq 发布搭子请求
 type CreatePartnerReq struct {
-	Title           string  `json:"title"`
-	Cover           string  `json:"cover"`
-	Destination     string  `json:"destination"`
-	Longitude       float64 `json:"longitude"`
-	Latitude        float64 `json:"latitude"`
-	StartDate       string  `json:"startDate"` // YYYY-MM-DD
-	EndDate         string  `json:"endDate"`   // YYYY-MM-DD
-	Days            int     `json:"days"`
-	TravelTags      string  `json:"travelTags"`
-	Desc            string  `json:"desc"`
-	Requirement     string  `json:"requirement"`
-	MaxMembers      int     `json:"maxMembers"`
-	GenderLimit     int     `json:"genderLimit"`
-	MinAge          int     `json:"minAge"`
-	MaxAge          int     `json:"maxAge"`
-	BudgetPerPerson int     `json:"budgetPerPerson"`
-	OfficialPrice   float64 `json:"officialPrice"`
-	IsPublic        int     `json:"isPublic"`
-	TripID          string  `json:"tripId"`
+	Title           string  `json:"title"`           // 搭子标题
+	Cover           string  `json:"cover"`           // 封面图
+	Images          string  `json:"images"`          // 多图JSON数组
+	Category        string  `json:"category"`        // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
+	Destination     string  `json:"destination"`     // 目的地
+	Longitude       float64 `json:"longitude"`       // 经度
+	Latitude        float64 `json:"latitude"`        // 纬度
+	Address         string  `json:"address"`         // 详细地址
+	LocationType    int     `json:"locationType"`    // 0线下 1线上
+	OnlineLink      string  `json:"onlineLink"`      // 线上链接
+	StartDate       string  `json:"startDate"`       // YYYY-MM-DD
+	EndDate         string  `json:"endDate"`         // YYYY-MM-DD
+	Days            int     `json:"days"`            // 出行天数
+	TravelTags      string  `json:"travelTags"`      // 逗号分隔（兼容旧版）
+	Tags            string  `json:"tags"`            // 多选标签JSON数组
+	Desc            string  `json:"desc"`            // 行程简述
+	RichDesc        string  `json:"richDesc"`        // 详细介绍（富文本）
+	Requirement     string  `json:"requirement"`     // 人员要求
+	MaxMembers      int     `json:"maxMembers"`      // 招募上限
+	MinMembers      int     `json:"minMembers"`      // 最小成团人数
+	GenderLimit     int     `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
+	MaleCount       int     `json:"maleCount"`       // 男生需求数
+	FemaleCount     int     `json:"femaleCount"`     // 女生需求数
+	MinAge          int     `json:"minAge"`          // 年龄下限
+	MaxAge          int     `json:"maxAge"`          // 年龄上限
+	FeeMode         int     `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
+	BudgetPerPerson int     `json:"budgetPerPerson"` // 人均预算
+	OfficialPrice   float64 `json:"officialPrice"`   // 官方活动定价
+	FeeInclude      string  `json:"feeInclude"`      // 费用包含
+	FeeExclude      string  `json:"feeExclude"`      // 费用不含
+	EstTotal        int     `json:"estTotal"`        // 预估总价
+	Visibility      int     `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
+	JoinMode        int     `json:"joinMode"`        // 0需审核 1直接加入
+	AutoClose       int     `json:"autoClose"`       // 满员自动关闭：0否 1是
+	AllowShare      int     `json:"allowShare"`      // 允许转发：0否 1是
+	AllowCollect    int     `json:"allowCollect"`    // 允许收藏：0否 1是
+	IsDraft         int     `json:"isDraft"`         // 0已发布 1草稿
+	IsPublic        int     `json:"isPublic"`        // 0仅自己可见 1公开招募
+	TripID          string  `json:"tripId"`          // 关联行程ID
 }
 
 // parseDate 将 YYYY-MM-DD 格式的字符串解析为 time.Time
@@ -63,21 +83,41 @@ func CreatePartner(c *gin.Context) {
 	p := model.Partner{
 		Title:           req.Title,
 		Cover:           req.Cover,
+		Images:          req.Images,
+		Category:        req.Category,
 		Destination:     req.Destination,
 		Longitude:       req.Longitude,
 		Latitude:        req.Latitude,
+		Address:         req.Address,
+		LocationType:    req.LocationType,
+		OnlineLink:      req.OnlineLink,
 		StartDate:       parseDate(req.StartDate),
 		EndDate:         parseDate(req.EndDate),
 		Days:            req.Days,
 		TravelTags:      req.TravelTags,
+		Tags:            req.Tags,
 		Desc:            req.Desc,
+		RichDesc:        req.RichDesc,
 		Requirement:     req.Requirement,
 		MaxMembers:      req.MaxMembers,
+		MinMembers:      req.MinMembers,
 		GenderLimit:     req.GenderLimit,
+		MaleCount:       req.MaleCount,
+		FemaleCount:     req.FemaleCount,
 		MinAge:          req.MinAge,
 		MaxAge:          req.MaxAge,
+		FeeMode:         req.FeeMode,
 		BudgetPerPerson: req.BudgetPerPerson,
 		OfficialPrice:   req.OfficialPrice,
+		FeeInclude:      req.FeeInclude,
+		FeeExclude:      req.FeeExclude,
+		EstTotal:        req.EstTotal,
+		Visibility:      req.Visibility,
+		JoinMode:        req.JoinMode,
+		AutoClose:       req.AutoClose,
+		AllowShare:      req.AllowShare,
+		AllowCollect:    req.AllowCollect,
+		IsDraft:         req.IsDraft,
 		IsPublic:        req.IsPublic,
 		TripID:          req.TripID,
 	}
@@ -242,24 +282,44 @@ func GetPartnerDetail(c *gin.Context) {
 		"userId":          partner.UserID,
 		"tripId":          partner.TripID,
 		"type":            partner.Type,
+		"category":        partner.Category,
 		"title":           partner.Title,
 		"cover":           partner.Cover,
+		"images":          partner.Images,
 		"destination":     partner.Destination,
 		"longitude":       partner.Longitude,
 		"latitude":        partner.Latitude,
+		"address":         partner.Address,
+		"locationType":    partner.LocationType,
+		"onlineLink":      partner.OnlineLink,
 		"startDate":       partner.StartDate,
 		"endDate":         partner.EndDate,
 		"days":            partner.Days,
 		"travelTags":      partner.TravelTags,
+		"tags":            partner.Tags,
 		"desc":            partner.Desc,
+		"richDesc":        partner.RichDesc,
 		"requirement":     partner.Requirement,
 		"maxMembers":      partner.MaxMembers,
+		"minMembers":      partner.MinMembers,
 		"currentMembers":  partner.CurrentMembers,
 		"genderLimit":     partner.GenderLimit,
+		"maleCount":       partner.MaleCount,
+		"femaleCount":     partner.FemaleCount,
 		"minAge":          partner.MinAge,
 		"maxAge":          partner.MaxAge,
+		"feeMode":         partner.FeeMode,
 		"budgetPerPerson": partner.BudgetPerPerson,
 		"officialPrice":   partner.OfficialPrice,
+		"feeInclude":      partner.FeeInclude,
+		"feeExclude":      partner.FeeExclude,
+		"estTotal":        partner.EstTotal,
+		"visibility":      partner.Visibility,
+		"joinMode":        partner.JoinMode,
+		"autoClose":       partner.AutoClose,
+		"allowShare":      partner.AllowShare,
+		"allowCollect":    partner.AllowCollect,
+		"isDraft":         partner.IsDraft,
 		"status":          partner.Status,
 		"isPublic":        partner.IsPublic,
 		"viewCount":       partner.ViewCount,
@@ -359,6 +419,39 @@ func HandleApplication(c *gin.Context) {
 			response.Fail(c, 500, "处理失败")
 			return
 		}
+	}
+	response.Success(c, nil)
+}
+
+// CancelPartner 发起人取消搭子
+// @Summary 取消搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id}/cancel [put]
+func CancelPartner(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+
+	// 验证是否为发起人
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	if partner.UserID != userID {
+		response.Fail(c, 403, "仅发起人可取消搭子")
+		return
+	}
+	if partner.Status != 0 {
+		response.Fail(c, 400, "当前状态不可取消")
+		return
+	}
+
+	if err := repository.CancelPartner(id, userID); err != nil {
+		response.Fail(c, 500, "取消失败")
+		return
 	}
 	response.Success(c, nil)
 }
