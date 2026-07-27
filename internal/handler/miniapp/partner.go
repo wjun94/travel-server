@@ -1,6 +1,7 @@
 package miniapp
 
 import (
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -12,78 +13,46 @@ import (
 	"travel-server/pkg/response"
 )
 
-// TripPlanItemReq 搭子行程日项请求
-type TripPlanItemReq struct {
-	SectionType     string   `json:"sectionType"` // 板块类型
-	Title           string   `json:"title"`       // 活动标题
-	Description     string   `json:"description"` // 描述/备注
-	StartTime       string   `json:"startTime"`   // 开始时间
-	EndTime         string   `json:"endTime"`     // 结束时间
-	Latitude        *float64 `json:"latitude"`
-	Longitude       *float64 `json:"longitude"`
-	Address         string   `json:"address"`
-	Images          []string `json:"images"`          // 图片URL列表
-	NeedReservation bool     `json:"needReservation"` // 是否需要预约/购票
-	TicketChannel   string   `json:"ticketChannel"`   // 购票渠道
-	TicketPrice     *float64 `json:"ticketPrice"`     // 票价
-	TransportMode   string   `json:"transportMode"`   // 交通方式
-	StartPoint      string   `json:"startPoint"`      // 起点
-	EndPoint        string   `json:"endPoint"`        // 终点
-	StartLat        *float64 `json:"startLat"`
-	StartLng        *float64 `json:"startLng"`
-	EndLat          *float64 `json:"endLat"`
-	EndLng          *float64 `json:"endLng"`
-}
-
-// TripPlanDayReq 搭子行程日请求
-type TripPlanDayReq struct {
-	DayNumber int               `json:"dayNumber"` // 第几天
-	Date      string            `json:"date"`      // 具体日期
-	Title     string            `json:"title"`     // 日标题
-	Items     []TripPlanItemReq `json:"items"`     // 行程项列表
-}
-
 // CreatePartnerReq 发布搭子请求
 type CreatePartnerReq struct {
-	Title           string           `json:"title"`           // 搭子标题
-	Cover           string           `json:"cover"`           // 封面图
-	Images          string           `json:"images"`          // 多图JSON数组
-	Category        string           `json:"category"`        // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
-	Destination     string           `json:"destination"`     // 目的地
-	Longitude       float64          `json:"longitude"`       // 经度
-	Latitude        float64          `json:"latitude"`        // 纬度
-	Address         string           `json:"address"`         // 详细地址
-	LocationType    int              `json:"locationType"`    // 0线下 1线上
-	OnlineLink      string           `json:"onlineLink"`      // 线上链接
-	StartDate       string           `json:"startDate"`       // YYYY-MM-DD
-	EndDate         string           `json:"endDate"`         // YYYY-MM-DD
-	TotalDays       int              `json:"totalDays"`       // 出行天数
-	TravelTags      string           `json:"travelTags"`      // 逗号分隔（兼容旧版）
-	Tags            string           `json:"tags"`            // 多选标签JSON数组
-	Desc            string           `json:"desc"`            // 行程简述
-	RichDesc        string           `json:"richDesc"`        // 详细介绍（富文本）
-	Requirement     string           `json:"requirement"`     // 人员要求
-	MaxMembers      int              `json:"maxMembers"`      // 招募上限
-	MinMembers      int              `json:"minMembers"`      // 最小成团人数
-	GenderLimit     int              `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
-	MaleCount       int              `json:"maleCount"`       // 男生需求数
-	FemaleCount     int              `json:"femaleCount"`     // 女生需求数
-	MinAge          int              `json:"minAge"`          // 年龄下限
-	MaxAge          int              `json:"maxAge"`          // 年龄上限
-	FeeMode         int              `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
-	BudgetPerPerson int              `json:"budgetPerPerson"` // 人均预算
-	OfficialPrice   float64          `json:"officialPrice"`   // 官方活动定价
-	FeeInclude      string           `json:"feeInclude"`      // 费用包含
-	FeeExclude      string           `json:"feeExclude"`      // 费用不含
-	EstTotal        int              `json:"estTotal"`        // 预估总价
-	Visibility      int              `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
-	JoinMode        int              `json:"joinMode"`        // 0需审核 1直接加入
-	AutoClose       int              `json:"autoClose"`       // 满员自动关闭：0否 1是
-	AllowShare      int              `json:"allowShare"`      // 允许转发：0否 1是
-	AllowCollect    int              `json:"allowCollect"`    // 允许收藏：0否 1是
-	IsDraft         int              `json:"isDraft"`         // 0已发布 1草稿
-	IsPublic        int              `json:"isPublic"`        // 0仅自己可见 1公开招募
-	Days            []TripPlanDayReq `json:"days"`            // 行程日表（内嵌行程）
+	Title           string   `json:"title"`           // 搭子标题
+	Cover           string   `json:"cover"`           // 封面图
+	Images          []string `json:"images"`          // 多图列表
+	Category        string   `json:"category"`        // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
+	Destination     string   `json:"destination"`     // 目的地
+	Longitude       float64  `json:"longitude"`       // 经度
+	Latitude        float64  `json:"latitude"`        // 纬度
+	Address         string   `json:"address"`         // 详细地址
+	LocationType    int      `json:"locationType"`    // 0线下 1线上
+	OnlineLink      string   `json:"onlineLink"`      // 线上链接
+	StartDate       string   `json:"startDate"`       // YYYY-MM-DD
+	EndDate         string   `json:"endDate"`         // YYYY-MM-DD
+	TotalDays       int      `json:"totalDays"`       // 出行天数
+	TravelTags      string   `json:"travelTags"`      // 逗号分隔（兼容旧版）
+	Tags            string   `json:"tags"`            // 多选标签JSON数组
+	Desc            string   `json:"desc"`            // 行程简述
+	RichDesc        string   `json:"richDesc"`        // 详细介绍（富文本）
+	Requirement     string   `json:"requirement"`     // 人员要求
+	MaxMembers      int      `json:"maxMembers"`      // 招募上限
+	MinMembers      int      `json:"minMembers"`      // 最小成团人数
+	GenderLimit     int      `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
+	MaleCount       int      `json:"maleCount"`       // 男生需求数
+	FemaleCount     int      `json:"femaleCount"`     // 女生需求数
+	MinAge          int      `json:"minAge"`          // 年龄下限
+	MaxAge          int      `json:"maxAge"`          // 年龄上限
+	FeeMode         int      `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
+	BudgetPerPerson int      `json:"budgetPerPerson"` // 人均预算
+	OfficialPrice   float64  `json:"officialPrice"`   // 官方活动定价
+	FeeInclude      string   `json:"feeInclude"`      // 费用包含
+	FeeExclude      string   `json:"feeExclude"`      // 费用不含
+	EstTotal        int      `json:"estTotal"`        // 预估总价
+	Visibility      int      `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
+	JoinMode        int      `json:"joinMode"`        // 0需审核 1直接加入
+	AutoClose       int      `json:"autoClose"`       // 满员自动关闭：0否 1是
+	AllowShare      int      `json:"allowShare"`      // 允许转发：0否 1是
+	AllowCollect    int      `json:"allowCollect"`    // 允许收藏：0否 1是
+	IsDraft         int      `json:"isDraft"`         // 0已发布 1草稿
+	IsPublic        int      `json:"isPublic"`        // 0仅自己可见 1公开招募
 }
 
 // parseDate 将 YYYY-MM-DD 格式的字符串解析为 time.Time
@@ -114,38 +83,17 @@ func CreatePartner(c *gin.Context) {
 
 	userID := c.MustGet("userID").(string)
 
-	// 如果传入了行程日表，先创建行程
-	var tripID string
-	if len(req.Days) > 0 {
-		// 校验行程项数据
-		for _, d := range req.Days {
-			for j, it := range d.Items {
-				if !model.ValidSectionTypes[it.SectionType] {
-					response.Fail(c, 400, "第"+strconv.Itoa(d.DayNumber)+"天第"+
-						strconv.Itoa(j+1)+"项：无效的板块类型 "+it.SectionType)
-					return
-				}
-				if it.SectionType == model.SectionTransport && it.TransportMode != "" {
-					if !model.ValidTransportModes[it.TransportMode] {
-						response.Fail(c, 400, "第"+strconv.Itoa(d.DayNumber)+"天第"+
-							strconv.Itoa(j+1)+"项：无效的交通方式 "+it.TransportMode)
-						return
-					}
-				}
-			}
-		}
-		trip := buildTripFromDays(req.Days, req.Title, userID)
-		if err := repository.CreateTrip(trip); err != nil {
-			response.Fail(c, 500, "创建行程失败")
-			return
-		}
-		tripID = trip.ID
+	// 多图列表转JSON字符串
+	imagesJSON := ""
+	if len(req.Images) > 0 {
+		b, _ := json.Marshal(req.Images)
+		imagesJSON = string(b)
 	}
 
 	p := model.Partner{
 		Title:           req.Title,
 		Cover:           req.Cover,
-		Images:          req.Images,
+		Images:          imagesJSON,
 		Category:        req.Category,
 		Destination:     req.Destination,
 		Longitude:       req.Longitude,
@@ -181,7 +129,6 @@ func CreatePartner(c *gin.Context) {
 		AllowCollect:    req.AllowCollect,
 		IsDraft:         req.IsDraft,
 		IsPublic:        req.IsPublic,
-		TripID:          tripID,
 	}
 	p.UserID = userID
 	p.Status = 0         // 默认招募中
@@ -191,51 +138,6 @@ func CreatePartner(c *gin.Context) {
 		return
 	}
 	response.Success(c, p)
-}
-
-// buildTripFromDays 将行程日表转为 model.Trip
-func buildTripFromDays(days []TripPlanDayReq, tripTitle, userID string) *model.Trip {
-	mdays := make([]model.TripDay, len(days))
-	for i, d := range days {
-		items := make([]model.TripItem, len(d.Items))
-		for j, it := range d.Items {
-			items[j] = model.TripItem{
-				SectionType:     it.SectionType,
-				Title:           it.Title,
-				Description:     it.Description,
-				StartTime:       it.StartTime,
-				EndTime:         it.EndTime,
-				Latitude:        it.Latitude,
-				Longitude:       it.Longitude,
-				Address:         it.Address,
-				Images:          it.Images,
-				NeedReservation: it.NeedReservation,
-				TicketChannel:   it.TicketChannel,
-				TicketPrice:     it.TicketPrice,
-				TransportMode:   it.TransportMode,
-				StartPoint:      it.StartPoint,
-				EndPoint:        it.EndPoint,
-				StartLat:        it.StartLat,
-				StartLng:        it.StartLng,
-				EndLat:          it.EndLat,
-				EndLng:          it.EndLng,
-			}
-		}
-		mdays[i] = model.TripDay{
-			DayNumber: d.DayNumber,
-			Date:      d.Date,
-			Title:     d.Title,
-			Items:     items,
-		}
-	}
-	return &model.Trip{
-		UserID:     userID,
-		Title:      tripTitle,
-		CoverImage: "",
-		Status:     2, // 已发布
-		IsPublic:   1, // 公开
-		Days:       mdays,
-	}
 }
 
 // GetPartnerList 获取搭子列表（公共接口，未登录也可浏览）
@@ -279,12 +181,13 @@ func GetPartnerList(c *gin.Context) {
 
 	type partnerVO struct {
 		model.Partner
-		AuthorID     string `json:"authorId"`
-		AuthorName   string `json:"authorName"`
-		AuthorAvatar string `json:"authorAvatar"`
-		IsApplied    bool   `json:"isApplied"`
-		IsSelf       bool   `json:"isSelf"`
-		IsFollowed   bool   `json:"isFollowed"`
+		AuthorID     string `json:"authorId"`     // 作者ID
+		AuthorName   string `json:"authorName"`   // 作者昵称
+		AuthorAvatar string `json:"authorAvatar"` // 作者头像
+		IsApplied    bool   `json:"isApplied"`    // 当前用户是否已申请
+		IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
+		IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
+		ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
 	}
 	result := make([]partnerVO, len(list))
 	for i, p := range list {
@@ -306,6 +209,34 @@ func GetPartnerList(c *gin.Context) {
 		}
 	}
 
+	// 批量查询关联行程的行程项总数
+	var tripIDs []string
+	for _, p := range list {
+		if p.TripID != "" {
+			tripIDs = append(tripIDs, p.TripID)
+		}
+	}
+	if len(tripIDs) > 0 {
+		itemCountMap := repository.GetTripItemCounts(tripIDs)
+		for i, p := range list {
+			if cnt, ok := itemCountMap[p.TripID]; ok {
+				result[i].ItemCount = cnt
+			}
+		}
+	}
+
+	// 批量查询实时评论数，覆盖数据库静态字段
+	partnerIDs = make([]string, len(list))
+	for i, p := range list {
+		partnerIDs[i] = p.ID
+	}
+	commentCountMap := repository.GetPartnerCommentCounts(partnerIDs)
+	for i, p := range list {
+		if cnt, ok := commentCountMap[p.ID]; ok {
+			result[i].CommentCount = int(cnt)
+		}
+	}
+
 	response.Success(c, gin.H{"list": result, "total": total})
 }
 
@@ -315,7 +246,7 @@ func GetPartnerList(c *gin.Context) {
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool},total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64,commentCount=int},total=int64}}
 // @Router /api/v1/my/partners [get]
 func GetMyPartners(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -329,23 +260,55 @@ func GetMyPartners(c *gin.Context) {
 
 	type partnerVO struct {
 		model.Partner
-		AuthorID     string `json:"authorId"`
-		AuthorName   string `json:"authorName"`
-		AuthorAvatar string `json:"authorAvatar"`
-		IsApplied    bool   `json:"isApplied"`
-		IsSelf       bool   `json:"isSelf"`
-		IsFollowed   bool   `json:"isFollowed"`
+		AuthorID     string `json:"authorId"`     // 作者ID
+		AuthorName   string `json:"authorName"`   // 作者昵称
+		AuthorAvatar string `json:"authorAvatar"` // 作者头像
+		IsApplied    bool   `json:"isApplied"`    // 当前用户是否已申请
+		IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
+		IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
+		ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
 	}
 	result := make([]partnerVO, len(list))
+
+	// 批量查询用户信息
+	userIDs := make([]string, 0, len(list))
+	for _, p := range list {
+		userIDs = append(userIDs, p.UserID)
+	}
+	userMap := repository.GetUsersByIDs(userIDs)
+
 	for i, p := range list {
+		u := userMap[p.UserID]
+		authorName := ""
+		authorAvatar := ""
+		if u != nil {
+			authorName = u.Nickname
+			authorAvatar = u.AvatarURL
+		}
 		result[i] = partnerVO{
 			Partner:      p,
 			AuthorID:     p.UserID,
-			AuthorName:   "",
-			AuthorAvatar: "",
+			AuthorName:   authorName,
+			AuthorAvatar: authorAvatar,
 			IsApplied:    false,
 			IsSelf:       true,
 			IsFollowed:   false,
+		}
+	}
+
+	// 批量查询关联行程的行程项总数
+	var tripIDs []string
+	for _, p := range list {
+		if p.TripID != "" {
+			tripIDs = append(tripIDs, p.TripID)
+		}
+	}
+	if len(tripIDs) > 0 {
+		itemCountMap := repository.GetTripItemCounts(tripIDs)
+		for i, p := range list {
+			if cnt, ok := itemCountMap[p.TripID]; ok {
+				result[i].ItemCount = cnt
+			}
 		}
 	}
 
@@ -396,6 +359,12 @@ func GetPartnerDetail(c *gin.Context) {
 		if err == nil {
 			tripData = trip
 		}
+	}
+
+	// 实时查询评论数
+	cm := repository.GetPartnerCommentCounts([]string{id})
+	if cnt, ok := cm[id]; ok {
+		partner.CommentCount = int(cnt)
 	}
 
 	response.Success(c, gin.H{
