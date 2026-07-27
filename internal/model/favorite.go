@@ -12,7 +12,7 @@ import (
 type Favorite struct {
 	ID         string    `gorm:"primaryKey" json:"id"`
 	UserID     string    `gorm:"size:191;uniqueIndex:uk_user_target" json:"userId"`    // 用户ID
-	TargetType string    `gorm:"size:20;uniqueIndex:uk_user_target" json:"targetType"` // 收藏类型：guide/trip
+	TargetType string    `gorm:"size:20;uniqueIndex:uk_user_target" json:"targetType"` // 收藏类型：guide/trip/partner
 	TargetID   string    `gorm:"size:191;uniqueIndex:uk_user_target" json:"targetId"`  // 收藏对象ID
 	CreatedAt  time.Time `json:"createdAt"`
 }

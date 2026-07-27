@@ -80,6 +80,10 @@ func CreateComment(c *gin.Context) {
 			var trip model.Trip
 			database.DB.Select("user_id").Where("id = ?", req.TargetID).First(&trip)
 			targetUserID = trip.UserID
+		case "partner":
+			var partner model.Partner
+			database.DB.Select("user_id").Where("id = ?", req.TargetID).First(&partner)
+			targetUserID = partner.UserID
 		}
 	}
 	if targetUserID != "" && targetUserID != comment.UserID {

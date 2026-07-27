@@ -63,8 +63,11 @@ type Partner struct {
 	Status   int `gorm:"default:0;index" json:"status"` // 0招募中 1满员 2取消 3已过期 4行程结束
 	IsPublic int `gorm:"default:1" json:"isPublic"`     // 0仅自己可见 1公开招募
 	// 运营统计
-	ViewCount  int `gorm:"default:0" json:"viewCount"`  // 浏览量
-	SortWeight int `gorm:"default:0" json:"sortWeight"` // 排序权重
+	ViewCount     int `gorm:"default:0" json:"viewCount"`     // 浏览量
+	LikeCount     int `gorm:"default:0" json:"likeCount"`     // 点赞数
+	FavoriteCount int `gorm:"default:0" json:"favoriteCount"` // 收藏数
+	CommentCount  int `gorm:"default:0" json:"commentCount"`  // 评论数
+	SortWeight    int `gorm:"default:0" json:"sortWeight"`    // 排序权重
 	// 时间与软删
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`

@@ -5,6 +5,8 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 // CreatePartner 发布搭子
@@ -119,4 +121,53 @@ func AutoCloseExpiredPartners() int64 {
 		Where("status = 0 AND start_date IS NOT NULL AND start_date < ? AND min_members > 0 AND current_members < min_members", now).
 		Update("status", 3)
 	return result.RowsAffected
+}
+
+// LikePartner 点赞搭子（幂等）
+func LikePartner(userID, partnerID string) error {
+	var count int64
+	database.DB.Model(&model.Favorite{}).
+		Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "partner", partnerID).
+		Count(&count)
+	if count > 0 {
+		return nil
+	}
+	tx := database.DB.Begin()
+	if err := tx.Create(&model.Favorite{
+		UserID:     userID,
+		TargetType: "partner",
+		TargetID:   partnerID,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&model.Partner{}).
+		Where("id = ?", partnerID).
+		UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
+}
+
+// UnlikePartner 取消点赞搭子
+func UnlikePartner(userID, partnerID string) error {
+	tx := database.DB.Begin()
+	r := tx.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "partner", partnerID).
+		Delete(&model.Favorite{})
+	if r.Error != nil {
+		tx.Rollback()
+		return r.Error
+	}
+	if r.RowsAffected == 0 {
+		tx.Rollback()
+		return nil
+	}
+	if err := tx.Model(&model.Partner{}).
+		Where("id = ?", partnerID).
+		UpdateColumn("like_count", gorm.Expr("like_count - 1")).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }

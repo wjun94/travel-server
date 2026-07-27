@@ -357,13 +357,13 @@ func GetMyPartners(c *gin.Context) {
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param id path string true "搭子ID"
-// @Success 200 {object} response.Response{data=object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorName=string,authorAvatar=string,isFollowed=bool,isSelf=bool,isApplied=bool,trip=object}}
+// @Success 200 {object} response.Response{data=object{id=string,userId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,likeCount=int,favoriteCount=int,commentCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorName=string,authorAvatar=string,isFollowed=bool,isSelf=bool,isApplied=bool,isLiked=bool,isFavorited=bool,trip=model.Trip}}
 // @Router /api/v1/partner/{id} [get]
 func GetPartnerDetail(c *gin.Context) {
 	id := c.Param("id")
 	partner, err := repository.GetPartnerByID(id)
 	if err != nil {
-		response.Fail(c, 404, "搭子不存在")
+		response.Fail(c, 500, "搭子不存在")
 		return
 	}
 	userID := c.MustGet("userID").(string)
@@ -376,6 +376,7 @@ func GetPartnerDetail(c *gin.Context) {
 		authorName = author.Nickname
 		authorAvatar = author.AvatarURL
 	}
+
 	// 关注状态
 	followStatus, _ := repository.GetFollowStatus(userID, partner.UserID)
 	isFollowed := followStatus == 1 || followStatus == 2
@@ -383,6 +384,10 @@ func GetPartnerDetail(c *gin.Context) {
 	// 当前用户是否已申请
 	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, []string{id})
 	isApplied := appliedMap[id]
+
+	// 点赞/收藏状态（搭子的点赞和收藏共用 Favorite 表）
+	isLiked := repository.IsFavorited(userID, id, "partner")
+	isFavorited := isLiked
 
 	// 如果有关联行程，获取行程详情（含日程日表）
 	var tripData interface{}
@@ -396,7 +401,6 @@ func GetPartnerDetail(c *gin.Context) {
 	response.Success(c, gin.H{
 		"id":              partner.ID,
 		"userId":          partner.UserID,
-		"tripId":          partner.TripID,
 		"type":            partner.Type,
 		"category":        partner.Category,
 		"title":           partner.Title,
@@ -439,6 +443,9 @@ func GetPartnerDetail(c *gin.Context) {
 		"status":          partner.Status,
 		"isPublic":        partner.IsPublic,
 		"viewCount":       partner.ViewCount,
+		"likeCount":       partner.LikeCount,
+		"favoriteCount":   partner.FavoriteCount,
+		"commentCount":    partner.CommentCount,
 		"sortWeight":      partner.SortWeight,
 		"createdAt":       partner.CreatedAt,
 		"updatedAt":       partner.UpdatedAt,
@@ -447,6 +454,8 @@ func GetPartnerDetail(c *gin.Context) {
 		"isFollowed":      isFollowed,
 		"isSelf":          userID == partner.UserID,
 		"isApplied":       isApplied,
+		"isLiked":         isLiked,
+		"isFavorited":     isFavorited,
 		"trip":            tripData,
 	})
 }
@@ -568,6 +577,51 @@ func CancelPartner(c *gin.Context) {
 
 	if err := repository.CancelPartner(id, userID); err != nil {
 		response.Fail(c, 500, "取消失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// LikePartner 点赞搭子
+// @Summary 点赞搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id}/like [post]
+func LikePartner(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.LikePartner(userID, id); err != nil {
+		response.Fail(c, 400, err.Error())
+		return
+	}
+	// 通知搭子发起人（非本人点赞才通知）
+	partner, _ := repository.GetPartnerByID(id)
+	if partner != nil && partner.UserID != userID {
+		repository.CreateNotification(&model.Notification{
+			UserID:     partner.UserID,
+			FromUserID: userID,
+			Type:       2,
+			RelatedID:  id,
+			Content:    "您的搭子收到一个赞",
+		})
+	}
+	response.Success(c, nil)
+}
+
+// UnlikePartner 取消点赞搭子
+// @Summary 取消点赞搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id}/like [delete]
+func UnlikePartner(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.UnlikePartner(userID, id); err != nil {
+		response.Fail(c, 400, err.Error())
 		return
 	}
 	response.Success(c, nil)

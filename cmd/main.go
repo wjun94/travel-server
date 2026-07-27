@@ -115,6 +115,8 @@ func main() {
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请
 			miniAuth.PUT("/partner/:id/cancel", miniapp.CancelPartner)          // 取消搭子
+			miniAuth.POST("/partner/:id/like", miniapp.LikePartner)             // 点赞搭子
+			miniAuth.DELETE("/partner/:id/like", miniapp.UnlikePartner)         // 取消点赞搭子
 
 			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 消息列表

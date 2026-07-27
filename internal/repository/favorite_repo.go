@@ -83,6 +83,12 @@ func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]
 			database.DB.Model(&model.Trip{}).Select("title").
 				Where("id = ?", f.TargetID).Scan(&t)
 			items[i].Title = t.Title
+		case "partner":
+			var p struct{ Title, Cover string }
+			database.DB.Model(&model.Partner{}).Select("title", "cover").
+				Where("id = ?", f.TargetID).Scan(&p)
+			items[i].Title = p.Title
+			items[i].CoverImage = p.Cover
 		}
 	}
 	return items, total, nil
