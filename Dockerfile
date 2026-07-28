@@ -21,7 +21,7 @@ COPY . .
 RUN swag init -g cmd/main.go -o docs
 
 # 编译
-RUN go build -o travel-backend .
+RUN go build -o travel-backend ./cmd/...
 
 # 运行阶段（关键：用固定版本，不走 latest 网络拉取）
 FROM alpine:3.19

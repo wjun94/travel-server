@@ -45,13 +45,26 @@ services:
     environment:
       - GOPROXY=https://goproxy.cn,direct
     volumes:
-      - .:/app
       - /app/tmp
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    container_name: travel-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./api.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/app/static
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
 
 # 顶级 volumes 必须顶格声明，且与 services 对齐
 volumes:
