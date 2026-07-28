@@ -159,3 +159,26 @@ func RemoveTripMember(id string) error {
 func UpdateTripMemberRole(id string, role string) error {
 	return database.DB.Model(&model.TripMember{}).Where("id = ?", id).Update("role", role).Error
 }
+
+// GetTripItemCounts 批量查询多个行程的行程项总数（按行程ID分组）
+func GetTripItemCounts(tripIDs []string) map[string]int64 {
+	if len(tripIDs) == 0 {
+		return nil
+	}
+	type result struct {
+		TripID string
+		Count  int64
+	}
+	var rows []result
+	database.DB.Table("trip_items ti").
+		Select("td.trip_id, COUNT(ti.id) as count").
+		Joins("JOIN trip_days td ON ti.trip_day_id = td.id").
+		Where("td.trip_id IN ?", tripIDs).
+		Group("td.trip_id").
+		Find(&rows)
+	m := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		m[r.TripID] = r.Count
+	}
+	return m
+}

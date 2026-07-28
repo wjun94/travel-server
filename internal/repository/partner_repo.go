@@ -171,3 +171,25 @@ func UnlikePartner(userID, partnerID string) error {
 	}
 	return tx.Commit().Error
 }
+
+// GetPartnerCommentCounts 批量查询多个搭子的评论数
+func GetPartnerCommentCounts(partnerIDs []string) map[string]int64 {
+	if len(partnerIDs) == 0 {
+		return nil
+	}
+	type result struct {
+		TargetID string
+		Count    int64
+	}
+	var rows []result
+	database.DB.Model(&model.Comment{}).
+		Select("target_id, COUNT(*) as count").
+		Where("target_type = ? AND target_id IN ?", "partner", partnerIDs).
+		Group("target_id").
+		Find(&rows)
+	m := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		m[r.TargetID] = r.Count
+	}
+	return m
+}
