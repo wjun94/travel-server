@@ -64,6 +64,25 @@ func JWTAuth() gin.HandlerFunc {
 	}
 }
 
+// OptionalJWTAuth 可选的小程序用户认证中间件（有token就解析，没有也不拦截）
+func OptionalJWTAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := ParseMiniAppToken(tokenString)
+		if err != nil {
+			c.Next()
+			return
+		}
+		c.Set("userID", claims.UserID)
+		c.Next()
+	}
+}
+
 // ---------- 后台管理员 Claims ----------
 type AdminClaims struct {
 	AdminUserID string `json:"adminUserId"`

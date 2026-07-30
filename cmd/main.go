@@ -50,19 +50,19 @@ func main() {
 	api := r.Group("/api/v1")
 	{
 		// ==================== 公开接口（无需登录） ====================
-		api.POST("/user/login", miniapp.UserLogin)                 // 微信登录
-		api.POST("/admin/login", admin.AdminLogin)                 // 后台登录
-		api.GET("/guide/feed", miniapp.GetGuideFeed)               // 攻略瀑布流
-		api.GET("/nearby", miniapp.GetNearby)                      // 周边推荐
-		api.GET("/nearby/recommend", miniapp.GetTopRecommend)      // TOP推荐
-		api.GET("/weather", common.GetWeather)                     // 天气查询
-		api.GET("/weather/qweather", common.GetQWeather)           // 天气查询（和风）
-		api.GET("/comments", miniapp.GetComments)                  // 评论列表
-		api.GET("/comment/replies", miniapp.GetReplies)            // 子回复列表
-		api.GET("/regions/all", miniapp.GetAllRegions)             // 国内省/市列表
-		api.GET("/regions/countries", miniapp.GetCountries)        // 境外国家列表
-		api.GET("/destinations/search", miniapp.SearchDestination) // 目的地搜索
-		api.GET("/partner/list", miniapp.GetPartnerList)           // 搭子列表（公共）
+		api.POST("/user/login", miniapp.UserLogin)                                     // 微信登录
+		api.POST("/admin/login", admin.AdminLogin)                                     // 后台登录
+		api.GET("/guide/feed", miniapp.GetGuideFeed)                                   // 攻略瀑布流
+		api.GET("/nearby", miniapp.GetNearby)                                          // 周边推荐
+		api.GET("/nearby/recommend", miniapp.GetTopRecommend)                          // TOP推荐
+		api.GET("/weather", common.GetWeather)                                         // 天气查询
+		api.GET("/weather/qweather", common.GetQWeather)                               // 天气查询（和风）
+		api.GET("/comments", miniapp.GetComments)                                      // 评论列表
+		api.GET("/comment/replies", miniapp.GetReplies)                                // 子回复列表
+		api.GET("/regions/all", miniapp.GetAllRegions)                                 // 国内省/市列表
+		api.GET("/regions/countries", miniapp.GetCountries)                            // 境外国家列表
+		api.GET("/destinations/search", miniapp.SearchDestination)                     // 目的地搜索
+		api.GET("/partner/list", middleware.OptionalJWTAuth(), miniapp.GetPartnerList) // 搭子列表（公共，可选JWT）
 
 		// ==================== 小程序端（需 JWT 登录） ====================
 		miniAuth := api.Group("", middleware.JWTAuth())
