@@ -16,10 +16,11 @@ import (
 
 // AIGenerateTrip 调用 DeepSeek 智能生成行程
 // @Summary AI生成行程
+// @Description 根据目的地和天数调用AI生成完整行程，自动填充标题/国家/省市/预算/概述等字段并保存
 // @Security BearerAuth
 // @Tags 小程序-行程
-// @Param body body object{destination=string,days=int} true "生成参数"
-// @Success 200 {object} response.Response{data=model.Trip}
+// @Param body body object{destination=string,days=int} true "生成参数：destination=目的地, days=旅行天数"
+// @Success 200 {object} response.Response{data=model.Trip} "返回完整行程（含国家/省市/预算/概述及每日行程项）"
 // @Router /api/v1/trip/ai-generate [post]
 func AIGenerateTrip(c *gin.Context) {
 	var req struct {
@@ -39,9 +40,16 @@ func AIGenerateTrip(c *gin.Context) {
 		return
 	}
 
-	// 解析 AI 返回的行程日数据
+	// 解析 AI 返回的行程数据（含行程基础信息与每日行程）
 	var aiResult struct {
-		Days []struct {
+		Title       string   `json:"title"`
+		Countries   []string `json:"countries"`
+		Provinces   []string `json:"provinces"`
+		Cities      []string `json:"cities"`
+		IsOverseas  int      `json:"isOverseas"`
+		TotalBudget float64  `json:"totalBudget"`
+		Summary     string   `json:"summary"`
+		Days        []struct {
 			Day   int `json:"day"`
 			Items []struct {
 				Time        string `json:"time"`
@@ -58,12 +66,22 @@ func AIGenerateTrip(c *gin.Context) {
 		return
 	}
 
-	// 创建行程
+	// 创建行程（填充AI返回的完整字段）
 	trip := model.Trip{
 		UserID:       uid,
-		Title:        req.Destination + "行程",
+		Title:        aiResult.Title,
+		Countries:    aiResult.Countries,
+		Provinces:    aiResult.Provinces,
+		Cities:       aiResult.Cities,
 		Destinations: []string{req.Destination},
-		Status:       1,
+		IsOverseas:   aiResult.IsOverseas,
+		TotalBudget:  aiResult.TotalBudget,
+		Summary:      aiResult.Summary,
+		Status:       1, // 草稿
+	}
+	// 兜底：AI未返回标题时用目的地+天数拼接
+	if trip.Title == "" {
+		trip.Title = fmt.Sprintf("%s%d日游", req.Destination, req.Days)
 	}
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "保存失败")
