@@ -6,6 +6,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -20,6 +24,7 @@ import (
 	"travel-server/pkg/config"
 	"travel-server/pkg/database"
 	"travel-server/pkg/qiniu"
+	"travel-server/pkg/response"
 )
 
 // @title           旅行搭子小程序 API
@@ -226,6 +231,24 @@ func main() {
 
 	// WebSocket 协同编辑
 	api.GET("/ws", common.WebSocketHandler)
+
+	// 静态文件服务（需放在 API 路由之后，避免覆盖接口路由）
+	r.Static("/static", "./static") // 通过 /static/xxx 访问
+
+	// 未匹配路由时，尝试从 static 目录直接读取文件（如 /kb406P2iUq.txt），否则返回 404
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.Contains(path, "..") {
+			response.Fail(c, http.StatusNotFound, "页面不存在")
+			return
+		}
+		fullPath := filepath.Join("./static", filepath.Clean(path))
+		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
+			c.File(fullPath)
+			return
+		}
+		response.Fail(c, http.StatusNotFound, "页面不存在")
+	})
 
 	log.Println("Server running on :", config.AppConfig.ServerPort)
 	r.Run(":" + config.AppConfig.ServerPort)
