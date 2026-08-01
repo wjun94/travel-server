@@ -26,6 +26,7 @@ type Trip struct {
 	FavoriteCount int            `gorm:"default:0" json:"favoriteCount"`                // 收藏数
 	Status        int            `gorm:"default:1" json:"status"`                       // 状态：1草稿 2已发布 3已归档完结
 	IsPublic      int            `gorm:"default:0" json:"isPublic"`                     // 是否公开（0私密 1公开）
+	IsAI          int            `gorm:"default:0" json:"isAI"`                         // 是否AI生成：0手动 1AI
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"` // 软删除

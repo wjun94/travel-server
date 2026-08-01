@@ -14,6 +14,16 @@ func CreatePartner(p *model.Partner) error {
 	return database.DB.Create(p).Error
 }
 
+// CountTodayAIPartners 统计用户今日AI生成的搭子数
+func CountTodayAIPartners(userID string) (int64, error) {
+	var count int64
+	start := time.Now().Truncate(24 * time.Hour)
+	err := database.DB.Model(&model.Partner{}).
+		Where("user_id = ? AND is_ai = 1 AND created_at >= ?", userID, start).
+		Count(&count).Error
+	return count, err
+}
+
 // GetPartnerList 获取搭子列表
 func GetPartnerList(page, pageSize int) ([]model.Partner, int64, error) {
 	var list []model.Partner

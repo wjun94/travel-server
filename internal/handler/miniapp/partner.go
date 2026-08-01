@@ -2,11 +2,13 @@ package miniapp
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"travel-server/internal/ai"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/internal/service"
@@ -549,6 +551,108 @@ func CancelPartner(c *gin.Context) {
 		return
 	}
 	response.Success(c, nil)
+}
+
+// AIGeneratePartner AI生成搭子招募信息
+// @Summary AI生成搭子
+// @Description 根据目的地和天数调用AI生成搭子招募文案并自动发布（每日基础1次，邀请好友成功1人可额外+1次，超出返回400）
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param body body object{destination=string,days=int,category=string} true "生成参数：destination=目的地, days=天数, category=分类(可选)"
+// @Success 200 {object} response.Response{data=model.Partner}
+// @Router /api/v1/partner/ai-generate [post]
+func AIGeneratePartner(c *gin.Context) {
+	var req struct {
+		Destination string `json:"destination" binding:"required"`
+		Days        int    `json:"days" binding:"required"`
+		Category    string `json:"category"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	userID := c.MustGet("userID").(string)
+
+	// 额度校验：今日基础1次 + 邀请成功奖励，超出拒绝
+	inviteCount, _ := repository.CountTodayInviteSuccess(userID)
+	partnerUsed, _ := repository.CountTodayAIPartners(userID)
+	if int(partnerUsed) >= 1+int(inviteCount) {
+		response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
+		return
+	}
+
+	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days)
+	result, err := ai.Chat(prompt)
+	if err != nil {
+		response.Fail(c, 500, "AI生成失败")
+		return
+	}
+
+	// 解析 AI 返回的搭子信息
+	var aiResult struct {
+		Title           string   `json:"title"`
+		Category        string   `json:"category"`
+		Destination     string   `json:"destination"`
+		Days            int      `json:"days"`
+		Desc            string   `json:"desc"`
+		Requirement     string   `json:"requirement"`
+		MaxMembers      int      `json:"maxMembers"`
+		GenderLimit     int      `json:"genderLimit"`
+		FeeMode         int      `json:"feeMode"`
+		BudgetPerPerson int      `json:"budgetPerPerson"`
+		Tags            []string `json:"tags"`
+	}
+	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
+		response.Fail(c, 500, "AI返回格式异常")
+		return
+	}
+	if aiResult.Title == "" {
+		aiResult.Title = fmt.Sprintf("%s%d天组队！", req.Destination, req.Days)
+	}
+	if aiResult.Destination == "" {
+		aiResult.Destination = req.Destination
+	}
+	if aiResult.Days <= 0 {
+		aiResult.Days = req.Days
+	}
+	if aiResult.Category == "" {
+		aiResult.Category = req.Category
+		if aiResult.Category == "" {
+			aiResult.Category = "旅游"
+		}
+	}
+	tagsJSON := ""
+	if len(aiResult.Tags) > 0 {
+		if b, err := json.Marshal(aiResult.Tags); err == nil {
+			tagsJSON = string(b)
+		}
+	}
+
+	p := model.Partner{
+		UserID:          userID,
+		Title:           aiResult.Title,
+		Category:        aiResult.Category,
+		Destination:     aiResult.Destination,
+		Days:            aiResult.Days,
+		TravelTags:      tagsJSON,
+		Tags:            tagsJSON,
+		Desc:            aiResult.Desc,
+		Requirement:     aiResult.Requirement,
+		MaxMembers:      aiResult.MaxMembers,
+		GenderLimit:     aiResult.GenderLimit,
+		FeeMode:         aiResult.FeeMode,
+		BudgetPerPerson: aiResult.BudgetPerPerson,
+		IsDraft:         0,
+		IsPublic:        1,
+		IsAI:            1,
+	}
+	p.Status = 0         // 默认招募中
+	p.CurrentMembers = 1 // 发起人计入
+	if err := repository.CreatePartner(&p); err != nil {
+		response.Fail(c, 500, "发布失败")
+		return
+	}
+	response.Success(c, p)
 }
 
 // LikePartner 点赞搭子

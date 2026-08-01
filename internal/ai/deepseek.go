@@ -30,6 +30,22 @@ const TripPrompt = `你是一个专业的旅行规划师。请为%s的%d天旅�
 - description: 简短描述
 只返回严格的JSON格式，不要解释：{"title":"...","countries":[],"provinces":[],"cities":[],"isOverseas":0,"totalBudget":0,"summary":"...","days":[{"day":1,"items":[{"time":"09:00","name":"...","type":"attraction","duration":"2h","address":"...","description":"..."}]}]}`
 
+// PartnerPrompt 搭子招募提示词模板
+const PartnerPrompt = `你是一个旅行搭子招募文案专家。请为目的地%s、行程%d天的旅行搭子招募生成一份文案。
+返回JSON需包含以下字段：
+- title: 招募标题（吸引人，如"成都5天4夜组队！美食徒步走起"）
+- category: 活动分类（旅游/美食/运动/学习/探店/看展/桌游）
+- destination: 目的地
+- days: 出行天数
+- desc: 行程简述（一两句话概括行程亮点）
+- requirement: 人员要求（如"不矫情、能早起、AA制"）
+- maxMembers: 招募人数上限（数字）
+- genderLimit: 0不限 1仅男生 2仅女生
+- feeMode: 费用模式（0免费 1AA 2组织者全包 3人均固定预算）
+- budgetPerPerson: 人均预算（元，数字）
+- tags: 标签JSON数组（如["徒步","拍照","美食"]，最多5个）
+只返回严格的JSON格式，不要解释：{"title":"...","category":"旅游","destination":"...","days":5,"desc":"...","requirement":"...","maxMembers":4,"genderLimit":0,"feeMode":1,"budgetPerPerson":500,"tags":["徒步","拍照"]}`
+
 // Chat 发送对话请求到 DeepSeek，返回模型回复内容
 func Chat(prompt string) (string, error) {
 	reqBody := map[string]interface{}{

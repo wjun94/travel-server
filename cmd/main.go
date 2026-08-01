@@ -82,8 +82,11 @@ func main() {
 			miniAuth.GET("/profile/:id", miniapp.GetUserProfile)             // 他人个人主页
 			miniAuth.GET("/profile/:id/favorites", miniapp.GetUserFavorites) // 他人收藏列表
 			miniAuth.GET("/profile/:id/feed", miniapp.GetUserFeed)           // 他人的攻略+行程流（按时间）
-			miniAuth.GET("/user/info", miniapp.GetUserInfo)                  // 个人信息
+			miniAuth.GET("/user/info", miniapp.GetUserInfo)                  // 个人信息（含邀请码）
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)             // 更新个人资料
+
+			// ---------- AI ----------
+			miniAuth.GET("/ai/quota", miniapp.GetAiQuota) // AI调用额度（行程/搭子今日剩余次数）
 
 			// ---------- 攻略 ----------
 			miniAuth.POST("/guide", miniapp.CreateGuide)                       // 创建攻略
@@ -115,6 +118,7 @@ func main() {
 
 			// ---------- 搭子 ----------
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
+			miniAuth.POST("/partner/ai-generate", miniapp.AIGeneratePartner)    // AI智能生成搭子
 			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入

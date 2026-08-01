@@ -18,16 +18,17 @@ import (
 
 // UserLogin 微信小程序登录
 // @Summary 微信登录
-// @Description 通过临时code换取openid，完成登录/注册，返回JWT Token
+// @Description 通过临时code换取openid，完成登录/注册，返回JWT Token；inviteCode为邀请码，仅新用户注册时绑定邀请关系
 // @Tags 小程序-用户
 // @Accept json
 // @Produce json
-// @Param code body string true "微信临时登录凭证"
-// @Success 200 {object} response.Response{data=object{token=string,user=model.User}}
+// @Param body body object{code=string,inviteCode=string} true "code微信临时登录凭证, inviteCode邀请码(可选)"
+// @Success 200 {object} response.Response{data=object{token=string}}
 // @Router /api/v1/user/login [post]
 func UserLogin(c *gin.Context) {
 	var req struct {
-		Code string `json:"code" binding:"required"`
+		Code       string `json:"code" binding:"required"`
+		InviteCode string `json:"inviteCode"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -40,14 +41,14 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	user, err := service.GetOrCreateUser(wxResp.OpenID)
+	user, err := service.GetOrCreateUser(wxResp.OpenID, wxResp.UnionID, req.InviteCode)
 	if err != nil {
 		response.Fail(c, 500, "服务器错误")
 		return
 	}
 
 	token, _ := middleware.GenerateMiniAppToken(user.ID)
-	response.Success(c, gin.H{"token": token, "user": user})
+	response.Success(c, gin.H{"token": token})
 }
 
 type WxSessionResp struct {
@@ -74,7 +75,7 @@ func getWxSession(code string) (*WxSessionResp, error) {
 	return &wxResp, nil
 }
 
-// GetUserInfo 获取当前用户信息
+// GetUserInfo 获取当前用户信息（含邀请码）
 // @Summary 获取个人信息
 // @Security BearerAuth
 // @Tags 小程序-用户
@@ -86,6 +87,12 @@ func GetUserInfo(c *gin.Context) {
 	if err != nil {
 		response.Fail(c, 401, "用户不存在")
 		return
+	}
+	// 邀请码兜底：老用户为空时自动补发
+	if user.InviteCode == "" {
+		if code, err := repository.EnsureInviteCode(uid); err == nil {
+			user.InviteCode = code
+		}
 	}
 	response.Success(c, user)
 }

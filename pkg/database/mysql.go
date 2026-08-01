@@ -74,6 +74,7 @@ func InitMySQL() {
 		&model.Role{},
 		&model.Follow{},
 		&model.Notification{},
+		&model.InviteRecord{},
 	)
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)

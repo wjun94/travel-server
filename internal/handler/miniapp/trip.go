@@ -16,7 +16,7 @@ import (
 
 // AIGenerateTrip 调用 DeepSeek 智能生成行程
 // @Summary AI生成行程
-// @Description 根据目的地和天数调用AI生成完整行程，自动填充标题/国家/省市/预算/概述等字段并保存
+// @Description 根据目的地和天数调用AI生成完整行程，自动填充标题/国家/省市/预算/概述等字段并保存（每日基础1次，邀请好友成功1人可额外+1次，超出返回400）
 // @Security BearerAuth
 // @Tags 小程序-行程
 // @Param body body object{destination=string,days=int} true "生成参数：destination=目的地, days=旅行天数"
@@ -32,6 +32,14 @@ func AIGenerateTrip(c *gin.Context) {
 		return
 	}
 	uid := c.MustGet("userID").(string)
+
+	// 额度校验：今日基础1次 + 邀请成功奖励，超出拒绝
+	inviteCount, _ := repository.CountTodayInviteSuccess(uid)
+	tripUsed, _ := repository.CountTodayAITrips(uid)
+	if int(tripUsed) >= 1+int(inviteCount) {
+		response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
+		return
+	}
 
 	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days)
 	result, err := ai.Chat(prompt)
@@ -78,6 +86,7 @@ func AIGenerateTrip(c *gin.Context) {
 		TotalBudget:  aiResult.TotalBudget,
 		Summary:      aiResult.Summary,
 		Status:       1, // 草稿
+		IsAI:         1, // AI生成
 	}
 	// 兜底：AI未返回标题时用目的地+天数拼接
 	if trip.Title == "" {

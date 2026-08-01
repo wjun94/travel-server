@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 
@@ -12,6 +14,16 @@ import (
 // CreateTrip 创建行程
 func CreateTrip(trip *model.Trip) error {
 	return database.DB.Create(trip).Error
+}
+
+// CountTodayAITrips 统计用户今日AI生成的行程数
+func CountTodayAITrips(userID string) (int64, error) {
+	var count int64
+	start := time.Now().Truncate(24 * time.Hour)
+	err := database.DB.Model(&model.Trip{}).
+		Where("user_id = ? AND is_ai = 1 AND created_at >= ?", userID, start).
+		Count(&count).Error
+	return count, err
 }
 
 // GetTripByID 获取行程详情（含行程日+行程项+同行者）

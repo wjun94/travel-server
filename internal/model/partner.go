@@ -59,6 +59,7 @@ type Partner struct {
 	AllowShare   int `gorm:"default:1" json:"allowShare"`   // 允许转发：0否 1是
 	AllowCollect int `gorm:"default:1" json:"allowCollect"` // 允许收藏：0否 1是
 	IsDraft      int `gorm:"default:0" json:"isDraft"`      // 0已发布 1草稿
+	IsAI         int `gorm:"default:0" json:"isAI"`         // 是否AI生成：0手动 1AI
 	// 状态
 	Status   int `gorm:"default:0;index" json:"status"` // 0招募中 1满员 2取消 3已过期 4行程结束
 	IsPublic int `gorm:"default:1" json:"isPublic"`     // 0仅自己可见 1公开招募
