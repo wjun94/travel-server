@@ -38,13 +38,25 @@ const PartnerPrompt = `你是一个旅行搭子招募文案专家。请为目的
 - destination: 目的地
 - days: 出行天数
 - desc: 行程简述（一两句话概括行程亮点）
+- richDesc: 详细介绍（3-5句话，包含路线安排、行程亮点、特色体验）
 - requirement: 人员要求（如"不矫情、能早起、AA制"）
+- address: 集合地点（如"成都东站集合"）
+- startDate: 建议出发日期（格式YYYY-MM-DD，无法确定则为空）
+- endDate: 建议结束日期（格式YYYY-MM-DD，无法确定则为空）
 - maxMembers: 招募人数上限（数字）
+- minMembers: 最小成团人数（数字）
 - genderLimit: 0不限 1仅男生 2仅女生
+- maleCount: 男生需求数（genderLimit为1时>0，否则0）
+- femaleCount: 女生需求数（genderLimit为2时>0，否则0）
+- minAge: 年龄下限（数字）
+- maxAge: 年龄上限（数字）
 - feeMode: 费用模式（0免费 1AA 2组织者全包 3人均固定预算）
 - budgetPerPerson: 人均预算（元，数字）
+- feeInclude: 费用包含（如"住宿、门票、交通"）
+- feeExclude: 费用不含（如"餐饮、个人消费"）
+- estTotal: 预估总花费（元，数字）
 - tags: 标签JSON数组（如["徒步","拍照","美食"]，最多5个）
-只返回严格的JSON格式，不要解释：{"title":"...","category":"旅游","destination":"...","days":5,"desc":"...","requirement":"...","maxMembers":4,"genderLimit":0,"feeMode":1,"budgetPerPerson":500,"tags":["徒步","拍照"]}`
+只返回严格的JSON格式，不要解释：{"title":"...","category":"旅游","destination":"...","days":5,"desc":"...","richDesc":"...","requirement":"...","address":"...","startDate":"","endDate":"","maxMembers":4,"minMembers":2,"genderLimit":0,"maleCount":0,"femaleCount":0,"minAge":18,"maxAge":40,"feeMode":1,"budgetPerPerson":500,"feeInclude":"住宿、门票","feeExclude":"餐饮、个人消费","estTotal":2000,"tags":["徒步","拍照"]}`
 
 // Chat 发送对话请求到 DeepSeek，返回模型回复内容
 func Chat(prompt string) (string, error) {

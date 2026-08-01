@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -595,17 +596,30 @@ func AIGeneratePartner(c *gin.Context) {
 		Destination     string   `json:"destination"`
 		Days            int      `json:"days"`
 		Desc            string   `json:"desc"`
+		RichDesc        string   `json:"richDesc"`
 		Requirement     string   `json:"requirement"`
+		Address         string   `json:"address"`
+		StartDate       string   `json:"startDate"`
+		EndDate         string   `json:"endDate"`
 		MaxMembers      int      `json:"maxMembers"`
+		MinMembers      int      `json:"minMembers"`
 		GenderLimit     int      `json:"genderLimit"`
+		MaleCount       int      `json:"maleCount"`
+		FemaleCount     int      `json:"femaleCount"`
+		MinAge          int      `json:"minAge"`
+		MaxAge          int      `json:"maxAge"`
 		FeeMode         int      `json:"feeMode"`
 		BudgetPerPerson int      `json:"budgetPerPerson"`
+		FeeInclude      string   `json:"feeInclude"`
+		FeeExclude      string   `json:"feeExclude"`
+		EstTotal        int      `json:"estTotal"`
 		Tags            []string `json:"tags"`
 	}
 	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
 		response.Fail(c, 500, "AI返回格式异常")
 		return
 	}
+	// 兜底：AI 未返回的字段用默认值填充
 	if aiResult.Title == "" {
 		aiResult.Title = fmt.Sprintf("%s%d天组队！", req.Destination, req.Days)
 	}
@@ -621,6 +635,12 @@ func AIGeneratePartner(c *gin.Context) {
 			aiResult.Category = "旅游"
 		}
 	}
+	if aiResult.MaxMembers <= 0 {
+		aiResult.MaxMembers = 4
+	}
+	if aiResult.MaxAge <= 0 {
+		aiResult.MaxAge = 99
+	}
 	tagsJSON := ""
 	if len(aiResult.Tags) > 0 {
 		if b, err := json.Marshal(aiResult.Tags); err == nil {
@@ -634,14 +654,26 @@ func AIGeneratePartner(c *gin.Context) {
 		Category:        aiResult.Category,
 		Destination:     aiResult.Destination,
 		Days:            aiResult.Days,
-		TravelTags:      tagsJSON,
+		Address:         aiResult.Address,
+		StartDate:       parseDate(aiResult.StartDate),
+		EndDate:         parseDate(aiResult.EndDate),
+		TravelTags:      strings.Join(aiResult.Tags, ","),
 		Tags:            tagsJSON,
 		Desc:            aiResult.Desc,
+		RichDesc:        aiResult.RichDesc,
 		Requirement:     aiResult.Requirement,
 		MaxMembers:      aiResult.MaxMembers,
+		MinMembers:      aiResult.MinMembers,
 		GenderLimit:     aiResult.GenderLimit,
+		MaleCount:       aiResult.MaleCount,
+		FemaleCount:     aiResult.FemaleCount,
+		MinAge:          aiResult.MinAge,
+		MaxAge:          aiResult.MaxAge,
 		FeeMode:         aiResult.FeeMode,
 		BudgetPerPerson: aiResult.BudgetPerPerson,
+		FeeInclude:      aiResult.FeeInclude,
+		FeeExclude:      aiResult.FeeExclude,
+		EstTotal:        aiResult.EstTotal,
 		IsDraft:         0,
 		IsPublic:        1,
 		IsAI:            1,
