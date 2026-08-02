@@ -66,6 +66,11 @@ func UpdateUserUnionID(userID, unionid string) error {
 	return database.DB.Model(&model.User{}).Where("id = ?", userID).Update("union_id", unionid).Error
 }
 
+// UpdateUserPhone 更新用户手机号
+func UpdateUserPhone(userID, phone string) error {
+	return database.DB.Model(&model.User{}).Where("id = ?", userID).Update("phone", phone).Error
+}
+
 // GetUserPublicProfile 获取他人个人主页
 func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, error) {
 	var user model.User

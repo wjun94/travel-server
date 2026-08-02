@@ -17,6 +17,7 @@ type User struct {
 	Nickname      string    `gorm:"size:50" json:"nickname"`               // 昵称
 	AvatarURL     string    `gorm:"size:500" json:"avatarUrl"`             // 头像链接
 	Role          int       `gorm:"default:0" json:"role"`                 // 0普通 1领队 2管理员
+	Phone         string    `gorm:"size:20" json:"phone"`                  // 手机号（微信授权绑定）
 	InviteCode    string    `gorm:"uniqueIndex;size:16" json:"inviteCode"` // 我的邀请码
 	FollowCount   int       `gorm:"default:0" json:"followCount"`          // 关注数
 	FollowerCount int       `gorm:"default:0" json:"followerCount"`        // 粉丝数

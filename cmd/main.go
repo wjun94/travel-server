@@ -84,6 +84,7 @@ func main() {
 			miniAuth.GET("/profile/:id/feed", miniapp.GetUserFeed)           // 他人的攻略+行程流（按时间）
 			miniAuth.GET("/user/info", miniapp.GetUserInfo)                  // 个人信息（含邀请码）
 			miniAuth.PUT("/user/profile", miniapp.UpdateProfile)             // 更新个人资料
+			miniAuth.POST("/bind/phone", miniapp.BindPhone)                  // 绑定微信手机号
 
 			// ---------- AI ----------
 			miniAuth.GET("/ai/quota", miniapp.GetAiQuota) // AI调用额度（行程/搭子今日剩余次数）
@@ -108,7 +109,6 @@ func main() {
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)                 // 行程详情
 			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)              // 更新行程
 			miniAuth.POST("/trip/day", miniapp.AddTripDay)             // 添加行程日
-			miniAuth.PUT("/trip/day/:id", miniapp.UpdateTripDay)       // 更新行程日
 			miniAuth.DELETE("/trip/day/:id", miniapp.DeleteTripDay)    // 删除行程日
 			miniAuth.POST("/trip/item", miniapp.AddTripItem)           // 添加行程项
 			miniAuth.PUT("/trip/item/:id", miniapp.UpdateTripItem)     // 更新行程项
