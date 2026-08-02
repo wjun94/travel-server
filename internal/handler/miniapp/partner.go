@@ -3,6 +3,7 @@ package miniapp
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -323,7 +324,7 @@ func GetMyPartners(c *gin.Context) {
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param id path string true "搭子ID"
-// @Success 200 {object} response.Response{data=object{id=string,userId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,likeCount=int,favoriteCount=int,commentCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorName=string,authorAvatar=string,isFollowed=bool,isSelf=bool,isApplied=bool,isLiked=bool,isFavorited=bool,trip=model.Trip}}
+// @Success 200 {object} response.Response{data=object{id=string,userId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,likeCount=int,favoriteCount=int,commentCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorName=string,authorAvatar=string,isFollowed=bool,isSelf=bool,isApplied=bool,application=object{id=string,status=int,remark=string,reason=string},isLiked=bool,isFavorited=bool,trip=model.Trip}}
 // @Router /api/v1/partner/{id} [get]
 func GetPartnerDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -350,6 +351,18 @@ func GetPartnerDetail(c *gin.Context) {
 	// 当前用户是否已申请
 	appliedMap, _ := repository.GetUserAppliedPartnerIDs(userID, []string{id})
 	isApplied := appliedMap[id]
+
+	// 当前用户对该搭子的申请记录（含状态和拒绝理由，未申请为null）
+	myApp, _ := repository.GetMyApplication(userID, id)
+	var application interface{}
+	if myApp != nil {
+		application = gin.H{
+			"id":     myApp.ID,
+			"status": myApp.Status,
+			"remark": myApp.Remark,
+			"reason": myApp.Reason,
+		}
+	}
 
 	// 点赞/收藏状态（搭子的点赞和收藏共用 Favorite 表）
 	isLiked := repository.IsFavorited(userID, id, "partner")
@@ -426,6 +439,7 @@ func GetPartnerDetail(c *gin.Context) {
 		"isFollowed":      isFollowed,
 		"isSelf":          userID == partner.UserID,
 		"isApplied":       isApplied,
+		"application":     application,
 		"isLiked":         isLiked,
 		"isFavorited":     isFavorited,
 		"trip":            tripData,
@@ -461,13 +475,16 @@ func ApplyPartner(c *gin.Context) {
 	// 通知搭子发起人
 	partner, _ := repository.GetPartnerByID(id)
 	if partner != nil && partner.UserID != app.UserID {
-		repository.CreateNotification(&model.Notification{
+		if err := repository.CreateNotification(&model.Notification{
 			UserID:     partner.UserID,
 			FromUserID: app.UserID,
 			Type:       1,
 			RelatedID:  app.ID,
 			Content:    "您的搭子收到一条新申请",
-		})
+		}); err != nil {
+			// 通知创建失败不影响主流程
+			log.Printf("创建搭子申请通知失败: %v", err)
+		}
 	}
 	response.Success(c, nil)
 }
@@ -477,7 +494,7 @@ func ApplyPartner(c *gin.Context) {
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param id path string true "搭子ID"
-// @Param body body object{applicationId=string,status=int} true "申请ID和状态(1同意 2拒绝)"
+// @Param body body object{applicationId=string,status=int,reason=string} true "申请ID和状态(1同意 2拒绝)，reason拒绝理由（拒绝时填写）"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner/{id}/application [put]
 func HandleApplication(c *gin.Context) {
@@ -485,6 +502,7 @@ func HandleApplication(c *gin.Context) {
 	var req struct {
 		ApplicationID string `json:"applicationId"`
 		Status        int    `json:"status"` // 1同意 2拒绝
+		Reason        string `json:"reason"` // 拒绝理由（拒绝时填写）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -513,8 +531,8 @@ func HandleApplication(c *gin.Context) {
 			return
 		}
 	} else {
-		if err := repository.UpdateApplicationStatus(req.ApplicationID, 2); err != nil {
-			response.Fail(c, 500, "处理失败")
+		if err := service.RejectApplication(req.ApplicationID, req.Reason); err != nil {
+			response.Fail(c, 500, err.Error())
 			return
 		}
 	}

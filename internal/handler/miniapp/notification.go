@@ -24,7 +24,7 @@ func MarkNotificationRead(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	isRead, _ := strconv.Atoi(c.DefaultQuery("isRead", "1"))
 	if err := repository.MarkNotificationRead(id, userID, isRead); err != nil {
-		response.Fail(c, 500, "操作失败")
+		response.Fail(c, 404, err.Error())
 		return
 	}
 	response.Success(c, nil)
@@ -45,6 +45,38 @@ func MarkAllNotificationsRead(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// MarkTypeNotificationRead 按类型清空未读数（点击tab时调用）
+// @Summary 按类型清空未读
+// @Description 标记指定类型的所有通知为已读：1搭子申请 2点赞 3新增关注 4系统通知 5评论（新增评论/评论点赞）
+// @Security BearerAuth
+// @Tags 小程序-通知
+// @Param type query int true "通知类型：1搭子申请 2点赞 3新增关注 4系统通知 5评论"
+// @Success 200 {object} response.Response
+// @Router /api/v1/notification/type-read [put]
+func MarkTypeNotificationRead(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	// 兼容 query 和 body 两种传参方式
+	notiType := 0
+	if t := c.Query("type"); t != "" {
+		notiType, _ = strconv.Atoi(t)
+	} else {
+		var req struct {
+			Type int `json:"type"`
+		}
+		_ = c.ShouldBindJSON(&req)
+		notiType = req.Type
+	}
+	if notiType < 1 || notiType > 5 {
+		response.Fail(c, 400, "type参数无效")
+		return
+	}
+	if err := repository.MarkTypeNotificationsRead(userID, notiType); err != nil {
+		response.Fail(c, 500, "操作失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
 // GetNotificationList 分页获取通知列表（type=0 全部，1搭子申请，2攻略点赞，3新增关注，4系统通知，5评论点赞）
 // @Summary 通知列表
 // @Security BearerAuth
@@ -52,7 +84,7 @@ func MarkAllNotificationsRead(c *gin.Context) {
 // @Param type query int false "通知类型：0全部 1搭子申请 2攻略点赞 3新增关注 4系统通知 5评论点赞"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,fromUserId=string,type=int,relatedId=string,targetId=string,targetType=string,isRead=int,content=string,createdAt=string,fromUser=object{id=string,nickname=string,avatarUrl=string},commentContent=string},total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,fromUserId=string,type=int,relatedId=string,targetId=string,targetType=string,isRead=int,content=string,createdAt=string,fromUser=object{id=string,nickname=string,avatarUrl=string},commentContent=string,remark=string,status=int,reason=string},total=int64}}
 // @Router /api/v1/notification/list [get]
 func GetNotificationList(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -128,23 +160,32 @@ func GetNotificationList(c *gin.Context) {
 		}
 	}
 
-	// 批量查搭子申请（获取所属搭子ID和申请人）
-	appMap := make(map[string]string)     // applicationID → partnerID
-	appUserMap := make(map[string]string) // applicationID → applicantID
+	// 批量查搭子申请（获取所属搭子ID、申请人、申请备注、状态和拒绝理由）
+	appMap := make(map[string]string)       // applicationID → partnerID
+	appUserMap := make(map[string]string)   // applicationID → applicantID
+	appRemarkMap := make(map[string]string) // applicationID → remark
+	appStatusMap := make(map[string]int)    // applicationID → status(0待审核 1通过 2拒绝 3主动退出)
+	appRejectMap := make(map[string]string) // applicationID → rejectReason
 	if len(appIDs) > 0 {
 		ids := make([]string, 0, len(appIDs))
 		for id := range appIDs {
 			ids = append(ids, id)
 		}
 		var apps []struct {
-			ID        string
-			PartnerID string
-			UserID    string
+			ID           string
+			PartnerID    string
+			UserID       string
+			Remark       string
+			Status       int
+			RejectReason string
 		}
-		database.DB.Model(&model.PartnerApplication{}).Select("id, partner_id, user_id").Where("id IN ?", ids).Find(&apps)
+		database.DB.Model(&model.PartnerApplication{}).Select("id, partner_id, user_id, remark, status, reject_reason").Where("id IN ?", ids).Find(&apps)
 		for _, a := range apps {
 			appMap[a.ID] = a.PartnerID
 			appUserMap[a.ID] = a.UserID
+			appRemarkMap[a.ID] = a.Remark
+			appStatusMap[a.ID] = a.Status
+			appRejectMap[a.ID] = a.RejectReason
 			if a.UserID != "" {
 				fromIDs[a.UserID] = struct{}{}
 			}
@@ -184,6 +225,9 @@ func GetNotificationList(c *gin.Context) {
 		CreatedAt      string      `json:"createdAt"`                // 创建时间（ISO8601）
 		FromUser       *fromUserVO `json:"fromUser"`                 // 触发者信息，null表示无触发者
 		CommentContent string      `json:"commentContent,omitempty"` // type=5 时的原评论内容，已删除则显示"原评论已删除"
+		Remark         string      `json:"remark,omitempty"`         // type=1 搭子申请的申请备注
+		Status         int         `json:"status"`                   // type=1 搭子申请状态：0待审核 1通过 2拒绝 3主动退出（不用omitempty，保证待审核0也返回）
+		Reason         string      `json:"reason,omitempty"`         // type=1 拒绝时的拒绝理由
 	}
 	items := make([]itemVO, 0, len(list))
 	for _, n := range list {
@@ -245,6 +289,16 @@ func GetNotificationList(c *gin.Context) {
 			}
 		}
 
+		// 搭子申请的备注/状态/拒绝理由
+		remark := ""
+		appStatus := 0
+		rejectReason := ""
+		if n.Type == 1 {
+			remark = appRemarkMap[n.RelatedID]
+			appStatus = appStatusMap[n.RelatedID]
+			rejectReason = appRejectMap[n.RelatedID]
+		}
+
 		items = append(items, itemVO{
 			ID:             n.ID,
 			UserID:         n.UserID,
@@ -258,6 +312,9 @@ func GetNotificationList(c *gin.Context) {
 			CreatedAt:      n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			FromUser:       fu,
 			CommentContent: cc,
+			Remark:         remark,
+			Status:         appStatus,
+			Reason:         rejectReason,
 		})
 	}
 

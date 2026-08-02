@@ -89,7 +89,8 @@ type PartnerApplication struct {
 	PartnerID string         `gorm:"size:64;index" json:"partnerId"` // 关联搭子ID
 	UserID    string         `gorm:"size:191;index" json:"userId"`   // 报名用户
 	Status    int            `gorm:"default:0;comment:0待审核 1通过 2拒绝 3主动退出" json:"status"`
-	Remark    string         `gorm:"size:512" json:"remark"` // 报名留言
+	Remark    string         `gorm:"size:512" json:"remark"`                                 // 报名留言
+	Reason    string         `gorm:"column:reject_reason;size:512;default:''" json:"reason"` // 拒绝理由（status=2时填写）
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

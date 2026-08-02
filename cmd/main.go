@@ -136,6 +136,7 @@ func main() {
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量
 			miniAuth.GET("/notification/list", miniapp.GetNotificationList)           // 通知列表（按type筛选）
 			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 标记单条已读
+			miniAuth.PUT("/notification/type-read", miniapp.MarkTypeNotificationRead) // 按类型清空未读
 			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 全部已读
 
 			// ---------- 记账 ----------

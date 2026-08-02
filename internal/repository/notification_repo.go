@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 )
@@ -26,9 +28,16 @@ func ListNotifications(userID string, notiType, page, pageSize int) ([]model.Not
 
 // MarkNotificationRead 标记单条通知为已读/未读（需校验归属）
 func MarkNotificationRead(id, userID string, isRead int) error {
-	return database.DB.Model(&model.Notification{}).
+	res := database.DB.Model(&model.Notification{}).
 		Where("id = ? AND user_id = ?", id, userID).
-		Update("is_read", isRead).Error
+		Update("is_read", isRead)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("通知不存在或无权操作")
+	}
+	return nil
 }
 
 // MarkAllNotificationsRead 标记当前用户所有通知为已读
@@ -38,17 +47,19 @@ func MarkAllNotificationsRead(userID string) error {
 		Update("is_read", 1).Error
 }
 
-// GetUnreadCounts 获取当前用户各类未读通知的数量
+// MarkTypeNotificationsRead 标记当前用户指定类型的所有通知为已读（点击tab清空未读数）
+func MarkTypeNotificationsRead(userID string, notiType int) error {
+	return database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = ? AND is_read = 0", userID, notiType).
+		Update("is_read", 1).Error
+}
+
+// GetUnreadCounts 获取当前用户各类未读通知的数量（统一按 Notification 表统计）
 func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount int64, err error) {
-	// 1. 搭子申请：我的搭子的待审核申请数
-	var partnerIDs []string
-	database.DB.Model(&model.Partner{}).Select("id").
-		Where("user_id = ?", userID).Find(&partnerIDs)
-	if len(partnerIDs) > 0 {
-		database.DB.Model(&model.PartnerApplication{}).
-			Where("partner_id IN ? AND status = 0", partnerIDs).
-			Count(&partnerApplyCount)
-	}
+	// 1. 搭子申请通知
+	database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = 1 AND is_read = 0", userID).
+		Count(&partnerApplyCount)
 
 	// 2. 点赞通知
 	database.DB.Model(&model.Notification{}).

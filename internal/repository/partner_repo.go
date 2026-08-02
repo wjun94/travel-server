@@ -63,6 +63,24 @@ func UpdateApplicationStatus(id string, status int) error {
 	return database.DB.Model(&model.PartnerApplication{}).Where("id = ?", id).Update("status", status).Error
 }
 
+// RejectApplication 拒绝申请并保存拒绝理由
+func RejectApplication(id, reason string) error {
+	return database.DB.Model(&model.PartnerApplication{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{"status": 2, "reject_reason": reason}).Error
+}
+
+// GetMyApplication 获取当前用户对指定搭子的最新一条申请记录（含状态和拒绝理由）
+func GetMyApplication(userID, partnerID string) (*model.PartnerApplication, error) {
+	var app model.PartnerApplication
+	err := database.DB.Where("user_id = ? AND partner_id = ?", userID, partnerID).
+		Order("created_at DESC").First(&app).Error
+	if err != nil {
+		return nil, err
+	}
+	return &app, nil
+}
+
 // GetUserAppliedPartnerIDs 获取当前用户已申请过的搭子ID集合（待审核+通过）
 func GetUserAppliedPartnerIDs(userID string, partnerIDs []string) (map[string]bool, error) {
 	var apps []model.PartnerApplication
