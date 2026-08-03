@@ -116,7 +116,7 @@ func GetUserTrips(c *gin.Context) {
 // @Param id path string true "用户ID"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]model.FeedItem,total=int64}}
+// @Success 200 {object} response.Response{data=object{list=array,total=int64}}
 // @Router /api/v1/profile/{id}/feed [get]
 func GetUserFeed(c *gin.Context) {
 	userID := c.Param("id")

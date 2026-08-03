@@ -110,7 +110,7 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 
 // GetPublicFeed 获取公开内容瀑布流（已发布攻略 + 公开行程，合并按时间/热度倒序，支持目的地/tab筛选）
 // tab 取值：recommend(推荐/默认) hot(热门) latest(最新) domestic(国内) overseas(国外)
-func GetPublicFeed(page, pageSize int, destination, userID, tab string) ([]model.FeedItem, int64, error) {
+func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string) ([]model.FeedItem, int64, error) {
 	// 1. 查询已发布的攻略
 	guideQuery := database.DB.Model(&model.Guide{}).Where("status = ?", 1)
 	// 2. 查询公开的行程
@@ -119,6 +119,13 @@ func GetPublicFeed(page, pageSize int, destination, userID, tab string) ([]model
 	if destination != "" {
 		guideQuery = guideQuery.Where("destination LIKE ?", "%"+destination+"%")
 		tripQuery = tripQuery.Where("destinations LIKE ?", "%"+destination+"%")
+	}
+
+	// 关键词搜索：匹配标题/目的地/简介
+	if keyword != "" {
+		kw := "%" + keyword + "%"
+		guideQuery = guideQuery.Where("title LIKE ? OR destination LIKE ? OR summary LIKE ?", kw, kw, kw)
+		tripQuery = tripQuery.Where("title LIKE ? OR destinations LIKE ? OR summary LIKE ?", kw, kw, kw)
 	}
 
 	// 按 tab 筛选及排序
