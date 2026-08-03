@@ -149,12 +149,18 @@ func CreatePartner(c *gin.Context) {
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
+// @Param keyword query string false "关键词搜索（标题/目的地/简述/标签）"
 // @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool},total=int64}}
 // @Router /api/v1/partner/list [get]
 func GetPartnerList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	list, total, err := repository.GetPartnerList(page, pageSize)
+	// 清洗关键词：去掉首尾空格，忽略 null/undefined 等无效值
+	keyword := strings.TrimSpace(c.Query("keyword"))
+	if keyword == "" || keyword == "null" || keyword == "undefined" {
+		keyword = ""
+	}
+	list, total, err := repository.GetPartnerList(page, pageSize, keyword)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return

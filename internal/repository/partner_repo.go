@@ -24,13 +24,18 @@ func CountTodayAIPartners(userID string) (int64, error) {
 	return count, err
 }
 
-// GetPartnerList 获取搭子列表
-func GetPartnerList(page, pageSize int) ([]model.Partner, int64, error) {
+// GetPartnerList 分页获取搭子列表，支持关键词搜索（标题/目的地/简述/标签）
+func GetPartnerList(page, pageSize int, keyword string) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.Partner{}).Count(&total)
-	err := database.DB.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	query := database.DB.Model(&model.Partner{})
+	if keyword != "" {
+		kw := "%" + keyword + "%"
+		query = query.Where("title LIKE ? OR destination LIKE ? OR `desc` LIKE ? OR tags LIKE ?", kw, kw, kw, kw)
+	}
+	query.Count(&total)
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
 	return list, total, err
 }
 
