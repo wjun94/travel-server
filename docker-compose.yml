@@ -61,6 +61,7 @@ services:
       - "443:443"
     volumes:
       - ./api.conf:/etc/nginx/conf.d/default.conf
+      - ./includes:/etc/nginx/includes:ro
       - ./static:/app/static
       - ./ssl:/etc/nginx/ssl
       - /var/www/travel-admin:/app/static/admin:ro

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openssl x509 -in /home/ubuntu/www/backend/travel-server/ssl/fullchain.pem -noout -subject -issuer -dates 2>/dev/null || echo \"openssl not available or cert unreadable\")",
+      "Bash(ls -la /etc/letsencrypt/ 2>/dev/null || echo \"No letsencrypt directory\")",
+      "Read(//etc/letsencrypt/**)",
+      "Bash(cat /etc/cron.d/certbot)",
+      "Read(//etc/cron.d/**)",
+      "Bash(sudo find /etc/nginx -type f -name \"*.conf\" 2>/dev/null; sudo find /etc/nginx -type f -name \"*.conf\" -exec grep -l \"img.cuicn.top\" {} \\\\; 2>/dev/null)",
+      "Bash(find /home/ubuntu/www/backend/travel-server -type d -name \"ssl\" -o -type d -name \"cert\" -o -type d -name \"certs\" -o -type d -name \"certificate\" 2>/dev/null | head -20)",
+      "Bash(ls -la /home/ubuntu/www/backend/travel-server/ssl/ 2>/dev/null; echo \"---\"; ls -la /home/ubuntu/www/backend/travel-server/certs/ 2>/dev/null; echo \"---\"; ls -la /etc/nginx/ssl/ 2>/dev/null)",
+      "Read(//etc/nginx/**)",
+      "Bash(find /home/ubuntu -name \"docker-compose*\" -o -name \"Dockerfile*\" 2>/dev/null | head -20)",
+      "Bash(which acme.sh 2>/dev/null; which certbot 2>/dev/null; ls ~/.acme.sh/ 2>/dev/null; ls /etc/letsencrypt/live/ 2>/dev/null)",
+      "Read(//home/ubuntu/**)",
+      "Bash(cat /tmp/qoder-cli-1000/-home-ubuntu-www-backend-travel-server/abcfce64-413f-43c7-9833-74581c94bb9b/tasks/b7x0wafz3.output 2>/dev/null)",
+      "Read(//tmp/qoder-cli-1000/-home-ubuntu-www-backend-travel-server/abcfce64-413f-43c7-9833-74581c94bb9b/tasks/**)",
+      "Bash(which certbot 2>/dev/null || which acme.sh 2>/dev/null || echo \"Neither certbot nor acme.sh found\"; crontab -l 2>/dev/null | grep -i ssl || echo \"No SSL cron jobs\")",
+      "Bash(git -C /home/ubuntu/www/backend/travel-server show --stat HEAD | head -30 && git -C /home/ubuntu/www/backend/travel-server log --oneline -8)",
+      "Bash(ssh-keygen -t ed25519 -f ~/.ssh/travel_admin_deploy -N \"\" -C \"github-actions-deploy\" && cat ~/.ssh/travel_admin_deploy.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh && ssh -i ~/.ssh/travel_admin_deploy -o StrictHostKeyChecking=no localhost 'echo key-login-ok')",
+      "Bash(ls -la static/ && cat .gitignore 2>/dev/null && git check-ignore static/admin static/h5)"
+    ]
+  }
+}
