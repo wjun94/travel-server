@@ -127,10 +127,16 @@ func main() {
 			miniAuth.POST("/partner/:id/like", miniapp.LikePartner)             // 点赞搭子
 			miniAuth.DELETE("/partner/:id/like", miniapp.UnlikePartner)         // 取消点赞搭子
 
+			// ---------- 群聊 ----------
+			miniAuth.GET("/conversation/list", miniapp.GetMyConversations)         // 我的群聊列表
+			miniAuth.GET("/conversation/:id", miniapp.GetConversationDetail)       // 群聊详情（含成员）
+			miniAuth.GET("/conversation/:id/messages", miniapp.GetGroupMessages)   // 群聊消息列表
+			miniAuth.POST("/conversation/:id/message", miniapp.SendGroupMessage)   // 发送群聊消息
+			miniAuth.PUT("/conversation/:id/kick", miniapp.KickConversationMember) // 踢出群成员（群主）
+
 			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 消息列表
 			miniAuth.POST("/message/send", miniapp.SendMessage)                 // 发送消息
-			miniAuth.GET("/message/conversations", miniapp.GetConversationList) // 消息中心聊天会话列表
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量
@@ -138,6 +144,7 @@ func main() {
 			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 标记单条已读
 			miniAuth.PUT("/notification/type-read", miniapp.MarkTypeNotificationRead) // 按类型清空未读
 			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 全部已读
+			miniAuth.DELETE("/notification/system", miniapp.ClearSystemNotifications) // 清空系统通知
 
 			// ---------- 记账 ----------
 			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)     // 查询行程账本

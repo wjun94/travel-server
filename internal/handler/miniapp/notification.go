@@ -77,6 +77,21 @@ func MarkTypeNotificationRead(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// ClearSystemNotifications 清空系统通知（type=4）
+// @Summary 清空系统通知
+// @Security BearerAuth
+// @Tags 小程序-通知
+// @Success 200 {object} response.Response
+// @Router /api/v1/notification/system [delete]
+func ClearSystemNotifications(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	if err := repository.DeleteSystemNotifications(userID); err != nil {
+		response.Fail(c, 500, "清空失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
 // GetNotificationList 分页获取通知列表（type=0 全部，1搭子申请，2攻略点赞，3新增关注，4系统通知，5评论点赞）
 // @Summary 通知列表
 // @Security BearerAuth

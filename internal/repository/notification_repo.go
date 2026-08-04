@@ -54,6 +54,12 @@ func MarkTypeNotificationsRead(userID string, notiType int) error {
 		Update("is_read", 1).Error
 }
 
+// DeleteSystemNotifications 清空当前用户的全部系统通知（type=4）
+func DeleteSystemNotifications(userID string) error {
+	return database.DB.Where("user_id = ? AND type = 4", userID).
+		Delete(&model.Notification{}).Error
+}
+
 // GetUnreadCounts 获取当前用户各类未读通知的数量（统一按 Notification 表统计）
 func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount int64, err error) {
 	// 1. 搭子申请通知

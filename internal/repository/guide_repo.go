@@ -652,13 +652,20 @@ func GetGuideByID(id string) (*model.Guide, error) {
 	return &guide, err
 }
 
-// ListGuides 后台攻略列表（所有状态）
-func ListGuides(page, pageSize int) ([]model.Guide, int64, error) {
+// ListGuides 后台攻略列表（所有状态，支持状态筛选）
+func ListGuides(page, pageSize int, status int) ([]model.Guide, int64, error) {
 	var guides []model.Guide
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.Guide{}).Count(&total)
-	err := database.DB.Offset(offset).Limit(pageSize).Find(&guides).Error
+	query := database.DB.Model(&model.Guide{})
+	// status 仅筛选有效值（-1 或未传表示全部）
+	if status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&guides).Error
 	return guides, total, err
 }
 

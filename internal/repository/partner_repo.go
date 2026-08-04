@@ -105,16 +105,23 @@ func GetUserAppliedPartnerIDs(userID string, partnerIDs []string) (map[string]bo
 	return result, nil
 }
 
-// GetPartners 获取搭子列表（分页）
-func GetPartners(page, pageSize int) ([]model.Partner, int64, error) {
+// GetPartners 获取官方搭子列表（分页，支持目的地/状态筛选）
+func GetPartners(page, pageSize int, destination string, status int) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	err := database.DB.Model(&model.Partner{}).Where("type = ?", 1).Count(&total).Error
-	if err != nil {
+	query := database.DB.Model(&model.Partner{}).Where("type = ?", 1)
+	if destination != "" {
+		query = query.Where("destination LIKE ?", "%"+destination+"%")
+	}
+	// status 仅筛选有效值（-1 或未传表示全部）
+	if status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	err = database.DB.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
 	return list, total, err
 }
 

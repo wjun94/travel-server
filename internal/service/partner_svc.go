@@ -8,7 +8,7 @@ import (
 	"travel-server/internal/repository"
 )
 
-// ApproveApplication 同意搭子申请，更新成员数并通知申请人
+// ApproveApplication 同意搭子申请，更新成员数、自动创建/加入群聊并通知申请人
 func ApproveApplication(appID string) error {
 	app, err := repository.GetApplicationByID(appID)
 	if err != nil {
@@ -30,6 +30,10 @@ func ApproveApplication(appID string) error {
 		partner.CurrentMembers++
 		repository.UpdatePartner(partner)
 	}
+	// 自动创建群聊（不存在则创建并加入群主），并把申请人加入（失败不影响主流程）
+	if err := ensurePartnerConversation(partner, app.UserID); err != nil {
+		log.Printf("创建搭子群聊失败: %v", err)
+	}
 	// 通知申请人（通知失败不影响主流程）
 	if err := repository.CreateNotification(&model.Notification{
 		UserID:     app.UserID,
@@ -41,6 +45,28 @@ func ApproveApplication(appID string) error {
 		log.Printf("创建搭子申请通过通知失败: %v", err)
 	}
 	return nil
+}
+
+// ensurePartnerConversation 确保搭子群聊存在，并把用户加入（群主在创建时加入）
+func ensurePartnerConversation(partner *model.Partner, userID string) error {
+	conv, err := repository.GetConversationByPartnerID(partner.ID)
+	if err != nil {
+		// 群聊不存在，创建（群主=搭子创建者，名称=搭子标题）
+		conv = &model.Conversation{
+			PartnerID: partner.ID,
+			Name:      partner.Title,
+			OwnerID:   partner.UserID,
+		}
+		if err := repository.CreateConversation(conv); err != nil {
+			return err
+		}
+		// 群主加入
+		if err := repository.AddConversationMember(conv.ID, partner.UserID); err != nil {
+			return err
+		}
+	}
+	// 申请人加入
+	return repository.AddConversationMember(conv.ID, userID)
 }
 
 // RejectApplication 拒绝搭子申请，保存理由并通知申请人

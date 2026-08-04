@@ -158,13 +158,19 @@ func GetUsersByIDs(ids []string) map[string]*model.User {
 	return result
 }
 
-// ListUsers 分页获取用户列表
-func ListUsers(page, pageSize int) ([]model.User, int64, error) {
+// ListUsers 分页获取用户列表（支持昵称关键词筛选）
+func ListUsers(page, pageSize int, keyword string) ([]model.User, int64, error) {
 	var users []model.User
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.User{}).Count(&total)
-	err := database.DB.Offset(offset).Limit(pageSize).Find(&users).Error
+	query := database.DB.Model(&model.User{})
+	if keyword != "" {
+		query = query.Where("nickname LIKE ? OR phone LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&users).Error
 	return users, total, err
 }
 

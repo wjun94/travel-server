@@ -10,18 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ListUsers 用户列表（分页）
+// ListUsers 用户列表（分页，支持昵称/手机号关键词筛选）
 // @Summary 用户列表
 // @Security BearerAuth
 // @Tags 后台-用户
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
+// @Param keyword query string false "昵称/手机号关键词"
 // @Success 200 {object} response.Response{data=object{list=[]model.User,total=int}}
 // @Router /api/v1/admin/users [get]
 func ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	users, total, err := repository.ListUsers(page, pageSize)
+	keyword := c.Query("keyword")
+	users, total, err := repository.ListUsers(page, pageSize, keyword)
 	if err != nil {
 		response.Fail(c, 500, "获取用户列表失败")
 		return

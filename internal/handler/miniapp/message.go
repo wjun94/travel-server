@@ -1,6 +1,7 @@
 package miniapp
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,12 +25,14 @@ type MessageVO struct {
 	Nickname   string    `json:"nickname"`
 }
 
-// GetMessageList 获取与指定用户的私聊记录
+// GetMessageList 获取与指定用户的私聊记录（分页，时间正序）
 // @Summary 获取消息列表
 // @Security BearerAuth
 // @Tags 小程序-消息
 // @Param targetUserId query string true "对方用户ID"
-// @Success 200 {object} response.Response{data=[]MessageVO}
+// @Param page query int false "页码（从最新一页开始）"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]MessageVO,total=int64}}
 // @Router /api/v1/message/list [get]
 func GetMessageList(c *gin.Context) {
 	uid := c.MustGet("userID").(string)
@@ -38,7 +41,9 @@ func GetMessageList(c *gin.Context) {
 		response.Fail(c, 400, "缺少targetUserId")
 		return
 	}
-	msgs, err := repository.GetMessagesBetweenUsers(uid, targetID)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	msgs, total, err := repository.GetMessagesBetweenUsers(uid, targetID, page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取消息失败")
 		return
@@ -82,7 +87,7 @@ func GetMessageList(c *gin.Context) {
 		})
 	}
 
-	response.Success(c, result)
+	response.Success(c, gin.H{"list": result, "total": total})
 }
 
 // SendMessage 发送私聊消息
@@ -112,43 +117,4 @@ func SendMessage(c *gin.Context) {
 		return
 	}
 	response.Success(c, msg)
-}
-
-// GetConversationList 获取会话列表（消息中心）
-// @Summary 会话列表
-// @Security BearerAuth
-// @Tags 小程序-消息
-// @Success 200 {object} response.Response{data=[]repository.ConversationItem}
-// @Router /api/v1/message/conversations [get]
-func GetConversationList(c *gin.Context) {
-	userID := c.MustGet("userID").(string)
-	list, err := repository.GetConversationList(userID)
-	if err != nil {
-		response.Fail(c, 500, "获取失败")
-		return
-	}
-
-	// 查询最新系统通知
-	var latestNoti model.Notification
-	database.DB.Where("user_id = ? AND type = 4", userID).
-		Order("created_at desc").First(&latestNoti)
-	var unreadSys int64
-	database.DB.Model(&model.Notification{}).
-		Where("user_id = ? AND type = 4 AND is_read = 0", userID).Count(&unreadSys)
-
-	// 在列表首部插入系统通知会话项（无通知记录时不显示）
-	result := make([]repository.ConversationItem, 0, len(list)+1)
-	if latestNoti.ID != "" {
-		result = append(result, repository.ConversationItem{
-			UserID:      "",
-			Nickname:    "系统通知",
-			AvatarURL:   "travel/img/notify.png",
-			LastContent: latestNoti.Content,
-			LastTime:    latestNoti.CreatedAt,
-			UnreadCount: unreadSys,
-		})
-	}
-	result = append(result, list...)
-
-	response.Success(c, result)
 }
