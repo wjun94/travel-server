@@ -444,14 +444,28 @@ func BlockUser(userID, blockedUserID string) error {
 		return errors.New("不能拉黑自己")
 	}
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		// 查重
-		var count int64
-		tx.Model(&model.Follow{}).
-			Where("user_id = ? AND follower_id = ? AND status = 1", userID, blockedUserID).
-			Count(&count)
-		if count > 0 {
-			return nil // 幂等
+		// 查询已有关注/拉黑记录（user_id=被关注者/拉黑者，follower_id=关注者/被拉黑者）
+		var existing model.Follow
+		err := tx.Where("user_id = ? AND follower_id = ?", userID, blockedUserID).First(&existing).Error
+		if err == nil {
+			if existing.Status == 1 {
+				return nil // 已拉黑，幂等
+			}
+			// 对方关注了我（status=0）→ 直接改为拉黑状态，避免唯一索引冲突
+			if err := tx.Model(&model.Follow{}).Where("id = ?", existing.ID).Update("status", 1).Error; err != nil {
+				return err
+			}
+			// 对方关注数-1，我的粉丝数-1
+			tx.Model(&model.User{}).Where("id = ?", blockedUserID).
+				UpdateColumn("follow_count", gorm.Expr("GREATEST(follow_count - 1, 0)"))
+			tx.Model(&model.User{}).Where("id = ?", userID).
+				UpdateColumn("follower_count", gorm.Expr("GREATEST(follower_count - 1, 0)"))
+			return nil
 		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
 		// 创建拉黑记录
 		if err := tx.Create(&model.Follow{
 			UserID:     userID,
@@ -467,15 +481,6 @@ func BlockUser(userID, blockedUserID string) error {
 			tx.Model(&model.User{}).Where("id = ?", userID).
 				UpdateColumn("follow_count", gorm.Expr("GREATEST(follow_count - 1, 0)"))
 			tx.Model(&model.User{}).Where("id = ?", blockedUserID).
-				UpdateColumn("follower_count", gorm.Expr("GREATEST(follower_count - 1, 0)"))
-		}
-		// 若对方关注了我 → 取消关注（对方关注数-1，我的粉丝数-1）
-		res2 := tx.Where("user_id = ? AND follower_id = ? AND status = 0", userID, blockedUserID).
-			Delete(&model.Follow{})
-		if res2.RowsAffected > 0 {
-			tx.Model(&model.User{}).Where("id = ?", blockedUserID).
-				UpdateColumn("follow_count", gorm.Expr("GREATEST(follow_count - 1, 0)"))
-			tx.Model(&model.User{}).Where("id = ?", userID).
 				UpdateColumn("follower_count", gorm.Expr("GREATEST(follower_count - 1, 0)"))
 		}
 		return nil

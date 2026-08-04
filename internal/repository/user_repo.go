@@ -15,6 +15,7 @@ type UserProfileStats struct {
 	PartnerCount  int64  `json:"partnerCount"`  // 搭子数
 	FollowCount   int    `json:"followCount"`   // 关注数
 	FollowerCount int    `json:"followerCount"` // 粉丝数
+	BlockCount    int64  `json:"blockCount"`    // 拉黑数
 }
 
 // UserPublicProfile 他人个人主页（含获赞收藏和关注状态）
@@ -30,6 +31,7 @@ type UserPublicProfile struct {
 	TotalLikes    int64  `json:"totalLikes"`    // 总获赞数
 	TotalFavs     int64  `json:"totalFavs"`     // 总收藏数
 	IsFollowed    bool   `json:"isFollowed"`    // 我是否已关注
+	IsBlocked     bool   `json:"isBlocked"`     // 我是否已拉黑对方
 	IsSelf        bool   `json:"isSelf"`        // 是否是自己
 }
 
@@ -49,6 +51,9 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 	var partnerCount int64
 	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&partnerCount)
 
+	var blockCount int64
+	database.DB.Model(&model.Follow{}).Where("user_id = ? AND status = 1", userID).Count(&blockCount)
+
 	return &UserProfileStats{
 		ID:            user.ID,
 		Nickname:      user.Nickname,
@@ -58,6 +63,7 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 		PartnerCount:  partnerCount,
 		FollowCount:   user.FollowCount,
 		FollowerCount: user.FollowerCount,
+		BlockCount:    blockCount,
 	}, nil
 }
 
@@ -106,6 +112,12 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 	followStatus, _ := GetFollowStatus(currentUserID, userID)
 	isFollowed := followStatus == 1 || followStatus == 2
 
+	// 我是否已拉黑对方
+	var blockedCount int64
+	database.DB.Model(&model.Follow{}).
+		Where("user_id = ? AND follower_id = ? AND status = 1", currentUserID, userID).
+		Count(&blockedCount)
+
 	return &UserPublicProfile{
 		ID:            user.ID,
 		Nickname:      user.Nickname,
@@ -118,6 +130,7 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 		TotalLikes:    totalLikes,
 		TotalFavs:     totalFavs,
 		IsFollowed:    isFollowed,
+		IsBlocked:     blockedCount > 0,
 		IsSelf:        userID == currentUserID,
 	}, nil
 }
