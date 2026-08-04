@@ -82,6 +82,12 @@ func InitMySQL() {
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
+
+	// 迁移旧记账数据：旧的 trip_id 字段迁移到 target_type/target_id（绑定行程）
+	if err := DB.Exec("UPDATE accountings SET target_type = 'trip', target_id = trip_id WHERE (target_type = '' OR target_type IS NULL) AND trip_id != ''").Error; err != nil {
+		log.Printf("记账数据迁移警告: %v", err)
+	}
+
 	// 初始化默认角色
 	var roleCount int64
 	DB.Model(&model.Role{}).Count(&roleCount)

@@ -135,8 +135,8 @@ func main() {
 			miniAuth.PUT("/conversation/:id/kick", miniapp.KickConversationMember) // 踢出群成员（群主）
 
 			// ---------- 消息 ----------
-			miniAuth.GET("/message/list", miniapp.GetMessageList)               // 消息列表
-			miniAuth.POST("/message/send", miniapp.SendMessage)                 // 发送消息
+			miniAuth.GET("/message/list", miniapp.GetMessageList) // 消息列表
+			miniAuth.POST("/message/send", miniapp.SendMessage)   // 发送消息
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量
@@ -147,9 +147,12 @@ func main() {
 			miniAuth.DELETE("/notification/system", miniapp.ClearSystemNotifications) // 清空系统通知
 
 			// ---------- 记账 ----------
-			miniAuth.GET("/account/:tripId", miniapp.GetAccounts)     // 查询行程账本
-			miniAuth.POST("/account", miniapp.AddAccount)             // 添加一笔账
-			miniAuth.POST("/account/import", miniapp.ImportWechatPay) // 导入微信账单
+			miniAuth.GET("/account/list", miniapp.GetAccountList)         // 账本明细（按目标）
+			miniAuth.POST("/account", miniapp.AddAccount)                 // 添加一笔账
+			miniAuth.DELETE("/account/:id", miniapp.DeleteAccount)        // 删除一笔账
+			miniAuth.GET("/account/summary", miniapp.GetAccountSummary)   // 账本汇总
+			miniAuth.GET("/account/overview", miniapp.GetAccountOverview) // 我的账本总览
+			miniAuth.POST("/account/import", miniapp.ImportWechatPay)     // 导入微信账单
 
 			// ---------- 备忘清单 ----------
 			miniAuth.GET("/checklist", miniapp.GetChecklists)                     // 清单列表
