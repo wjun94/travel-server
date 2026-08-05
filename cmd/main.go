@@ -135,8 +135,11 @@ func main() {
 			miniAuth.PUT("/conversation/:id/kick", miniapp.KickConversationMember) // 踢出群成员（群主）
 
 			// ---------- 消息 ----------
-			miniAuth.GET("/message/list", miniapp.GetMessageList) // 消息列表
-			miniAuth.POST("/message/send", miniapp.SendMessage)   // 发送消息
+			miniAuth.GET("/message/list", miniapp.GetMessageList)              // 消息列表
+			miniAuth.GET("/message/conversations", miniapp.GetMyConversations) // 会话列表（兼容旧路径）
+			miniAuth.POST("/message/send", miniapp.SendMessage)                // 发送消息
+			miniAuth.POST("/message/clear", miniapp.ClearChatHistory)          // 清空聊天记录（会话保留）
+			miniAuth.DELETE("/message/session", miniapp.DeleteChatSession)     // 删除会话（列表不显示）
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量

@@ -116,5 +116,62 @@ func SendMessage(c *gin.Context) {
 		response.Fail(c, 500, "发送失败")
 		return
 	}
+	// 为双方创建/恢复私聊会话（对方重新收到消息时被删的会话重新出现）
+	_ = repository.UpsertChatSession(msg.FromUserID, msg.ToUserID)
+	_ = repository.UpsertChatSession(msg.ToUserID, msg.FromUserID)
 	response.Success(c, msg)
+}
+
+// ClearChatHistory 清空与某用户的聊天记录（会话保留，列表仍显示）
+// @Summary 清空聊天记录
+// @Security BearerAuth
+// @Tags 小程序-消息
+// @Param body body object{targetUserId=string} true "对方用户ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/message/clear [post]
+func ClearChatHistory(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	var req struct {
+		TargetUserID string `json:"targetUserId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "缺少targetUserId")
+		return
+	}
+	if req.TargetUserID == userID {
+		response.Fail(c, 400, "不能清空自己")
+		return
+	}
+	if err := repository.ClearChatHistory(userID, req.TargetUserID); err != nil {
+		response.Fail(c, 500, "清空失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// DeleteChatSession 删除私聊会话（清空聊天记录 + 会话从列表消失）
+// @Summary 删除会话
+// @Security BearerAuth
+// @Tags 小程序-消息
+// @Param body body object{targetUserId=string} true "对方用户ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/message/session [delete]
+func DeleteChatSession(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	var req struct {
+		TargetUserID string `json:"targetUserId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "缺少targetUserId")
+		return
+	}
+	if req.TargetUserID == userID {
+		response.Fail(c, 400, "不能删除自己")
+		return
+	}
+	if err := repository.DeleteChatSession(userID, req.TargetUserID); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
 }

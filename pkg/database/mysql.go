@@ -60,6 +60,7 @@ func InitMySQL() {
 		&model.Partner{},
 		&model.PartnerApplication{},
 		&model.Message{},
+		&model.ChatSession{},
 		&model.Accounting{},
 		&model.Checklist{},
 		&model.ChecklistItem{},

@@ -97,7 +97,11 @@ type ChatItemVO struct {
 func GetChatList(userID string) ([]ChatItemVO, error) {
 	items := make([]ChatItemVO, 0, 16)
 
-	// 1. 私聊会话：聚合与每个用户的最后一条消息
+	// 1. 私聊会话：基于 chat_sessions 表（清空后会话保留，删除后列表消失）
+	var sessions []model.ChatSession
+	database.DB.Where("user_id = ?", userID).Find(&sessions)
+
+	// 兼容老数据：从消息表聚合出所有会话对方，缺失的自动补建会话
 	type msgRow struct {
 		FromUserID string
 		ToUserID   string
@@ -107,30 +111,31 @@ func GetChatList(userID string) ([]ChatItemVO, error) {
 	var msgs []msgRow
 	database.DB.Model(&model.Message{}).
 		Select("from_user_id, to_user_id, content, created_at").
-		Where("(from_user_id = ? OR to_user_id = ?) AND type = 1", userID, userID).
+		Where("type = 1 AND ((from_user_id = ? AND deleted_by_sender = 0) OR (to_user_id = ? AND deleted_by_receiver = 0))", userID, userID).
 		Order("created_at desc").
 		Find(&msgs)
 
-	seen := make(map[string]bool)
-	var otherIDs []string
-	lastContent := make(map[string]string)
-	lastTime := make(map[string]time.Time)
+	peerSet := make(map[string]bool)
+	for _, s := range sessions {
+		peerSet[s.PeerID] = true
+	}
 	for _, m := range msgs {
 		otherID := m.ToUserID
 		if m.ToUserID == userID {
 			otherID = m.FromUserID
 		}
-		if seen[otherID] {
-			continue
+		if !peerSet[otherID] {
+			peerSet[otherID] = true
+			_ = UpsertChatSession(userID, otherID) // 自动补建，失败忽略下次再补
 		}
-		seen[otherID] = true
-		otherIDs = append(otherIDs, otherID)
-		lastContent[otherID] = m.Content
-		lastTime[otherID] = m.CreatedAt
 	}
 
-	if len(otherIDs) > 0 {
+	if len(peerSet) > 0 {
 		// 批量查对方用户信息
+		otherIDs := make([]string, 0, len(peerSet))
+		for oid := range peerSet {
+			otherIDs = append(otherIDs, oid)
+		}
 		var users []model.User
 		database.DB.Select("id, nickname, avatar_url").Where("id IN ?", otherIDs).Find(&users)
 		userMap := make(map[string]model.User)
@@ -139,18 +144,25 @@ func GetChatList(userID string) ([]ChatItemVO, error) {
 		}
 		for _, oid := range otherIDs {
 			u := userMap[oid]
+			// 最后一条消息（未被当前用户删除）
+			var last msgRow
+			database.DB.Model(&model.Message{}).
+				Select("content, created_at").
+				Where("type = 1 AND ((from_user_id = ? AND to_user_id = ? AND deleted_by_sender = 0) OR (from_user_id = ? AND to_user_id = ? AND deleted_by_receiver = 0))", oid, userID, userID, oid).
+				Order("created_at desc").
+				First(&last)
 			// 未读消息数（对方发给当前用户且未读）
 			var unread int64
 			database.DB.Model(&model.Message{}).
-				Where("from_user_id = ? AND to_user_id = ? AND is_read = 0 AND type = 1", oid, userID).
+				Where("from_user_id = ? AND to_user_id = ? AND is_read = 0 AND type = 1 AND deleted_by_receiver = 0", oid, userID).
 				Count(&unread)
 			items = append(items, ChatItemVO{
 				ID:          oid,
 				Type:        "user",
 				Name:        u.Nickname,
 				AvatarURL:   u.AvatarURL,
-				LastContent: lastContent[oid],
-				LastTime:    lastTime[oid],
+				LastContent: last.Content,
+				LastTime:    last.CreatedAt,
 				UnreadCount: unread,
 			})
 		}
