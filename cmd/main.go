@@ -156,6 +156,9 @@ func main() {
 			// ---------- 记账 ----------
 			miniAuth.GET("/account/list", miniapp.GetAccountList)         // 账本明细（按目标）
 			miniAuth.POST("/account", miniapp.AddAccount)                 // 添加一笔账
+			miniAuth.POST("/account/book", miniapp.CreateAccountBook)     // 创建自主账本
+			miniAuth.DELETE("/account/book", miniapp.DeleteAccountBook)   // 删除整本账本
+			miniAuth.PUT("/account/:id", miniapp.UpdateAccount)           // 编辑一笔账
 			miniAuth.DELETE("/account/:id", miniapp.DeleteAccount)        // 删除一笔账
 			miniAuth.GET("/account/summary", miniapp.GetAccountSummary)   // 账本汇总
 			miniAuth.GET("/account/overview", miniapp.GetAccountOverview) // 我的账本总览

@@ -8,11 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// Accounting 旅行记账（可绑定行程/攻略/搭子）
+// Accounting 旅行记账（可绑定行程/攻略/搭子，或自主创建账本）
 type Accounting struct {
 	ID            string    `gorm:"primaryKey" json:"id"`
-	TargetType    string    `gorm:"size:20;index" json:"targetType"` // 绑定类型：trip行程 guide攻略 partner搭子
-	TargetID      string    `gorm:"size:191;index" json:"targetId"`  // 绑定目标ID
+	TargetType    string    `gorm:"size:20;index" json:"targetType"` // 绑定类型：trip行程 guide攻略 partner搭子 custom自主账本
+	TargetID      string    `gorm:"size:191;index" json:"targetId"`  // 绑定目标ID/自主账本ID
+	TargetName    string    `gorm:"size:100" json:"targetName"`      // 自主账本名（绑定时为空）
 	UserID        string    `gorm:"size:191" json:"userId"`          // 记账用户
 	Category      string    `gorm:"size:50" json:"category"`         // 分类：交通/餐饮/住宿/门票/购物/其他
 	Amount        float64   `json:"amount"`                          // 金额

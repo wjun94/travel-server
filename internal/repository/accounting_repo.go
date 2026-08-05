@@ -33,6 +33,20 @@ func DeleteAccount(id, userID string) error {
 	return nil
 }
 
+// UpdateAccount 编辑记账条目（仅本人，可改分类/金额/备注/消费时间）
+func UpdateAccount(id, userID string, updates map[string]interface{}) error {
+	res := database.DB.Model(&model.Accounting{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(updates)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrAccountNotFound
+	}
+	return nil
+}
+
 // AccountSummary 账本汇总
 type AccountSummary struct {
 	TotalAmount  float64            `json:"totalAmount"`  // 总支出
@@ -79,20 +93,21 @@ func GetAccountOverview(userID string) ([]AccountOverviewItem, error) {
 	type aggRow struct {
 		TargetType  string
 		TargetID    string
+		TargetName  string
 		TotalAmount float64
 		Count       int64
 		LastTime    time.Time
 	}
 	var aggs []aggRow
 	err := database.DB.Model(&model.Accounting{}).
-		Select("target_type, target_id, SUM(amount) as total_amount, COUNT(*) as count, MAX(consumed_at) as last_time").
-		Where("user_id = ? AND target_type IN (?) AND target_id != ''", userID, []string{"trip", "guide", "partner"}).
+		Select("target_type, target_id, MAX(target_name) as target_name, SUM(amount) as total_amount, COUNT(*) as count, MAX(consumed_at) as last_time").
+		Where("user_id = ? AND target_type IN (?) AND target_id != ''", userID, []string{"trip", "guide", "partner", "custom"}).
 		Group("target_type, target_id").Scan(&aggs).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// 批量取目标名称
+	// 批量取绑定目标名称（自主账本直接用存储的账本名）
 	tripIDs, guideIDs, partnerIDs := []string{}, []string{}, []string{}
 	for _, a := range aggs {
 		switch a.TargetType {
@@ -105,6 +120,11 @@ func GetAccountOverview(userID string) ([]AccountOverviewItem, error) {
 		}
 	}
 	nameMap := make(map[string]string, len(aggs))
+	for _, a := range aggs {
+		if a.TargetType == "custom" && a.TargetName != "" {
+			nameMap["custom:"+a.TargetID] = a.TargetName
+		}
+	}
 	if len(tripIDs) > 0 {
 		var trips []model.Trip
 		database.DB.Select("id, title").Where("id IN ?", tripIDs).Find(&trips)
@@ -145,6 +165,17 @@ func GetAccountOverview(userID string) ([]AccountOverviewItem, error) {
 		}
 	}
 	return items, nil
+}
+
+// DeleteAccountBook 删除整本账本（该目标下的所有记账条目，仅本人）。
+// 账本下无记录时视为已删除，返回成功（幂等删除）。
+func DeleteAccountBook(targetType, targetID, userID string) error {
+	res := database.DB.Where("target_type = ? AND target_id = ? AND user_id = ?", targetType, targetID, userID).
+		Delete(&model.Accounting{})
+	if res.Error != nil {
+		return res.Error
+	}
+	return nil
 }
 
 // ErrAccountNotFound 记账条目不存在
