@@ -79,6 +79,7 @@ func InitMySQL() {
 		&model.Conversation{},
 		&model.ConversationMember{},
 		&model.ConversationMessage{},
+		&model.Complaint{},
 	)
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)

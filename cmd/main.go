@@ -164,6 +164,11 @@ func main() {
 			miniAuth.GET("/account/overview", miniapp.GetAccountOverview) // 我的账本总览
 			miniAuth.POST("/account/import", miniapp.ImportWechatPay)     // 导入微信账单
 
+			// ---------- 投诉 ----------
+			miniAuth.POST("/complaint", miniapp.SubmitComplaint)       // 提交投诉
+			miniAuth.GET("/complaint/list", miniapp.ListComplaints)    // 我的投诉列表
+			miniAuth.GET("/complaint/:id", miniapp.GetComplaintDetail) // 我的投诉详情
+
 			// ---------- 备忘清单 ----------
 			miniAuth.GET("/checklist", miniapp.GetChecklists)                     // 清单列表
 			miniAuth.GET("/checklist/categories", miniapp.GetChecklistCategories) // 分类列表
@@ -249,8 +254,11 @@ func main() {
 			adminGroup.GET("/partners", admin.ListPartners)  // 官方搭子列表
 
 			// ---------- 推荐内容 ----------
-			adminGroup.POST("/recommendation", admin.SaveRecommendation)  // 保存推荐
-			adminGroup.GET("/recommendations", admin.ListRecommendations) // 推荐列表
+			adminGroup.POST("/recommendation", admin.SaveRecommendation)   // 保存推荐
+			adminGroup.GET("/recommendations", admin.ListRecommendations)  // 推荐列表
+			adminGroup.GET("/complaints", admin.ListComplaints)            // 投诉列表
+			adminGroup.PUT("/complaint/:id/status", admin.HandleComplaint) // 处理投诉
+			adminGroup.DELETE("/complaint/:id", admin.DeleteComplaint)     // 删除投诉
 		}
 	}
 
