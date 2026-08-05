@@ -74,6 +74,7 @@ type UpdateGuideReq struct {
 	CrowdType       *string  `json:"crowdType"`
 	IsOriginal      *int     `json:"isOriginal"`
 	Status          *int     `json:"status"`
+	Days            []DayReq `json:"days"` // 每日行程（可选，传入则全量替换）
 }
 
 // ==================== 校验逻辑 ====================

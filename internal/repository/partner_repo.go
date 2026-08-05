@@ -125,14 +125,32 @@ func GetPartners(page, pageSize int, destination string, status int) ([]model.Pa
 	return list, total, err
 }
 
-// GetMyPartners 获取当前用户创建的搭子列表
-func GetMyPartners(userID string, page, pageSize int) ([]model.Partner, int64, error) {
+// GetMyPartners 我发布的搭子列表（isDraft>=0 时按草稿状态筛选，-1 返回全部）
+func GetMyPartners(userID string, page, pageSize, isDraft int) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&total)
-	err := database.DB.Where("user_id = ?", userID).Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	query := database.DB.Model(&model.Partner{}).Where("user_id = ?", userID)
+	if isDraft >= 0 {
+		query = query.Where("is_draft = ?", isDraft)
+	}
+	query.Count(&total)
+	listQuery := database.DB.Where("user_id = ?", userID)
+	if isDraft >= 0 {
+		listQuery = listQuery.Where("is_draft = ?", isDraft)
+	}
+	err := listQuery.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
 	return list, total, err
+}
+
+// DeletePartnerCascade 删除搭子（级联删除申请记录）
+func DeletePartnerCascade(id string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("partner_id = ?", id).Delete(&model.PartnerApplication{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", id).Delete(&model.Partner{}).Error
+	})
 }
 
 // CancelPartner 发起人主动取消搭子（状态置为2），并拒绝所有待审核申请

@@ -60,19 +60,52 @@ func GetGuideFeed(c *gin.Context) {
 // @Tags 小程序-攻略
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
+// @Param status query int false "状态筛选（0草稿 1已发布，-1或不传为全部）" default(-1)
 // @Success 200 {object} response.Response{data=object{list=[]model.GuideFeedItem,total=int}}
 // @Router /api/v1/my/guides [get]
 func GetMyGuides(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	// 容错：status 解析失败或非数字时视为全部（-1），避免前端误传对象导致误筛草稿
+	status := -1
+	if v := c.Query("status"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			status = n
+		}
+	}
 
-	guides, total, err := repository.ListMyGuides(userID, page, pageSize)
+	guides, total, err := repository.ListMyGuides(userID, page, pageSize, status)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
 	response.Success(c, gin.H{"list": guides, "total": total})
+}
+
+// DeleteGuide 删除攻略（仅作者本人，级联删除每日行程及行程项）
+// @Summary 删除攻略
+// @Security BearerAuth
+// @Tags 小程序-攻略
+// @Param id path string true "攻略ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/guide/{id} [delete]
+func DeleteGuide(c *gin.Context) {
+	id := c.Param("id")
+	guide, err := repository.GetGuideByID(id)
+	if err != nil {
+		response.Fail(c, 404, "攻略不存在")
+		return
+	}
+	if guide.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权操作")
+		return
+	}
+	if err := repository.DeleteGuideCascade(id); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
 }
 
 // CreateGuide 创建攻略（含每日行程）
@@ -112,47 +145,8 @@ func CreateGuide(c *gin.Context) {
 		Status:          req.Status,
 	}
 	// 组装每日行程（如果未传 days，自动创建第1天空天）
-	days := make([]model.GuideSection, 0)
-	if len(req.Days) > 0 {
-		for _, d := range req.Days {
-			day := model.GuideSection{
-				Title: d.Title,
-				Date:  d.Date,
-			}
-			// 组装行程项
-			items := make([]model.GuideDayItem, len(d.Items))
-			for j, it := range d.Items {
-				// 图片最多9张
-				images := it.Images
-				if len(images) > 9 {
-					images = images[:9]
-				}
-				items[j] = model.GuideDayItem{
-					SectionType:     it.SectionType,
-					Title:           it.Title,
-					Description:     it.Description,
-					StartTime:       it.StartTime,
-					EndTime:         it.EndTime,
-					Latitude:        it.Latitude,
-					Longitude:       it.Longitude,
-					Address:         it.Address,
-					Images:          images,
-					NeedReservation: it.NeedReservation,
-					TicketChannel:   it.TicketChannel,
-					TicketPrice:     it.TicketPrice,
-					TransportMode:   it.TransportMode,
-					StartPoint:      it.StartPoint,
-					EndPoint:        it.EndPoint,
-					StartLat:        it.StartLat,
-					StartLng:        it.StartLng,
-					EndLat:          it.EndLat,
-					EndLng:          it.EndLng,
-				}
-			}
-			day.Items = items
-			days = append(days, day)
-		}
-	} else {
+	days := buildGuideSections(req.Days)
+	if len(days) == 0 {
 		// 未传 days，自动创建第1天空天
 		days = append(days, model.GuideSection{
 			Title: "第1天",
@@ -166,6 +160,50 @@ func CreateGuide(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"id": guide.ID})
+}
+
+// buildGuideSections 将请求的每日行程数据组装为 GuideSection 列表
+func buildGuideSections(dayReqs []model.DayReq) []model.GuideSection {
+	days := make([]model.GuideSection, 0, len(dayReqs))
+	for _, d := range dayReqs {
+		day := model.GuideSection{
+			Title: d.Title,
+			Date:  d.Date,
+		}
+		// 组装行程项
+		items := make([]model.GuideDayItem, len(d.Items))
+		for j, it := range d.Items {
+			// 图片最多9张
+			images := it.Images
+			if len(images) > 9 {
+				images = images[:9]
+			}
+			items[j] = model.GuideDayItem{
+				SectionType:     it.SectionType,
+				Title:           it.Title,
+				Description:     it.Description,
+				StartTime:       it.StartTime,
+				EndTime:         it.EndTime,
+				Latitude:        it.Latitude,
+				Longitude:       it.Longitude,
+				Address:         it.Address,
+				Images:          images,
+				NeedReservation: it.NeedReservation,
+				TicketChannel:   it.TicketChannel,
+				TicketPrice:     it.TicketPrice,
+				TransportMode:   it.TransportMode,
+				StartPoint:      it.StartPoint,
+				EndPoint:        it.EndPoint,
+				StartLat:        it.StartLat,
+				StartLng:        it.StartLng,
+				EndLat:          it.EndLat,
+				EndLng:          it.EndLng,
+			}
+		}
+		day.Items = items
+		days = append(days, day)
+	}
+	return days
 }
 
 // GetGuideDetail 获取攻略详情（含每日行程和行程项）
@@ -260,8 +298,18 @@ func UpdateGuide(c *gin.Context) {
 		return
 	}
 	updates := buildUpdateMap(&req)
-	if len(updates) == 0 {
+	if len(updates) == 0 && len(req.Days) == 0 {
 		response.Fail(c, 400, "无更新内容")
+		return
+	}
+	// 传入 days 时全量替换每日行程（删除旧行程重建）
+	if len(req.Days) > 0 {
+		days := buildGuideSections(req.Days)
+		if err := repository.UpdateGuideWithDays(id, updates, days); err != nil {
+			response.Fail(c, 500, "更新失败")
+			return
+		}
+		response.Success(c, nil)
 		return
 	}
 	if err := repository.UpdateGuide(id, updates); err != nil {

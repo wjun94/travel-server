@@ -19,44 +19,46 @@ import (
 
 // CreatePartnerReq 发布搭子请求
 type CreatePartnerReq struct {
-	Title           string   `json:"title"`           // 搭子标题
-	Cover           string   `json:"cover"`           // 封面图
-	Images          []string `json:"images"`          // 多图列表
-	Category        string   `json:"category"`        // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
-	Destination     string   `json:"destination"`     // 目的地
-	Longitude       float64  `json:"longitude"`       // 经度
-	Latitude        float64  `json:"latitude"`        // 纬度
-	Address         string   `json:"address"`         // 详细地址
-	LocationType    int      `json:"locationType"`    // 0线下 1线上
-	OnlineLink      string   `json:"onlineLink"`      // 线上链接
-	StartDate       string   `json:"startDate"`       // YYYY-MM-DD
-	EndDate         string   `json:"endDate"`         // YYYY-MM-DD
-	TotalDays       int      `json:"totalDays"`       // 出行天数
-	TravelTags      string   `json:"travelTags"`      // 逗号分隔（兼容旧版）
-	Tags            string   `json:"tags"`            // 多选标签JSON数组
-	Desc            string   `json:"desc"`            // 行程简述
-	RichDesc        string   `json:"richDesc"`        // 详细介绍（富文本）
-	Requirement     string   `json:"requirement"`     // 人员要求
-	MaxMembers      int      `json:"maxMembers"`      // 招募上限
-	MinMembers      int      `json:"minMembers"`      // 最小成团人数
-	GenderLimit     int      `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
-	MaleCount       int      `json:"maleCount"`       // 男生需求数
-	FemaleCount     int      `json:"femaleCount"`     // 女生需求数
-	MinAge          int      `json:"minAge"`          // 年龄下限
-	MaxAge          int      `json:"maxAge"`          // 年龄上限
-	FeeMode         int      `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
-	BudgetPerPerson int      `json:"budgetPerPerson"` // 人均预算
-	OfficialPrice   float64  `json:"officialPrice"`   // 官方活动定价
-	FeeInclude      string   `json:"feeInclude"`      // 费用包含
-	FeeExclude      string   `json:"feeExclude"`      // 费用不含
-	EstTotal        int      `json:"estTotal"`        // 预估总价
-	Visibility      int      `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
-	JoinMode        int      `json:"joinMode"`        // 0需审核 1直接加入
-	AutoClose       int      `json:"autoClose"`       // 满员自动关闭：0否 1是
-	AllowShare      int      `json:"allowShare"`      // 允许转发：0否 1是
-	AllowCollect    int      `json:"allowCollect"`    // 允许收藏：0否 1是
-	IsDraft         int      `json:"isDraft"`         // 0已发布 1草稿
-	IsPublic        int      `json:"isPublic"`        // 0仅自己可见 1公开招募
+	Title           string          `json:"title"`           // 搭子标题
+	Cover           string          `json:"cover"`           // 封面图
+	Images          []string        `json:"images"`          // 多图列表
+	Category        string          `json:"category"`        // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
+	Destination     string          `json:"destination"`     // 目的地
+	Longitude       float64         `json:"longitude"`       // 经度
+	Latitude        float64         `json:"latitude"`        // 纬度
+	Address         string          `json:"address"`         // 详细地址
+	LocationType    int             `json:"locationType"`    // 0线下 1线上
+	OnlineLink      string          `json:"onlineLink"`      // 线上链接
+	StartDate       string          `json:"startDate"`       // YYYY-MM-DD
+	EndDate         string          `json:"endDate"`         // YYYY-MM-DD
+	TotalDays       int             `json:"totalDays"`       // 出行天数
+	TravelTags      string          `json:"travelTags"`      // 逗号分隔（兼容旧版）
+	Tags            string          `json:"tags"`            // 多选标签JSON数组
+	Desc            string          `json:"desc"`            // 行程简述
+	RichDesc        string          `json:"richDesc"`        // 详细介绍（富文本）
+	Requirement     string          `json:"requirement"`     // 人员要求
+	MaxMembers      int             `json:"maxMembers"`      // 招募上限
+	MinMembers      int             `json:"minMembers"`      // 最小成团人数
+	GenderLimit     int             `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
+	MaleCount       int             `json:"maleCount"`       // 男生需求数
+	FemaleCount     int             `json:"femaleCount"`     // 女生需求数
+	MinAge          int             `json:"minAge"`          // 年龄下限
+	MaxAge          int             `json:"maxAge"`          // 年龄上限
+	FeeMode         int             `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
+	BudgetPerPerson int             `json:"budgetPerPerson"` // 人均预算
+	OfficialPrice   float64         `json:"officialPrice"`   // 官方活动定价
+	FeeInclude      string          `json:"feeInclude"`      // 费用包含
+	FeeExclude      string          `json:"feeExclude"`      // 费用不含
+	EstTotal        int             `json:"estTotal"`        // 预估总价
+	Visibility      int             `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
+	JoinMode        int             `json:"joinMode"`        // 0需审核 1直接加入
+	AutoClose       int             `json:"autoClose"`       // 满员自动关闭：0否 1是
+	AllowShare      int             `json:"allowShare"`      // 允许转发：0否 1是
+	AllowCollect    int             `json:"allowCollect"`    // 允许收藏：0否 1是
+	IsDraft         int             `json:"isDraft"`         // 0已发布 1草稿
+	IsPublic        int             `json:"isPublic"`        // 0仅自己可见 1公开招募
+	TripID          string          `json:"tripId"`          // 关联行程ID（可选，已有行程时直接关联）
+	Days            []model.TripDay `json:"days"`            // 行程安排（可选，自动创建关联草稿行程）
 }
 
 // parseDate 将 YYYY-MM-DD 格式的字符串解析为 time.Time
@@ -140,6 +142,21 @@ func CreatePartner(c *gin.Context) {
 	if err := repository.CreatePartner(&p); err != nil {
 		response.Fail(c, 500, "发布失败")
 		return
+	}
+
+	// 行程安排：优先关联已有行程，否则由 days 自动创建关联草稿行程（搭子草稿持久化行程安排）
+	if p.TripID == "" && len(req.Days) > 0 {
+		trip := model.Trip{
+			UserID:   userID,
+			Title:    req.Title,
+			Status:   1, // 草稿
+			IsPublic: 0,
+			Days:     req.Days,
+		}
+		if err := repository.CreateTrip(&trip); err == nil {
+			p.TripID = trip.ID
+			_ = repository.UpdatePartner(&p)
+		}
 	}
 	response.Success(c, p)
 }
@@ -256,13 +273,21 @@ func GetPartnerList(c *gin.Context) {
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
+// @Param isDraft query int false "草稿筛选（1草稿 0已发布，-1或不传为全部）" default(-1)
 // @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64,commentCount=int},total=int64}}
 // @Router /api/v1/my/partners [get]
 func GetMyPartners(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	list, total, err := repository.GetMyPartners(userID, page, pageSize)
+	// 容错：isDraft 解析失败或非数字时视为全部（-1），避免前端误传对象导致误筛
+	isDraft := -1
+	if v := c.Query("isDraft"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			isDraft = n
+		}
+	}
+	list, total, err := repository.GetMyPartners(userID, page, pageSize, isDraft)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
@@ -323,6 +348,247 @@ func GetMyPartners(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"list": result, "total": total})
+}
+
+// DeletePartner 删除搭子（仅作者本人，级联删除申请记录）
+// @Summary 删除搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id} [delete]
+func DeletePartner(c *gin.Context) {
+	id := c.Param("id")
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	if partner.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权限")
+		return
+	}
+	if err := repository.DeletePartnerCascade(id); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// UpdatePartnerReq 更新搭子请求（所有字段可选）
+type UpdatePartnerReq struct {
+	Title           *string         `json:"title"`           // 搭子标题
+	Cover           *string         `json:"cover"`           // 封面图
+	Images          []string        `json:"images"`          // 多图列表
+	Category        *string         `json:"category"`        // 活动分类
+	Destination     *string         `json:"destination"`     // 目的地
+	Longitude       *float64        `json:"longitude"`       // 经度
+	Latitude        *float64        `json:"latitude"`        // 纬度
+	Address         *string         `json:"address"`         // 详细地址
+	LocationType    *int            `json:"locationType"`    // 0线下 1线上
+	OnlineLink      *string         `json:"onlineLink"`      // 线上链接
+	StartDate       *string         `json:"startDate"`       // YYYY-MM-DD
+	EndDate         *string         `json:"endDate"`         // YYYY-MM-DD
+	TotalDays       *int            `json:"totalDays"`       // 出行天数
+	TravelTags      *string         `json:"travelTags"`      // 逗号分隔（兼容旧版）
+	Tags            *string         `json:"tags"`            // 多选标签JSON数组
+	Desc            *string         `json:"desc"`            // 行程简述
+	RichDesc        *string         `json:"richDesc"`        // 详细介绍（富文本）
+	Requirement     *string         `json:"requirement"`     // 人员要求
+	MaxMembers      *int            `json:"maxMembers"`      // 招募上限
+	MinMembers      *int            `json:"minMembers"`      // 最小成团人数
+	GenderLimit     *int            `json:"genderLimit"`     // 0不限 1仅男生 2仅女生
+	MaleCount       *int            `json:"maleCount"`       // 男生需求数
+	FemaleCount     *int            `json:"femaleCount"`     // 女生需求数
+	MinAge          *int            `json:"minAge"`          // 年龄下限
+	MaxAge          *int            `json:"maxAge"`          // 年龄上限
+	FeeMode         *int            `json:"feeMode"`         // 0免费 1AA 2组织者全包 3人均固定预算
+	BudgetPerPerson *int            `json:"budgetPerPerson"` // 人均预算
+	OfficialPrice   *float64        `json:"officialPrice"`   // 官方活动定价
+	FeeInclude      *string         `json:"feeInclude"`      // 费用包含
+	FeeExclude      *string         `json:"feeExclude"`      // 费用不含
+	EstTotal        *int            `json:"estTotal"`        // 预估总价
+	Visibility      *int            `json:"visibility"`      // 0全部可见 1同城可见 2好友可见
+	JoinMode        *int            `json:"joinMode"`        // 0需审核 1直接加入
+	AutoClose       *int            `json:"autoClose"`       // 满员自动关闭：0否 1是
+	AllowShare      *int            `json:"allowShare"`      // 允许转发：0否 1是
+	AllowCollect    *int            `json:"allowCollect"`    // 允许收藏：0否 1是
+	IsDraft         *int            `json:"isDraft"`         // 0已发布 1草稿
+	IsPublic        *int            `json:"isPublic"`        // 0仅自己可见 1公开招募
+	TripID          *string         `json:"tripId"`          // 关联行程ID（可选，已有行程时直接关联）
+	Days            []model.TripDay `json:"days"`            // 行程安排（可选，传入则全量替换关联行程）
+}
+
+// UpdatePartner 更新搭子信息（仅作者，支持全量替换关联行程安排）
+// @Summary 更新搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Param body body UpdatePartnerReq true "更新数据"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id} [put]
+func UpdatePartner(c *gin.Context) {
+	id := c.Param("id")
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	if partner.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权限")
+		return
+	}
+	var req UpdatePartnerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+
+	// 基础字段更新（指针非空才更新）
+	if req.Title != nil {
+		partner.Title = *req.Title
+	}
+	if req.Cover != nil {
+		partner.Cover = *req.Cover
+	}
+	if req.Images != nil {
+		b, _ := json.Marshal(req.Images)
+		partner.Images = string(b)
+	}
+	if req.Category != nil {
+		partner.Category = *req.Category
+	}
+	if req.Destination != nil {
+		partner.Destination = *req.Destination
+	}
+	if req.Longitude != nil {
+		partner.Longitude = *req.Longitude
+	}
+	if req.Latitude != nil {
+		partner.Latitude = *req.Latitude
+	}
+	if req.Address != nil {
+		partner.Address = *req.Address
+	}
+	if req.LocationType != nil {
+		partner.LocationType = *req.LocationType
+	}
+	if req.OnlineLink != nil {
+		partner.OnlineLink = *req.OnlineLink
+	}
+	if req.StartDate != nil {
+		partner.StartDate = parseDate(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		partner.EndDate = parseDate(*req.EndDate)
+	}
+	if req.TotalDays != nil {
+		partner.Days = *req.TotalDays
+	}
+	if req.TravelTags != nil {
+		partner.TravelTags = *req.TravelTags
+	}
+	if req.Tags != nil {
+		partner.Tags = *req.Tags
+	}
+	if req.Desc != nil {
+		partner.Desc = *req.Desc
+	}
+	if req.RichDesc != nil {
+		partner.RichDesc = *req.RichDesc
+	}
+	if req.Requirement != nil {
+		partner.Requirement = *req.Requirement
+	}
+	if req.MaxMembers != nil {
+		partner.MaxMembers = *req.MaxMembers
+	}
+	if req.MinMembers != nil {
+		partner.MinMembers = *req.MinMembers
+	}
+	if req.GenderLimit != nil {
+		partner.GenderLimit = *req.GenderLimit
+	}
+	if req.MaleCount != nil {
+		partner.MaleCount = *req.MaleCount
+	}
+	if req.FemaleCount != nil {
+		partner.FemaleCount = *req.FemaleCount
+	}
+	if req.MinAge != nil {
+		partner.MinAge = *req.MinAge
+	}
+	if req.MaxAge != nil {
+		partner.MaxAge = *req.MaxAge
+	}
+	if req.FeeMode != nil {
+		partner.FeeMode = *req.FeeMode
+	}
+	if req.BudgetPerPerson != nil {
+		partner.BudgetPerPerson = *req.BudgetPerPerson
+	}
+	if req.OfficialPrice != nil {
+		partner.OfficialPrice = *req.OfficialPrice
+	}
+	if req.FeeInclude != nil {
+		partner.FeeInclude = *req.FeeInclude
+	}
+	if req.FeeExclude != nil {
+		partner.FeeExclude = *req.FeeExclude
+	}
+	if req.EstTotal != nil {
+		partner.EstTotal = *req.EstTotal
+	}
+	if req.Visibility != nil {
+		partner.Visibility = *req.Visibility
+	}
+	if req.JoinMode != nil {
+		partner.JoinMode = *req.JoinMode
+	}
+	if req.AutoClose != nil {
+		partner.AutoClose = *req.AutoClose
+	}
+	if req.AllowShare != nil {
+		partner.AllowShare = *req.AllowShare
+	}
+	if req.AllowCollect != nil {
+		partner.AllowCollect = *req.AllowCollect
+	}
+	if req.IsDraft != nil {
+		partner.IsDraft = *req.IsDraft
+	}
+	if req.IsPublic != nil {
+		partner.IsPublic = *req.IsPublic
+	}
+	if req.TripID != nil && *req.TripID != "" {
+		partner.TripID = *req.TripID
+	}
+
+	if err := repository.UpdatePartner(partner); err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
+	}
+
+	// 行程安排：优先全量替换关联行程 days，无关联时由 days 自动创建关联草稿行程
+	if len(req.Days) > 0 {
+		tripID := partner.TripID
+		if tripID != "" {
+			_ = repository.UpdateTripWithDays(tripID, nil, req.Days)
+		} else {
+			trip := model.Trip{
+				UserID:   partner.UserID,
+				Title:    partner.Title,
+				Status:   1, // 草稿
+				IsPublic: 0,
+				Days:     req.Days,
+			}
+			if err := repository.CreateTrip(&trip); err == nil {
+				partner.TripID = trip.ID
+				_ = repository.UpdatePartner(partner)
+			}
+		}
+	}
+	response.Success(c, nil)
 }
 
 // GetPartnerDetail 获取搭子详情

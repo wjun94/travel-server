@@ -91,9 +91,10 @@ func main() {
 
 			// ---------- 攻略 ----------
 			miniAuth.POST("/guide", miniapp.CreateGuide)                       // 创建攻略
-			miniAuth.GET("/my/guides", miniapp.GetMyGuides)                    // 我的攻略列表
+			miniAuth.GET("/my/guides", miniapp.GetMyGuides)                    // 我的攻略列表（status可筛草稿）
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)                 // 攻略详情
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)                    // 更新攻略
+			miniAuth.DELETE("/guide/:id", miniapp.DeleteGuide)                 // 删除攻略（仅作者）
 			miniAuth.POST("/guide/:id/day", miniapp.CreateGuideDay)            // 新增一天
 			miniAuth.DELETE("/guide/day/:id", miniapp.DeleteGuideDay)          // 删除一天
 			miniAuth.POST("/guide/:id/like", miniapp.LikeGuide)                // 点赞攻略
@@ -104,10 +105,11 @@ func main() {
 
 			// ---------- 行程 ----------
 			miniAuth.POST("/trip", miniapp.CreateTrip)                 // 手动创建行程
-			miniAuth.GET("/my/trips", miniapp.GetMyTrips)              // 我的行程列表
+			miniAuth.GET("/my/trips", miniapp.GetMyTrips)              // 我的行程列表（status可筛草稿）
 			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip) // AI智能生成行程
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)                 // 行程详情
 			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)              // 更新行程
+			miniAuth.DELETE("/trip/:id", miniapp.DeleteTrip)           // 删除行程（仅作者）
 			miniAuth.POST("/trip/day", miniapp.AddTripDay)             // 添加行程日
 			miniAuth.DELETE("/trip/day/:id", miniapp.DeleteTripDay)    // 删除行程日
 			miniAuth.POST("/trip/item", miniapp.AddTripItem)           // 添加行程项
@@ -119,8 +121,10 @@ func main() {
 			// ---------- 搭子 ----------
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
 			miniAuth.POST("/partner/ai-generate", miniapp.AIGeneratePartner)    // AI智能生成搭子
-			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表
+			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表（isDraft可筛草稿）
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
+			miniAuth.PUT("/partner/:id", miniapp.UpdatePartner)                 // 更新搭子（编辑草稿）
+			miniAuth.DELETE("/partner/:id", miniapp.DeletePartner)              // 删除搭子（仅作者）
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请
 			miniAuth.PUT("/partner/:id/cancel", miniapp.CancelPartner)          // 取消搭子

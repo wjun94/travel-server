@@ -43,9 +43,70 @@ func UpdateTrip(id string, updates map[string]interface{}) error {
 	return database.DB.Model(&model.Trip{}).Where("id = ?", id).Updates(updates).Error
 }
 
+// UpdateTripWithDays 事务更新行程基本信息并全量替换行程日（删除旧行程日后重建）
+func UpdateTripWithDays(id string, updates map[string]interface{}, days []model.TripDay) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if len(updates) > 0 {
+			if err := tx.Model(&model.Trip{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+		// 删除旧行程日及行程项
+		var dayIDs []string
+		if err := tx.Model(&model.TripDay{}).Where("trip_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("trip_day_id IN ?", dayIDs).Delete(&model.TripItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("trip_id = ?", id).Delete(&model.TripDay{}).Error; err != nil {
+				return err
+			}
+		}
+		// 重建行程日
+		for i := range days {
+			days[i].ID = ""
+			days[i].TripID = id
+			for j := range days[i].Items {
+				days[i].Items[j].ID = ""
+				days[i].Items[j].TripDayID = ""
+			}
+		}
+		if len(days) > 0 {
+			if err := tx.Create(&days).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // DeleteTrip 软删除行程
 func DeleteTrip(id string) error {
 	return database.DB.Where("id = ?", id).Delete(&model.Trip{}).Error
+}
+
+// DeleteTripCascade 删除行程（级联删除行程日、行程项及同行者）
+func DeleteTripCascade(id string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		var dayIDs []string
+		if err := tx.Model(&model.TripDay{}).Where("trip_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("trip_day_id IN ?", dayIDs).Delete(&model.TripItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("trip_id = ?", id).Delete(&model.TripDay{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("trip_id = ?", id).Delete(&model.TripMember{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", id).Delete(&model.Trip{}).Error
+	})
 }
 
 // GetTripFavoriteCount 获取行程收藏数
@@ -62,14 +123,21 @@ func GetTripCommentCount(tripID string) int64 {
 	return count
 }
 
-// ListUserTrips 用户行程列表
-func ListUserTrips(userID string, page, pageSize int) ([]model.Trip, int64, error) {
+// ListUserTrips 我的行程列表（status>=0 时按状态筛选，-1 返回全部）
+func ListUserTrips(userID string, page, pageSize, status int) ([]model.Trip, int64, error) {
 	var trips []model.Trip
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.Trip{}).Where("user_id = ?", userID).Count(&total)
-	err := database.DB.Where("user_id = ?", userID).
-		Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error
+	query := database.DB.Model(&model.Trip{}).Where("user_id = ?", userID)
+	if status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+	query.Count(&total)
+	listQuery := database.DB.Where("user_id = ?", userID)
+	if status >= 0 {
+		listQuery = listQuery.Where("status = ?", status)
+	}
+	err := listQuery.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&trips).Error
 	return trips, total, err
 }
 

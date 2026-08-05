@@ -249,14 +249,22 @@ func GetTrip(c *gin.Context) {
 // @Tags 小程序-行程
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
+// @Param status query int false "状态筛选（1草稿 2已发布，-1或不传为全部）" default(-1)
 // @Success 200 {object} response.Response{data=object{list=[]model.Trip,total=int}}
 // @Router /api/v1/my/trips [get]
 func GetMyTrips(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	// 容错：status 解析失败或非数字时视为全部（-1），避免前端误传对象导致误筛草稿
+	status := -1
+	if v := c.Query("status"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			status = n
+		}
+	}
 
-	trips, total, err := repository.ListUserTrips(userID, page, pageSize)
+	trips, total, err := repository.ListUserTrips(userID, page, pageSize, status)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
@@ -334,6 +342,31 @@ func GetMyTrips(c *gin.Context) {
 	response.Success(c, gin.H{"list": list, "total": total})
 }
 
+// DeleteTrip 删除行程（仅作者本人，级联删除行程日、行程项及同行者）
+// @Summary 删除行程
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path string true "行程ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/{id} [delete]
+func DeleteTrip(c *gin.Context) {
+	id := c.Param("id")
+	trip, err := repository.GetTripByID(id)
+	if err != nil {
+		response.Fail(c, 404, "行程不存在")
+		return
+	}
+	if trip.UserID != c.MustGet("userID").(string) {
+		response.Fail(c, 403, "无权限")
+		return
+	}
+	if err := repository.DeleteTripCascade(id); err != nil {
+		response.Fail(c, 500, "删除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
 // UpdateTrip 更新行程基本信息
 // @Summary 更新行程
 // @Security BearerAuth
@@ -368,6 +401,23 @@ func UpdateTrip(c *gin.Context) {
 	delete(updates, "view_count")
 	delete(updates, "like_count")
 	delete(updates, "favorite_count")
+
+	// 传入 days 时全量替换行程日（删除旧行程重建）
+	days, hasDays := updates["days"].([]interface{})
+	if hasDays {
+		delete(updates, "days")
+		dayList := make([]model.TripDay, 0, len(days))
+		b, err := json.Marshal(days)
+		if err == nil {
+			_ = json.Unmarshal(b, &dayList)
+		}
+		if err := repository.UpdateTripWithDays(id, updates, dayList); err != nil {
+			response.Fail(c, 500, "更新失败")
+			return
+		}
+		response.Success(c, nil)
+		return
+	}
 
 	if err := repository.UpdateTrip(id, updates); err != nil {
 		response.Fail(c, 500, "更新失败")

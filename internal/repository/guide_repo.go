@@ -481,14 +481,21 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 	return allItems[offset:end], total, nil
 }
 
-// ListMyGuides 我的攻略列表（含天数、行程项统计）
-func ListMyGuides(userID string, page, pageSize int) ([]model.GuideFeedItem, int64, error) {
+// ListMyGuides 我的攻略列表（含天数、行程项统计；status>=0 时按状态筛选，-1 返回全部）
+func ListMyGuides(userID string, page, pageSize, status int) ([]model.GuideFeedItem, int64, error) {
 	var guides []model.Guide
 	var total int64
 	offset := (page - 1) * pageSize
-	database.DB.Model(&model.Guide{}).Where("user_id = ?", userID).Count(&total)
-	err := database.DB.Where("user_id = ?", userID).
-		Order("created_at desc").Offset(offset).Limit(pageSize).Find(&guides).Error
+	query := database.DB.Model(&model.Guide{}).Where("user_id = ?", userID)
+	if status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+	query.Count(&total)
+	listQuery := database.DB.Where("user_id = ?", userID)
+	if status >= 0 {
+		listQuery = listQuery.Where("status = ?", status)
+	}
+	err := listQuery.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&guides).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -548,6 +555,25 @@ func ListMyGuides(userID string, page, pageSize int) ([]model.GuideFeedItem, int
 		}
 	}
 	return items, total, nil
+}
+
+// DeleteGuideCascade 删除攻略（级联删除每日行程及行程项）
+func DeleteGuideCascade(id string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		var dayIDs []string
+		if err := tx.Model(&model.GuideSection{}).Where("guide_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("day_id IN ?", dayIDs).Delete(&model.GuideDayItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("guide_id = ?", id).Delete(&model.GuideSection{}).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Where("id = ?", id).Delete(&model.Guide{}).Error
+	})
 }
 
 // ListUserPublishedGuides 他人已发布的攻略列表
@@ -677,6 +703,46 @@ func UpdateGuideStatus(id string, status int) error {
 // UpdateGuide 更新攻略基本信息（支持零值更新）
 func UpdateGuide(id string, updates map[string]interface{}) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// UpdateGuideWithDays 事务更新攻略基本信息并全量替换每日行程（删除旧行程后重建）
+func UpdateGuideWithDays(id string, updates map[string]interface{}, days []model.GuideSection) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if len(updates) > 0 {
+			if err := tx.Model(&model.Guide{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+		// 删除旧行程日及行程项
+		var dayIDs []string
+		if err := tx.Model(&model.GuideSection{}).Where("guide_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("day_id IN ?", dayIDs).Delete(&model.GuideDayItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("guide_id = ?", id).Delete(&model.GuideSection{}).Error; err != nil {
+				return err
+			}
+		}
+		// 重建行程日
+		for i := range days {
+			days[i].ID = ""
+			days[i].GuideID = id
+			days[i].DayNumber = i + 1
+			for j := range days[i].Items {
+				days[i].Items[j].ID = ""
+				days[i].Items[j].DayID = ""
+			}
+		}
+		if len(days) > 0 {
+			if err := tx.Create(&days).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // IncrementGuideViewCount 增加浏览量
