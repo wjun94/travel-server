@@ -70,6 +70,40 @@ func loadRegionTree() []RegionNode {
 	return regionTree
 }
 
+// IsDomesticDestination 判断目的地是否属于国内（命中省市区树→国内；命中境外国家列表→境外；均未命中默认国内）
+func IsDomesticDestination(destination string) bool {
+	name := strings.TrimSpace(destination)
+	if name == "" {
+		return true
+	}
+	// 命中境外国家列表 → 境外
+	for _, country := range countryData {
+		if name == country.Name || name == country.NameEn || name == country.Code {
+			return false
+		}
+	}
+	// 命中国内省市区树 → 国内
+	tree := loadRegionTree()
+	if containsNodeName(tree, name) {
+		return true
+	}
+	// 均未命中，默认国内
+	return true
+}
+
+// containsNodeName 递归判断目的地名称是否命中地区树中的任意节点名
+func containsNodeName(nodes []RegionNode, name string) bool {
+	for _, node := range nodes {
+		if node.Name == name || strings.Contains(node.Name, name) || strings.Contains(name, node.Name) {
+			return true
+		}
+		if containsNodeName(node.Children, name) {
+			return true
+		}
+	}
+	return false
+}
+
 // toPinyin 将中文转换为全拼（无音调，小写，空格分隔）
 func toPinyin(s string) string {
 	py := pinyin.LazyConvert(s, nil)

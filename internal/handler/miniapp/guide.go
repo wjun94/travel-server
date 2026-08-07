@@ -142,6 +142,7 @@ func CreateGuide(c *gin.Context) {
 		Difficulty:      req.Difficulty,
 		CrowdType:       req.CrowdType,
 		IsOriginal:      req.IsOriginal,
+		IsOverseas:      req.IsOverseas,
 		Status:          req.Status,
 	}
 	// 组装每日行程（如果未传 days，自动创建第1天空天）

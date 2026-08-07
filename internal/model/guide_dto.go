@@ -23,6 +23,7 @@ type CreateGuideReq struct {
 	Difficulty      string   `json:"difficulty"`                     // 难度：轻松/适中/挑战
 	CrowdType       string   `json:"crowdType"`                      // 适合人群：情侣/家庭/独行/朋友
 	IsOriginal      int      `json:"isOriginal"`                     // 是否原创
+	IsOverseas      int      `json:"isOverseas"`                     // 境内境外：0国内 1境外
 	Status          int      `json:"status"`                         // 0草稿 / 1已发布
 	Days            []DayReq `json:"days"`                           // 可选的每日行程（不传则自动创建第1天）
 }
@@ -171,6 +172,7 @@ type FeedItem struct {
 	Destinations []string  `json:"destinations"` // 目的地列表
 	Summary      string    `json:"summary"`      // 摘要/备注
 	ItemType     string    `json:"itemType"`     // 内容类型：guide(攻略) / trip(行程)
+	IsOverseas   int       `json:"isOverseas"`   // 境内境外：0国内 1境外
 	ViewCount    int       `json:"viewCount"`    // 浏览量
 	LikeCount    int       `json:"likeCount"`    // 点赞数
 	TripDays     int       `json:"tripDays"`     // 行程天数

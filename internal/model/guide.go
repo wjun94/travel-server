@@ -23,6 +23,7 @@ type Guide struct {
 	Difficulty      string         `gorm:"size:20" json:"difficulty"`           // 难度：轻松/适中/挑战
 	CrowdType       string         `gorm:"size:100" json:"crowdType"`           // 适合人群：情侣/家庭/独行/朋友
 	IsOriginal      int            `gorm:"default:1" json:"isOriginal"`         // 是否原创
+	IsOverseas      int            `gorm:"default:0;index" json:"isOverseas"`   // 境内境外：0国内 1境外
 	ViewCount       int            `gorm:"default:0" json:"viewCount"`          // 浏览量
 	LikeCount       int            `gorm:"default:0" json:"likeCount"`          // 点赞数
 	Status          int            `gorm:"default:0" json:"status"`             // 状态：0草稿/1已发布/2下架

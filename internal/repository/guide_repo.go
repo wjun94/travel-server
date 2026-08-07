@@ -135,10 +135,12 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 		guideOrder = "like_count desc"
 		tripOrder = "like_count desc"
 	case "domestic":
+		guideQuery = guideQuery.Where("is_overseas = ?", 0)
 		tripQuery = tripQuery.Where("is_overseas = ?", 0)
 		guideOrder = "created_at desc"
 		tripOrder = "created_at desc"
 	case "overseas":
+		guideQuery = guideQuery.Where("is_overseas = ?", 1)
 		tripQuery = tripQuery.Where("is_overseas = ?", 1)
 		guideOrder = "created_at desc"
 		tripOrder = "created_at desc"
@@ -208,6 +210,7 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 			Destinations: []string{g.Destination},
 			Summary:      g.Summary,
 			ItemType:     "guide",
+			IsOverseas:   g.IsOverseas,
 			ViewCount:    g.ViewCount,
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
@@ -265,6 +268,7 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 			Destinations: t.Destinations,
 			Summary:      t.Summary,
 			ItemType:     "trip",
+			IsOverseas:   t.IsOverseas,
 			ViewCount:    t.ViewCount,
 			LikeCount:    t.LikeCount,
 			TripDays:     tripDayMap[t.ID],
@@ -440,6 +444,7 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 			Destinations: []string{g.Destination},
 			Summary:      g.Summary,
 			ItemType:     "guide",
+			IsOverseas:   g.IsOverseas,
 			ViewCount:    g.ViewCount,
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
@@ -456,6 +461,7 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 			Destinations: t.Destinations,
 			Summary:      t.Summary,
 			ItemType:     "trip",
+			IsOverseas:   t.IsOverseas,
 			ViewCount:    t.ViewCount,
 			LikeCount:    t.LikeCount,
 			TripDays:     tripDayMap[t.ID],
@@ -698,6 +704,13 @@ func ListGuides(page, pageSize int, status int) ([]model.Guide, int64, error) {
 // UpdateGuideStatus 审核攻略（修改状态）
 func UpdateGuideStatus(id string, status int) error {
 	return database.DB.Model(&model.Guide{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// ListAllGuides 全量攻略列表（用于存量数据回填）
+func ListAllGuides() ([]model.Guide, error) {
+	var guides []model.Guide
+	err := database.DB.Model(&model.Guide{}).Find(&guides).Error
+	return guides, err
 }
 
 // UpdateGuide 更新攻略基本信息（支持零值更新）

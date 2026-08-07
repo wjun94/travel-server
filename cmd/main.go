@@ -40,7 +40,8 @@ func main() {
 	config.LoadConfig()
 	database.InitMySQL()
 	database.InitRedis()
-	qiniu.InitQiniu() // 新增七牛云
+	qiniu.InitQiniu()                 // 新增七牛云
+	miniapp.BackfillGuideIsOverseas() // 存量攻略国内外标记回填（幂等）
 
 	// 创建 Gin 引擎 & 全局中间件
 	r := gin.Default()
