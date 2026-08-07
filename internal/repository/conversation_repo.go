@@ -84,7 +84,7 @@ func KickConversationMember(convID, userID string) error {
 type ChatItemVO struct {
 	ID          string    `json:"id"`          // 会话ID：私聊=对方用户ID，群聊=群聊ID，系统=system
 	Type        string    `json:"type"`        // user私聊 group群聊 system系统消息
-	Name        string    `json:"name"`        // 显示名：昵称/群名/系统消息
+	Name        string    `json:"name"`        // 显示名：昵称/群名/公告
 	AvatarURL   string    `json:"avatarUrl"`   // 头像（私聊）
 	PartnerID   string    `json:"partnerId"`   // 群聊关联搭子ID
 	MemberCount int64     `json:"memberCount"` // 群聊成员数
@@ -201,7 +201,7 @@ func GetChatList(userID string) ([]ChatItemVO, error) {
 		items = append(items, ChatItemVO{
 			ID:          "system",
 			Type:        "system",
-			Name:        "系统消息",
+			Name:        "公告",
 			LastContent: latestNoti.Content,
 			LastTime:    latestNoti.CreatedAt,
 			UnreadCount: unreadSys,

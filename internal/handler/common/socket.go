@@ -33,6 +33,17 @@ func WebSocketHandler(c *gin.Context) {
 	defer conn.Close()
 
 	userID := claims.UserID
+
+	// 连接建立即加入用户专属房间，服务端可实时推送通知
+	ws.WsHub.JoinUser(userID, conn)
+	// 记录本次连接加入的所有房间，断开时统一清理（避免残留死连接）
+	joinedRooms := []string{"user:" + userID}
+	defer func() {
+		for _, room := range joinedRooms {
+			ws.WsHub.Leave(room, conn)
+		}
+	}()
+
 	for {
 		_, msgBytes, err := conn.ReadMessage()
 		if err != nil {
@@ -48,6 +59,7 @@ func WebSocketHandler(c *gin.Context) {
 			// 加入房间
 			tripID, _ := msg["tripId"].(string)
 			ws.WsHub.Join("trip:"+tripID, conn)
+			joinedRooms = append(joinedRooms, "trip:"+tripID)
 		case "edit_trip":
 			// 数据广播与持久化
 			tripID, _ := msg["tripId"].(string)

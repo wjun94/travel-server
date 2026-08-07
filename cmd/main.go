@@ -148,7 +148,8 @@ func main() {
 
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量
-			miniAuth.GET("/notification/list", miniapp.GetNotificationList)           // 通知列表（按type筛选）
+			miniAuth.GET("/notification/list", miniapp.GetNotificationList)
+			miniAuth.GET("/notification/:id", miniapp.GetNotificationDetail)             // 通知详情           // 通知列表（按type筛选）
 			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 标记单条已读
 			miniAuth.PUT("/notification/type-read", miniapp.MarkTypeNotificationRead) // 按类型清空未读
 			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 全部已读
@@ -260,6 +261,11 @@ func main() {
 			adminGroup.GET("/complaints", admin.ListComplaints)            // 投诉列表
 			adminGroup.PUT("/complaint/:id/status", admin.HandleComplaint) // 处理投诉
 			adminGroup.DELETE("/complaint/:id", admin.DeleteComplaint)     // 删除投诉
+
+			// ---------- 消息管理（系统通知） ----------
+			adminGroup.POST("/sys-message", admin.CreateSysMessage)           // 发送系统消息（立即/定时）
+			adminGroup.GET("/sys-messages", admin.ListSysMessages)            // 系统消息列表
+			adminGroup.PUT("/sys-message/:id/cancel", admin.CancelSysMessage) // 取消定时发送
 		}
 	}
 

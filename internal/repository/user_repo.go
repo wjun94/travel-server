@@ -191,3 +191,17 @@ func ListUsers(page, pageSize int, keyword string) ([]model.User, int64, error) 
 func UpdateUserRole(userID string, role int) error {
 	return database.DB.Model(&model.User{}).Where("id = ?", userID).Update("role", role).Error
 }
+
+// ListAllUserIDs 获取全部用户ID（系统消息-全部用户）
+func ListAllUserIDs() ([]string, error) {
+	var ids []string
+	err := database.DB.Model(&model.User{}).Pluck("id", &ids).Error
+	return ids, err
+}
+
+// ListUserIDsByRole 获取指定角色的用户ID列表（系统消息-用户分组）
+func ListUserIDsByRole(role int) ([]string, error) {
+	var ids []string
+	err := database.DB.Model(&model.User{}).Where("role = ?", role).Pluck("id", &ids).Error
+	return ids, err
+}

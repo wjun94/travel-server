@@ -27,6 +27,8 @@ func GetOrCreateUser(openid, unionid, inviteCode string) (*model.User, error) {
 					}
 				}
 			}
+			// 发送新用户欢迎系统消息（type=4 通知）
+			SendWelcomeMessage(newUser.ID)
 			return newUser, nil
 		}
 		return nil, err

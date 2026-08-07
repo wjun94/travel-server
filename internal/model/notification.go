@@ -17,6 +17,8 @@ type Notification struct {
 	RelatedID  string    `gorm:"size:191" json:"relatedId"`    // 关联的单据ID（搭子申请/点赞/关注 记录ID）
 	IsRead     int       `gorm:"default:0" json:"isRead"`      // 0未读 1已读
 	Content    string    `gorm:"type:text" json:"content"`     // 通知内容简述
+	Title      string    `gorm:"size:100" json:"title"`        // 标题（type=4 系统通知用）
+	LinkURL    string    `gorm:"size:500" json:"linkUrl"`      // 跳转链接（type=4 系统通知用，可空）
 	CreatedAt  time.Time `json:"createdAt"`
 }
 

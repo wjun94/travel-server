@@ -113,6 +113,63 @@ func GetNotificationList(c *gin.Context) {
 		return
 	}
 
+	items := enrichNotifications(list)
+	response.Success(c, gin.H{"list": items, "total": total})
+}
+
+// GetUnreadNotificationCounts 获取所有类型的未读通知数量
+// @Summary 未读通知数量
+// @Security BearerAuth
+// @Tags 小程序-通知
+// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,commentCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64}}
+// @Router /api/v1/notification/unread [get]
+func GetUnreadNotificationCounts(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, err := repository.GetUnreadCounts(userID)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	response.Success(c, gin.H{
+		"partnerApplyCount": partnerApplyCount,
+		"commentCount":      commentCount,
+		"likeCount":         likeCount,
+		"followCount":       followCount,
+		"systemNotifyCount": systemNotifyCount,
+	})
+}
+
+// fromUserVO 通知触发者信息
+// 统一通过 userMap 查询：有数据则返回用户对象，无数据则返回 null
+type fromUserVO struct {
+	ID        string `json:"id"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatarUrl"`
+}
+
+// notificationItemVO 通知列表项（列表与详情共用响应结构）
+type notificationItemVO struct {
+	ID             string      `json:"id"`
+	UserID         string      `json:"userId"`                   // 通知接收者ID
+	FromUserID     string      `json:"fromUserId"`               // 通知触发者ID
+	Type           int         `json:"type"`                     // 1搭子申请 2攻略点赞 3新增关注 4系统通知 5评论点赞
+	RelatedID      string      `json:"relatedId"`                // 原始关联单据ID
+	TargetID       string      `json:"targetId"`                 // 用于前端跳转的目标ID
+	TargetType     string      `json:"targetType"`               // 跳转目标类型：guide/trip/partner/user
+	IsRead         int         `json:"isRead"`                   // 0未读 1已读
+	Content        string      `json:"content"`                  // 通知摘要文字
+	Title          string      `json:"title"`                    // 标题（type=4 系统通知）
+	LinkURL        string      `json:"linkUrl"`                  // 跳转链接（type=4 系统通知，可空）
+	CreatedAt      string      `json:"createdAt"`                // 创建时间（ISO8601）
+	FromUser       *fromUserVO `json:"fromUser"`                 // 触发者信息，null表示无触发者
+	CommentContent string      `json:"commentContent,omitempty"` // type=5 时的原评论内容，已删除则显示"原评论已删除"
+	Remark         string      `json:"remark,omitempty"`         // type=1 搭子申请的申请备注
+	Status         int         `json:"status"`                   // type=1 搭子申请状态：0待审核 1通过 2拒绝 3主动退出（不用omitempty，保证待审核0也返回）
+	Reason         string      `json:"reason,omitempty"`         // type=1 拒绝时的拒绝理由
+}
+
+// enrichNotifications 富化通知列表：批量查询用户/评论/搭子申请并组装响应项
+func enrichNotifications(list []model.Notification) []notificationItemVO {
 	// 批量收集关联ID
 	fromIDs := make(map[string]struct{})
 	commentIDs := make(map[string]struct{})
@@ -222,29 +279,7 @@ func GetNotificationList(c *gin.Context) {
 	}
 
 	// 构建富化响应
-	type fromUserVO struct {
-		ID        string `json:"id"`
-		Nickname  string `json:"nickname"`
-		AvatarURL string `json:"avatarUrl"`
-	}
-	type itemVO struct {
-		ID             string      `json:"id"`
-		UserID         string      `json:"userId"`                   // 通知接收者ID
-		FromUserID     string      `json:"fromUserId"`               // 通知触发者ID
-		Type           int         `json:"type"`                     // 1搭子申请 2攻略点赞 3新增关注 4系统通知 5评论点赞
-		RelatedID      string      `json:"relatedId"`                // 原始关联单据ID
-		TargetID       string      `json:"targetId"`                 // 用于前端跳转的目标ID
-		TargetType     string      `json:"targetType"`               // 跳转目标类型：guide/trip/partner/user
-		IsRead         int         `json:"isRead"`                   // 0未读 1已读
-		Content        string      `json:"content"`                  // 通知摘要文字
-		CreatedAt      string      `json:"createdAt"`                // 创建时间（ISO8601）
-		FromUser       *fromUserVO `json:"fromUser"`                 // 触发者信息，null表示无触发者
-		CommentContent string      `json:"commentContent,omitempty"` // type=5 时的原评论内容，已删除则显示"原评论已删除"
-		Remark         string      `json:"remark,omitempty"`         // type=1 搭子申请的申请备注
-		Status         int         `json:"status"`                   // type=1 搭子申请状态：0待审核 1通过 2拒绝 3主动退出（不用omitempty，保证待审核0也返回）
-		Reason         string      `json:"reason,omitempty"`         // type=1 拒绝时的拒绝理由
-	}
-	items := make([]itemVO, 0, len(list))
+	items := make([]notificationItemVO, 0, len(list))
 	for _, n := range list {
 		// 确定 fromUser 的真实用户ID（优先 FromUserID，再按类型回退）
 		fromUserID := n.FromUserID
@@ -314,7 +349,7 @@ func GetNotificationList(c *gin.Context) {
 			rejectReason = appRejectMap[n.RelatedID]
 		}
 
-		items = append(items, itemVO{
+		items = append(items, notificationItemVO{
 			ID:             n.ID,
 			UserID:         n.UserID,
 			FromUserID:     n.FromUserID,
@@ -324,6 +359,8 @@ func GetNotificationList(c *gin.Context) {
 			TargetType:     targetType,
 			IsRead:         n.IsRead,
 			Content:        n.Content,
+			Title:          n.Title,
+			LinkURL:        n.LinkURL,
 			CreatedAt:      n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			FromUser:       fu,
 			CommentContent: cc,
@@ -333,27 +370,25 @@ func GetNotificationList(c *gin.Context) {
 		})
 	}
 
-	response.Success(c, gin.H{"list": items, "total": total})
+	return items
 }
 
-// GetUnreadNotificationCounts 获取所有类型的未读通知数量
-// @Summary 未读通知数量
+// GetNotificationDetail 单条通知详情
+// @Summary 通知详情
+// @Description 获取单条通知的完整信息（标题/内容/链接/触发者等），仅本人可见
 // @Security BearerAuth
 // @Tags 小程序-通知
-// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,commentCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64}}
-// @Router /api/v1/notification/unread [get]
-func GetUnreadNotificationCounts(c *gin.Context) {
+// @Param id path string true "通知ID"
+// @Success 200 {object} response.Response{data=object{id=string,userId=string,fromUserId=string,type=int,relatedId=string,targetId=string,targetType=string,isRead=int,content=string,title=string,linkUrl=string,createdAt=string,fromUser=object{id=string,nickname=string,avatarUrl=string},commentContent=string,remark=string,status=int,reason=string}}
+// @Router /api/v1/notification/{id} [get]
+func GetNotificationDetail(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
-	partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, err := repository.GetUnreadCounts(userID)
+	id := c.Param("id")
+	n, err := repository.GetNotificationByID(id, userID)
 	if err != nil {
-		response.Fail(c, 500, "获取失败")
+		response.Fail(c, 404, "通知不存在")
 		return
 	}
-	response.Success(c, gin.H{
-		"partnerApplyCount": partnerApplyCount,
-		"commentCount":      commentCount,
-		"likeCount":         likeCount,
-		"followCount":       followCount,
-		"systemNotifyCount": systemNotifyCount,
-	})
+	items := enrichNotifications([]model.Notification{*n})
+	response.Success(c, items[0])
 }

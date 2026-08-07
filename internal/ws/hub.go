@@ -53,3 +53,18 @@ func (h *Hub) Broadcast(room string, msg interface{}, exclude *websocket.Conn) {
 		}
 	}
 }
+
+// JoinUser 将连接加入用户专属房间（用于服务端实时通知推送）
+func (h *Hub) JoinUser(userID string, conn *websocket.Conn) {
+	h.Join("user:"+userID, conn)
+}
+
+// LeaveUser 将连接移出用户专属房间
+func (h *Hub) LeaveUser(userID string, conn *websocket.Conn) {
+	h.Leave("user:"+userID, conn)
+}
+
+// PushToUser 向用户专属房间推送消息（用户不在线时静默丢弃）
+func (h *Hub) PushToUser(userID string, msg interface{}) {
+	h.Broadcast("user:"+userID, msg, nil)
+}

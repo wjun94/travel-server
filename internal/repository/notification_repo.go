@@ -5,7 +5,16 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
+
+	"gorm.io/gorm"
 )
+
+// GetNotificationByID 获取单条通知（校验归属，仅本人可见）
+func GetNotificationByID(id, userID string) (*model.Notification, error) {
+	var n model.Notification
+	err := database.DB.Where("id = ? AND user_id = ?", id, userID).First(&n).Error
+	return &n, err
+}
 
 // CreateNotification 创建通知
 func CreateNotification(n *model.Notification) error {
@@ -26,18 +35,17 @@ func ListNotifications(userID string, notiType, page, pageSize int) ([]model.Not
 	return list, total, err
 }
 
-// MarkNotificationRead 标记单条通知为已读/未读（需校验归属）
+// MarkNotificationRead 标记单条通知为已读/未读（需校验归属；幂等：重复标记不报错）
 func MarkNotificationRead(id, userID string, isRead int) error {
-	res := database.DB.Model(&model.Notification{}).
-		Where("id = ? AND user_id = ?", id, userID).
-		Update("is_read", isRead)
-	if res.Error != nil {
-		return res.Error
+	// 先校验通知存在且归属本人，避免依赖 UPDATE 影响行数判断（重复标记已读时影响行数为 0）
+	var n model.Notification
+	if err := database.DB.Select("id").Where("id = ? AND user_id = ?", id, userID).First(&n).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("通知不存在或无权操作")
+		}
+		return err
 	}
-	if res.RowsAffected == 0 {
-		return errors.New("通知不存在或无权操作")
-	}
-	return nil
+	return database.DB.Model(&model.Notification{}).Where("id = ?", id).Update("is_read", isRead).Error
 }
 
 // MarkAllNotificationsRead 标记当前用户所有通知为已读
