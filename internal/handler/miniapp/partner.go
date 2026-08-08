@@ -14,6 +14,7 @@ import (
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/internal/service"
+	"travel-server/internal/ws"
 	"travel-server/pkg/response"
 )
 
@@ -785,6 +786,14 @@ func ApplyPartner(c *gin.Context) {
 		}); err != nil {
 			// 通知创建失败不影响主流程
 			log.Printf("创建搭子申请通知失败: %v", err)
+		} else {
+			// 实时推送：作者在线时立即刷新消息中心
+			ws.WsHub.PushToUser(partner.UserID, map[string]interface{}{
+				"action":  "new_notification",
+				"type":    1, // 搭子申请
+				"title":   "新的搭子申请",
+				"content": "您的搭子收到一条新申请",
+			})
 		}
 	}
 	response.Success(c, nil)

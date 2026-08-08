@@ -174,6 +174,7 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 	fromIDs := make(map[string]struct{})
 	commentIDs := make(map[string]struct{})
 	appIDs := make(map[string]struct{})
+	likeIDs := make(map[string]struct{})
 	for _, n := range list {
 		if n.FromUserID != "" {
 			fromIDs[n.FromUserID] = struct{}{}
@@ -187,6 +188,9 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			commentIDs[n.RelatedID] = struct{}{}
 		case 1:
 			appIDs[n.RelatedID] = struct{}{}
+		case 2:
+			// 点赞目标的ID（可能是攻略ID或搭子ID）
+			likeIDs[n.RelatedID] = struct{}{}
 		case 3:
 			// RelatedID 即关注者ID，加入用户查询集合
 			fromIDs[n.RelatedID] = struct{}{}
@@ -264,6 +268,33 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 		}
 	}
 
+	// 批量查攻略/搭子：区分 type=2 点赞通知的目标类型（RelatedID 可能是攻略ID或搭子ID）
+	guideSet := make(map[string]struct{})
+	partnerSet := make(map[string]struct{})
+	if len(likeIDs) > 0 {
+		ids := make([]string, 0, len(likeIDs))
+		for id := range likeIDs {
+			ids = append(ids, id)
+		}
+		var guides []struct{ ID string }
+		database.DB.Model(&model.Guide{}).Select("id").Where("id IN ?", ids).Find(&guides)
+		for _, g := range guides {
+			guideSet[g.ID] = struct{}{}
+			delete(likeIDs, g.ID)
+		}
+		if len(likeIDs) > 0 {
+			ids = ids[:0]
+			for id := range likeIDs {
+				ids = append(ids, id)
+			}
+			var partners []struct{ ID string }
+			database.DB.Model(&model.Partner{}).Select("id").Where("id IN ?", ids).Find(&partners)
+			for _, p := range partners {
+				partnerSet[p.ID] = struct{}{}
+			}
+		}
+	}
+
 	// 重新查询一遍用户（回退ID已追加到 fromIDs）
 	userMap = make(map[string]model.User)
 	if len(fromIDs) > 0 {
@@ -317,8 +348,12 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			}
 			targetType = "partner"
 		case 2:
-			// 攻略点赞 → 跳转到攻略详情
-			targetType = "guide"
+			// 攻略/搭子点赞 → 跳转到对应内容详情（RelatedID 命中搭子表则为搭子）
+			if _, ok := partnerSet[n.RelatedID]; ok {
+				targetType = "partner"
+			} else {
+				targetType = "guide"
+			}
 		case 3:
 			// 新增关注 → 跳转到用户主页
 			targetType = "user"
