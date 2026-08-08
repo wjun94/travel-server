@@ -31,20 +31,20 @@ const TripPrompt = `你是一个专业的旅行规划师。请为%s的%d天旅�
 只返回严格的JSON格式，不要解释：{"title":"...","countries":[],"provinces":[],"cities":[],"isOverseas":0,"totalBudget":0,"summary":"...","days":[{"day":1,"items":[{"time":"09:00","name":"...","type":"attraction","duration":"2h","address":"...","description":"..."}]}]}`
 
 // PartnerPrompt 搭子招募提示词模板
-const PartnerPrompt = `你是一个旅行搭子招募文案专家。请为目的地%s、行程%d天的旅行搭子招募生成一份文案。
+const PartnerPrompt = `你是一个旅行搭子招募文案专家。请为目的地%s、行程%d天的旅行搭子招募生成一份完整的文案和行程安排。
 返回JSON需包含以下字段：
 - title: 招募标题（吸引人，如"成都5天4夜组队！美食徒步走起"）
 - category: 活动分类（旅游/美食/运动/学习/探店/看展/桌游）
 - destination: 目的地
-- days: 出行天数
+- days: 出行天数（数字）
 - desc: 行程简述（一两句话概括行程亮点）
 - richDesc: 详细介绍（3-5句话，包含路线安排、行程亮点、特色体验）
 - requirement: 人员要求（如"不矫情、能早起、AA制"）
 - address: 集合地点（如"成都东站集合"）
-- startDate: 建议出发日期（格式YYYY-MM-DD，无法确定则为空）
-- endDate: 建议结束日期（格式YYYY-MM-DD，无法确定则为空）
-- maxMembers: 招募人数上限（数字）
-- minMembers: 最小成团人数（数字）
+- startDate: 建议出发日期（格式YYYY-MM-DD，从今天开始）
+- endDate: 建议结束日期（格式YYYY-MM-DD，等于startDate+days-1天）
+- maxMembers: 招募人数上限（数字，4-10）
+- minMembers: 最小成团人数（数字，2-4，不超过maxMembers）
 - genderLimit: 0不限 1仅男生 2仅女生
 - maleCount: 男生需求数（genderLimit为1时>0，否则0）
 - femaleCount: 女生需求数（genderLimit为2时>0，否则0）
@@ -56,7 +56,20 @@ const PartnerPrompt = `你是一个旅行搭子招募文案专家。请为目的
 - feeExclude: 费用不含（如"餐饮、个人消费"）
 - estTotal: 预估总花费（元，数字）
 - tags: 标签JSON数组（如["徒步","拍照","美食"]，最多5个）
-只返回严格的JSON格式，不要解释：{"title":"...","category":"旅游","destination":"...","days":5,"desc":"...","richDesc":"...","requirement":"...","address":"...","startDate":"","endDate":"","maxMembers":4,"minMembers":2,"genderLimit":0,"maleCount":0,"femaleCount":0,"minAge":18,"maxAge":40,"feeMode":1,"budgetPerPerson":500,"feeInclude":"住宿、门票","feeExclude":"餐饮、个人消费","estTotal":2000,"tags":["徒步","拍照"]}`
+- schedule: 每日行程安排数组（共%d天），每天包含：
+  - dayNumber: 第几天（1开始）
+  - title: 当天行程主题（如"抵达成都，火锅初体验"）
+  - items: 当天行程项数组（每天3-6项，涵盖景点、美食、住宿、交通等），每项包含：
+    - sectionType: 类型（attraction景点/food美食/hotel住宿/transport交通/shopping购物/tips避坑）
+    - title: 行程项名称（如"宽窄巷子"）
+    - description: 简短描述
+    - startTime: 开始时间（如09:00）
+    - endTime: 结束时间（如11:00）
+    - address: 地点地址
+    - startPoint: 起点名称（仅transport类型填写，其他为空）
+    - endPoint: 终点名称（仅transport类型填写，其他为空）
+    - transportMode: 交通方式（train/bus/metro/taxi/walk/plane，仅transport类型填写，其他为空）
+只返回严格的JSON格式，不要解释：{"title":"...","category":"旅游","destination":"...","days":5,"desc":"...","richDesc":"...","requirement":"...","address":"...","startDate":"2026-08-08","endDate":"2026-08-12","maxMembers":6,"minMembers":2,"genderLimit":0,"maleCount":0,"femaleCount":0,"minAge":18,"maxAge":40,"feeMode":1,"budgetPerPerson":500,"feeInclude":"住宿、门票","feeExclude":"餐饮、个人消费","estTotal":2000,"tags":["徒步","拍照"],"schedule":[{"dayNumber":1,"title":"抵达成都，火锅初体验","items":[{"sectionType":"transport","title":"前往成都","description":"高铁/飞机抵达","startTime":"09:00","endTime":"12:00","address":"成都东站","startPoint":"出发城市","endPoint":"成都东站","transportMode":"train"},{"sectionType":"food","title":"火锅晚餐","description":"体验地道成都火锅","startTime":"18:00","endTime":"20:00","address":"春熙路","startPoint":"","endPoint":"","transportMode":""}]}]}`
 
 // Chat 发送对话请求到 DeepSeek，返回模型回复内容
 func Chat(prompt string) (string, error) {

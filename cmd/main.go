@@ -123,6 +123,7 @@ func main() {
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
 			miniAuth.POST("/partner/ai-generate", miniapp.AIGeneratePartner)    // AI智能生成搭子
 			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表（isDraft可筛草稿）
+			miniAuth.GET("/my/joined-partners", miniapp.GetMyJoinedPartners)    // 我参与的搭子列表
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.PUT("/partner/:id", miniapp.UpdatePartner)                 // 更新搭子（编辑草稿）
 			miniAuth.DELETE("/partner/:id", miniapp.DeletePartner)              // 删除搭子（仅作者）
@@ -149,7 +150,7 @@ func main() {
 			// ---------- 通知 ----------
 			miniAuth.GET("/notification/unread", miniapp.GetUnreadNotificationCounts) // 未读通知数量
 			miniAuth.GET("/notification/list", miniapp.GetNotificationList)
-			miniAuth.GET("/notification/:id", miniapp.GetNotificationDetail)             // 通知详情           // 通知列表（按type筛选）
+			miniAuth.GET("/notification/:id", miniapp.GetNotificationDetail)          // 通知详情           // 通知列表（按type筛选）
 			miniAuth.PUT("/notification/read/:id", miniapp.MarkNotificationRead)      // 标记单条已读
 			miniAuth.PUT("/notification/type-read", miniapp.MarkTypeNotificationRead) // 按类型清空未读
 			miniAuth.PUT("/notification/read-all", miniapp.MarkAllNotificationsRead)  // 全部已读

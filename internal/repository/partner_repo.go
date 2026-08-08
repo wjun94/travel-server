@@ -143,6 +143,29 @@ func GetMyPartners(userID string, page, pageSize, isDraft int) ([]model.Partner,
 	return list, total, err
 }
 
+// GetJoinedPartners 我参与的搭子列表（申请已通过且搭子已发布，按发布时间倒序）
+func GetJoinedPartners(userID string, page, pageSize int) ([]model.Partner, int64, error) {
+	var list []model.Partner
+	var total int64
+	query := database.DB.Model(&model.Partner{}).
+		Joins("JOIN partner_applications pa ON pa.partner_id = partners.id").
+		Where("pa.user_id = ? AND pa.status = 1 AND partners.is_draft = 0", userID)
+	query.Count(&total)
+	err := query.Offset((page - 1) * pageSize).Limit(pageSize).
+		Order("partners.created_at desc").Find(&list).Error
+	return list, total, err
+}
+
+// CountJoinedPartners 统计我参与的搭子数（申请已通过且搭子已发布）
+func CountJoinedPartners(userID string) (int64, error) {
+	var count int64
+	err := database.DB.Model(&model.Partner{}).
+		Joins("JOIN partner_applications pa ON pa.partner_id = partners.id").
+		Where("pa.user_id = ? AND pa.status = 1 AND partners.is_draft = 0", userID).
+		Count(&count).Error
+	return count, err
+}
+
 // DeletePartnerCascade 删除搭子（级联删除申请记录）
 func DeletePartnerCascade(id string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
@@ -181,20 +204,19 @@ func AutoCloseExpiredPartners() int64 {
 	return result.RowsAffected
 }
 
-// LikePartner 点赞搭子（幂等）
+// LikePartner 点赞搭子（点赞独立记录在 partner_likes 表，与收藏分离）
 func LikePartner(userID, partnerID string) error {
 	var count int64
-	database.DB.Model(&model.Favorite{}).
-		Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "partner", partnerID).
+	database.DB.Model(&model.PartnerLike{}).
+		Where("user_id = ? AND partner_id = ?", userID, partnerID).
 		Count(&count)
 	if count > 0 {
 		return nil
 	}
 	tx := database.DB.Begin()
-	if err := tx.Create(&model.Favorite{
-		UserID:     userID,
-		TargetType: "partner",
-		TargetID:   partnerID,
+	if err := tx.Create(&model.PartnerLike{
+		UserID:    userID,
+		PartnerID: partnerID,
 	}).Error; err != nil {
 		tx.Rollback()
 		return err
@@ -211,8 +233,8 @@ func LikePartner(userID, partnerID string) error {
 // UnlikePartner 取消点赞搭子
 func UnlikePartner(userID, partnerID string) error {
 	tx := database.DB.Begin()
-	r := tx.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "partner", partnerID).
-		Delete(&model.Favorite{})
+	r := tx.Where("user_id = ? AND partner_id = ?", userID, partnerID).
+		Delete(&model.PartnerLike{})
 	if r.Error != nil {
 		tx.Rollback()
 		return r.Error
@@ -223,11 +245,20 @@ func UnlikePartner(userID, partnerID string) error {
 	}
 	if err := tx.Model(&model.Partner{}).
 		Where("id = ?", partnerID).
-		UpdateColumn("like_count", gorm.Expr("like_count - 1")).Error; err != nil {
+		UpdateColumn("like_count", gorm.Expr("GREATEST(like_count - 1, 0)")).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 	return tx.Commit().Error
+}
+
+// IsPartnerLiked 当前用户是否已点赞该搭子
+func IsPartnerLiked(userID, partnerID string) bool {
+	var count int64
+	database.DB.Model(&model.PartnerLike{}).
+		Where("user_id = ? AND partner_id = ?", userID, partnerID).
+		Count(&count)
+	return count > 0
 }
 
 // GetPartnerCommentCounts 批量查询多个搭子的评论数

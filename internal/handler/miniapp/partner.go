@@ -293,17 +293,25 @@ func GetMyPartners(c *gin.Context) {
 		return
 	}
 
-	type partnerVO struct {
-		model.Partner
-		AuthorID     string `json:"authorId"`     // 作者ID
-		AuthorName   string `json:"authorName"`   // 作者昵称
-		AuthorAvatar string `json:"authorAvatar"` // 作者头像
-		IsApplied    bool   `json:"isApplied"`    // 当前用户是否已申请
-		IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
-		IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
-		ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
-	}
-	result := make([]partnerVO, len(list))
+	result := enrichPartnerList(list, false, true)
+	response.Success(c, gin.H{"list": result, "total": total})
+}
+
+// partnerItemVO 搭子列表项（列表接口共用响应结构）
+type partnerItemVO struct {
+	model.Partner
+	AuthorID     string `json:"authorId"`     // 作者ID
+	AuthorName   string `json:"authorName"`   // 作者昵称
+	AuthorAvatar string `json:"authorAvatar"` // 作者头像
+	IsApplied    bool   `json:"isApplied"`    // 当前用户是否已申请
+	IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
+	IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
+	ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
+}
+
+// enrichPartnerList 富化搭子列表：批量注入作者信息与关联行程项数（列表/我的/参与的共用）
+func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerItemVO {
+	result := make([]partnerItemVO, len(list))
 
 	// 批量查询用户信息
 	userIDs := make([]string, 0, len(list))
@@ -320,13 +328,13 @@ func GetMyPartners(c *gin.Context) {
 			authorName = u.Nickname
 			authorAvatar = u.AvatarURL
 		}
-		result[i] = partnerVO{
+		result[i] = partnerItemVO{
 			Partner:      p,
 			AuthorID:     p.UserID,
 			AuthorName:   authorName,
 			AuthorAvatar: authorAvatar,
-			IsApplied:    false,
-			IsSelf:       true,
+			IsApplied:    isApplied,
+			IsSelf:       isSelf,
 			IsFollowed:   false,
 		}
 	}
@@ -346,7 +354,28 @@ func GetMyPartners(c *gin.Context) {
 			}
 		}
 	}
+	return result
+}
 
+// GetMyJoinedPartners 我参与的搭子列表（申请已通过且搭子已发布）
+// @Summary 我参与的搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,address=string,locationType=int,startDate=string,endDate=string,days=int,tags=string,desc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,status=int,isDraft=int,isPublic=int,viewCount=int,createdAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64},total=int64}}
+// @Router /api/v1/my/joined-partners [get]
+func GetMyJoinedPartners(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	list, total, err := repository.GetJoinedPartners(userID, page, pageSize)
+	if err != nil {
+		response.Fail(c, 500, "获取失败")
+		return
+	}
+	result := enrichPartnerList(list, true, false)
 	response.Success(c, gin.H{"list": result, "total": total})
 }
 
@@ -636,9 +665,9 @@ func GetPartnerDetail(c *gin.Context) {
 		}
 	}
 
-	// 点赞/收藏状态（搭子的点赞和收藏共用 Favorite 表）
-	isLiked := repository.IsFavorited(userID, id, "partner")
-	isFavorited := isLiked
+	// 点赞/收藏状态（点赞记录在 partner_likes 表，收藏记录在 Favorite 表，两者独立）
+	isLiked := repository.IsPartnerLiked(userID, id)
+	isFavorited := repository.IsFavorited(userID, id, "partner")
 
 	// 如果有关联行程，获取行程详情（含日程日表）
 	var tripData interface{}
@@ -864,15 +893,18 @@ func AIGeneratePartner(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
-	// 额度校验：今日基础1次 + 邀请成功奖励，超出拒绝
-	inviteCount, _ := repository.CountTodayInviteSuccess(userID)
-	partnerUsed, _ := repository.CountTodayAIPartners(userID)
-	if int(partnerUsed) >= 1+int(inviteCount) {
-		response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
-		return
+	// 额度校验：管理员不限次数，其他用户今日基础1次 + 邀请成功奖励，超出拒绝
+	user, _ := repository.GetUserByID(userID)
+	if user == nil || user.Role != 2 {
+		inviteCount, _ := repository.CountTodayInviteSuccess(userID)
+		partnerUsed, _ := repository.CountTodayAIPartners(userID)
+		if int(partnerUsed) >= 1+int(inviteCount) {
+			response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
+			return
+		}
 	}
 
-	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days)
+	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, req.Days)
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
@@ -904,6 +936,22 @@ func AIGeneratePartner(c *gin.Context) {
 		FeeExclude      string   `json:"feeExclude"`
 		EstTotal        int      `json:"estTotal"`
 		Tags            []string `json:"tags"`
+		Schedule        []struct {
+			DayNumber int    `json:"dayNumber"`
+			Date      string `json:"date"`
+			Title     string `json:"title"`
+			Items     []struct {
+				SectionType   string `json:"sectionType"`
+				Title         string `json:"title"`
+				Description   string `json:"description"`
+				StartTime     string `json:"startTime"`
+				EndTime       string `json:"endTime"`
+				Address       string `json:"address"`
+				StartPoint    string `json:"startPoint"`
+				EndPoint      string `json:"endPoint"`
+				TransportMode string `json:"transportMode"`
+			} `json:"items"`
+		} `json:"schedule"`
 	}
 	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
 		response.Fail(c, 500, "AI返回格式异常")
@@ -928,8 +976,14 @@ func AIGeneratePartner(c *gin.Context) {
 	if aiResult.MaxMembers <= 0 {
 		aiResult.MaxMembers = 4
 	}
+	if aiResult.MinMembers <= 0 {
+		aiResult.MinMembers = 2
+	}
 	if aiResult.MaxAge <= 0 {
 		aiResult.MaxAge = 99
+	}
+	if aiResult.MinAge <= 0 {
+		aiResult.MinAge = 18
 	}
 	tagsJSON := ""
 	if len(aiResult.Tags) > 0 {
@@ -974,7 +1028,72 @@ func AIGeneratePartner(c *gin.Context) {
 		response.Fail(c, 500, "发布失败")
 		return
 	}
-	response.Success(c, p)
+
+	// 行程安排：AI 生成的 schedule 自动创建关联草稿行程（与手动创建搭子一致）
+	if len(aiResult.Schedule) > 0 {
+		dayList := make([]model.TripDay, 0, len(aiResult.Schedule))
+		for i, d := range aiResult.Schedule {
+			dayNumber := d.DayNumber
+			if dayNumber <= 0 {
+				dayNumber = i + 1
+			}
+			items := make([]model.TripItem, 0, len(d.Items))
+			for _, it := range d.Items {
+				items = append(items, model.TripItem{
+					SectionType:   it.SectionType,
+					Title:         it.Title,
+					Description:   it.Description,
+					StartTime:     it.StartTime,
+					EndTime:       it.EndTime,
+					Address:       it.Address,
+					StartPoint:    it.StartPoint,
+					EndPoint:      it.EndPoint,
+					TransportMode: it.TransportMode,
+				})
+			}
+			dayList = append(dayList, model.TripDay{
+				DayNumber: dayNumber,
+				Date:      d.Date,
+				Title:     d.Title,
+				Items:     items,
+			})
+		}
+		trip := model.Trip{
+			UserID:   userID,
+			Title:    p.Title,
+			Status:   1, // 草稿
+			IsPublic: 0,
+			IsAI:     1, // AI生成
+			Days:     dayList,
+		}
+		if err := repository.CreateTrip(&trip); err == nil {
+			p.TripID = trip.ID
+			_ = repository.UpdatePartner(&p)
+		}
+	}
+
+	// 重新加载关联行程（含每日行程项）
+	var tripDays []model.TripDay
+	if p.TripID != "" {
+		if trip, err := repository.GetTripByID(p.TripID); err == nil {
+			tripDays = trip.Days
+		}
+	}
+
+	// 响应：搭子完整字段 + 行程安排数组（前端 AI 流程依赖 days 数组结构）
+	respData := make(map[string]interface{})
+	if b, err := json.Marshal(p); err == nil {
+		json.Unmarshal(b, &respData)
+	}
+	respData["tripId"] = p.TripID
+	respData["coverImage"] = p.Cover
+	respData["cities"] = []string{p.Destination}
+	respData["dayCount"] = p.Days
+	if tripDays == nil {
+		tripDays = []model.TripDay{}
+	}
+	respData["days"] = tripDays
+	response.Success(c, respData)
 }
 
 // LikePartner 点赞搭子

@@ -7,32 +7,35 @@ import (
 
 // UserProfileStats 用户个人主页统计数据
 type UserProfileStats struct {
-	ID            string `json:"id"`
-	Nickname      string `json:"nickname"`
-	AvatarURL     string `json:"avatarUrl"`
-	GuideCount    int64  `json:"guideCount"`    // 已发布的攻略数
-	TripCount     int64  `json:"tripCount"`     // 行程数
-	PartnerCount  int64  `json:"partnerCount"`  // 搭子数
-	FollowCount   int    `json:"followCount"`   // 关注数
-	FollowerCount int    `json:"followerCount"` // 粉丝数
-	BlockCount    int64  `json:"blockCount"`    // 拉黑数
+	ID                 string `json:"id"`
+	Nickname           string `json:"nickname"`
+	AvatarURL          string `json:"avatarUrl"`
+	Role               int    `json:"role"`               // 0普通 1领队 2管理员
+	GuideCount         int64  `json:"guideCount"`         // 已发布的攻略数
+	TripCount          int64  `json:"tripCount"`          // 行程数
+	PartnerCount       int64  `json:"partnerCount"`       // 搭子数（发布的）
+	JoinedPartnerCount int64  `json:"joinedPartnerCount"` // 我参与的搭子数
+	FollowCount        int    `json:"followCount"`        // 关注数
+	FollowerCount      int    `json:"followerCount"`      // 粉丝数
+	BlockCount         int64  `json:"blockCount"`         // 拉黑数
 }
 
 // UserPublicProfile 他人个人主页（含获赞收藏和关注状态）
 type UserPublicProfile struct {
-	ID            string `json:"id"`
-	Nickname      string `json:"nickname"`
-	AvatarURL     string `json:"avatarUrl"`
-	GuideCount    int64  `json:"guideCount"`    // 已发布的攻略数
-	TripCount     int64  `json:"tripCount"`     // 行程数
-	PartnerCount  int64  `json:"partnerCount"`  // 搭子数
-	FollowCount   int    `json:"followCount"`   // 关注数
-	FollowerCount int    `json:"followerCount"` // 粉丝数
-	TotalLikes    int64  `json:"totalLikes"`    // 总获赞数
-	TotalFavs     int64  `json:"totalFavs"`     // 总收藏数
-	IsFollowed    bool   `json:"isFollowed"`    // 我是否已关注
-	IsBlocked     bool   `json:"isBlocked"`     // 我是否已拉黑对方
-	IsSelf        bool   `json:"isSelf"`        // 是否是自己
+	ID                 string `json:"id"`
+	Nickname           string `json:"nickname"`
+	AvatarURL          string `json:"avatarUrl"`
+	GuideCount         int64  `json:"guideCount"`         // 已发布的攻略数
+	TripCount          int64  `json:"tripCount"`          // 行程数
+	PartnerCount       int64  `json:"partnerCount"`       // 搭子数（发布的）
+	JoinedPartnerCount int64  `json:"joinedPartnerCount"` // 我参与的搭子数
+	FollowCount        int    `json:"followCount"`        // 关注数
+	FollowerCount      int    `json:"followerCount"`      // 粉丝数
+	TotalLikes         int64  `json:"totalLikes"`         // 总获赞数
+	TotalFavs          int64  `json:"totalFavs"`          // 总收藏数
+	IsFollowed         bool   `json:"isFollowed"`         // 我是否已关注
+	IsBlocked          bool   `json:"isBlocked"`          // 我是否已拉黑对方
+	IsSelf             bool   `json:"isSelf"`             // 是否是自己
 }
 
 // GetUserProfileStats 获取用户主页统计
@@ -51,19 +54,23 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 	var partnerCount int64
 	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&partnerCount)
 
+	joinedPartnerCount, _ := CountJoinedPartners(userID)
+
 	var blockCount int64
 	database.DB.Model(&model.Follow{}).Where("user_id = ? AND status = 1", userID).Count(&blockCount)
 
 	return &UserProfileStats{
-		ID:            user.ID,
-		Nickname:      user.Nickname,
-		AvatarURL:     user.AvatarURL,
-		GuideCount:    guideCount,
-		TripCount:     tripCount,
-		PartnerCount:  partnerCount,
-		FollowCount:   user.FollowCount,
-		FollowerCount: user.FollowerCount,
-		BlockCount:    blockCount,
+		ID:                 user.ID,
+		Nickname:           user.Nickname,
+		AvatarURL:          user.AvatarURL,
+		Role:               user.Role,
+		GuideCount:         guideCount,
+		TripCount:          tripCount,
+		PartnerCount:       partnerCount,
+		JoinedPartnerCount: joinedPartnerCount,
+		FollowCount:        user.FollowCount,
+		FollowerCount:      user.FollowerCount,
+		BlockCount:         blockCount,
 	}, nil
 }
 
@@ -93,6 +100,8 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 	var partnerCount int64
 	database.DB.Model(&model.Partner{}).Where("user_id = ?", userID).Count(&partnerCount)
 
+	joinedPartnerCount, _ := CountJoinedPartners(userID)
+
 	// 获赞总数（用户所有已发布攻略的点赞数之和）
 	var totalLikes int64
 	database.DB.Model(&model.Guide{}).
@@ -119,19 +128,20 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 		Count(&blockedCount)
 
 	return &UserPublicProfile{
-		ID:            user.ID,
-		Nickname:      user.Nickname,
-		AvatarURL:     user.AvatarURL,
-		GuideCount:    guideCount,
-		TripCount:     tripCount,
-		PartnerCount:  partnerCount,
-		FollowCount:   user.FollowCount,
-		FollowerCount: user.FollowerCount,
-		TotalLikes:    totalLikes,
-		TotalFavs:     totalFavs,
-		IsFollowed:    isFollowed,
-		IsBlocked:     blockedCount > 0,
-		IsSelf:        userID == currentUserID,
+		ID:                 user.ID,
+		Nickname:           user.Nickname,
+		AvatarURL:          user.AvatarURL,
+		GuideCount:         guideCount,
+		TripCount:          tripCount,
+		PartnerCount:       partnerCount,
+		JoinedPartnerCount: joinedPartnerCount,
+		FollowCount:        user.FollowCount,
+		FollowerCount:      user.FollowerCount,
+		TotalLikes:         totalLikes,
+		TotalFavs:          totalFavs,
+		IsFollowed:         isFollowed,
+		IsBlocked:          blockedCount > 0,
+		IsSelf:             userID == currentUserID,
 	}, nil
 }
 

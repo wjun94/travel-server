@@ -17,6 +17,24 @@ import (
 func GetAiQuota(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
+	// 管理员不限次数
+	user, _ := repository.GetUserByID(userID)
+	if user != nil && user.Role == 2 {
+		response.Success(c, gin.H{
+			"trip": gin.H{
+				"used":   0,
+				"total":  999,
+				"remain": 999,
+			},
+			"partner": gin.H{
+				"used":   0,
+				"total":  999,
+				"remain": 999,
+			},
+		})
+		return
+	}
+
 	// 今日邀请成功奖励次数
 	inviteCount, _ := repository.CountTodayInviteSuccess(userID)
 	bonus := int(inviteCount)

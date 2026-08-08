@@ -33,12 +33,15 @@ func AIGenerateTrip(c *gin.Context) {
 	}
 	uid := c.MustGet("userID").(string)
 
-	// 额度校验：今日基础1次 + 邀请成功奖励，超出拒绝
-	inviteCount, _ := repository.CountTodayInviteSuccess(uid)
-	tripUsed, _ := repository.CountTodayAITrips(uid)
-	if int(tripUsed) >= 1+int(inviteCount) {
-		response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
-		return
+	// 额度校验：管理员不限次数，其他用户今日基础1次 + 邀请成功奖励，超出拒绝
+	user, _ := repository.GetUserByID(uid)
+	if user == nil || user.Role != 2 {
+		inviteCount, _ := repository.CountTodayInviteSuccess(uid)
+		tripUsed, _ := repository.CountTodayAITrips(uid)
+		if int(tripUsed) >= 1+int(inviteCount) {
+			response.Fail(c, 400, "今日AI生成次数已用完，邀请好友可额外获得次数")
+			return
+		}
 	}
 
 	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days)

@@ -353,7 +353,14 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 	tripQuery.Count(&tripTotal)
 	tripQuery.Order("created_at desc").Find(&trips)
 
-	total := guideTotal + tripTotal
+	// 3. 查询已发布的公开搭子
+	var partners []model.Partner
+	var partnerTotal int64
+	partnerQuery := database.DB.Model(&model.Partner{}).Where("user_id = ? AND is_draft = 0 AND is_public = 1", userID)
+	partnerQuery.Count(&partnerTotal)
+	partnerQuery.Order("created_at desc").Find(&partners)
+
+	total := guideTotal + tripTotal + partnerTotal
 
 	// 批量查询攻略的天数和行程项统计
 	guideIDs := make([]string, len(guides))
@@ -433,8 +440,8 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 		tripSecMap[s.TripID] = s.Count
 	}
 
-	// 3. 合并为 FeedItem 切片
-	allItems := make([]model.FeedItem, 0, len(guides)+len(trips))
+	// 4. 合并为 FeedItem 切片（攻略+行程+搭子）
+	allItems := make([]model.FeedItem, 0, len(guides)+len(trips)+len(partners))
 	for _, g := range guides {
 		allItems = append(allItems, model.FeedItem{
 			ID:           g.ID,
@@ -469,13 +476,28 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 			CreatedAt:    t.CreatedAt,
 		})
 	}
+	for _, p := range partners {
+		allItems = append(allItems, model.FeedItem{
+			ID:           p.ID,
+			UserID:       p.UserID,
+			Title:        p.Title,
+			CoverImage:   p.Cover,
+			Destinations: []string{p.Destination},
+			Summary:      p.Desc,
+			ItemType:     "partner",
+			ViewCount:    p.ViewCount,
+			LikeCount:    p.LikeCount,
+			TripDays:     p.Days,
+			CreatedAt:    p.CreatedAt,
+		})
+	}
 
-	// 4. 按时间倒序排序
+	// 5. 按时间倒序排序
 	sort.Slice(allItems, func(i, j int) bool {
 		return allItems[i].CreatedAt.After(allItems[j].CreatedAt)
 	})
 
-	// 5. 手动分页
+	// 6. 手动分页
 	offset := (page - 1) * pageSize
 	if offset > len(allItems) {
 		return []model.FeedItem{}, total, nil
