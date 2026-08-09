@@ -32,7 +32,7 @@ func FollowUser(c *gin.Context) {
 			FromUserID: followerID,
 			Type:       3,
 			RelatedID:  followerID,
-			Content:    "有人关注了你",
+			Content:    "关注了你",
 		}); err != nil {
 			// 通知创建失败不影响主流程
 			log.Printf("创建关注通知失败: %v", err)
