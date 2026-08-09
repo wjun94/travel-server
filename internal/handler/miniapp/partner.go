@@ -637,6 +637,11 @@ func GetPartnerDetail(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
+	// 增加浏览量（非作者）
+	if partner.UserID != userID {
+		_ = repository.IncrementPartnerViewCount(id)
+	}
+
 	// 作者信息
 	author, _ := repository.GetUserByID(partner.UserID)
 	authorName := ""

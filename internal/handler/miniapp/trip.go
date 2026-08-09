@@ -194,6 +194,11 @@ func GetTrip(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
+	// 增加浏览量（非作者）
+	if trip.UserID != userID {
+		_ = repository.IncrementTripViewCount(id)
+	}
+
 	// 作者信息
 	author, _ := repository.GetUserByID(trip.UserID)
 	authorName := ""

@@ -261,6 +261,12 @@ func IsPartnerLiked(userID, partnerID string) bool {
 	return count > 0
 }
 
+// IncrementPartnerViewCount 增加搭子浏览量
+func IncrementPartnerViewCount(id string) error {
+	return database.DB.Model(&model.Partner{}).Where("id = ?", id).
+		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
+}
+
 // GetPartnerCommentCounts 批量查询多个搭子的评论数
 func GetPartnerCommentCounts(partnerIDs []string) map[string]int64 {
 	if len(partnerIDs) == 0 {

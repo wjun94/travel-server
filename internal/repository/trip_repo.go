@@ -262,3 +262,9 @@ func GetTripItemCounts(tripIDs []string) map[string]int64 {
 	}
 	return m
 }
+
+// IncrementTripViewCount 增加行程浏览量
+func IncrementTripViewCount(id string) error {
+	return database.DB.Model(&model.Trip{}).Where("id = ?", id).
+		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
+}
