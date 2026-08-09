@@ -29,7 +29,7 @@ func GetPartnerList(page, pageSize int, keyword string) ([]model.Partner, int64,
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	query := database.DB.Model(&model.Partner{})
+	query := database.DB.Model(&model.Partner{}).Where("status != ?", 4) // 排除后台已下架
 	if keyword != "" {
 		kw := "%" + keyword + "%"
 		query = query.Where("title LIKE ? OR destination LIKE ? OR `desc` LIKE ? OR tags LIKE ?", kw, kw, kw, kw)
@@ -66,6 +66,11 @@ func GetApplicationByID(id string) (*model.PartnerApplication, error) {
 // UpdateApplicationStatus 修改申请状态
 func UpdateApplicationStatus(id string, status int) error {
 	return database.DB.Model(&model.PartnerApplication{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// UpdatePartnerStatus 修改搭子状态（后台审核：0恢复招募 1满员 2已取消 3已过期 4已下架）
+func UpdatePartnerStatus(id string, status int) error {
+	return database.DB.Model(&model.Partner{}).Where("id = ?", id).Update("status", status).Error
 }
 
 // RejectApplication 拒绝申请并保存拒绝理由
@@ -105,12 +110,15 @@ func GetUserAppliedPartnerIDs(userID string, partnerIDs []string) (map[string]bo
 	return result, nil
 }
 
-// GetPartners 获取官方搭子列表（分页，支持目的地/状态筛选）
-func GetPartners(page, pageSize int, destination string, status int) ([]model.Partner, int64, error) {
+// GetPartners 搭子列表（分页，支持目的地/状态/类型筛选；type -1 全部 0用户 1官方）
+func GetPartners(page, pageSize int, destination string, status int, ptype int) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	query := database.DB.Model(&model.Partner{}).Where("type = ?", 1)
+	query := database.DB.Model(&model.Partner{})
+	if ptype >= 0 {
+		query = query.Where("type = ?", ptype)
+	}
 	if destination != "" {
 		query = query.Where("destination LIKE ?", "%"+destination+"%")
 	}

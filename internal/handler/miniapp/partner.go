@@ -637,6 +637,12 @@ func GetPartnerDetail(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
+	// 后台已下架的内容不可访问（作者本人可见）
+	if partner.Status == 4 && partner.UserID != userID {
+		response.Fail(c, 404, "搭子已下架")
+		return
+	}
+
 	// 增加浏览量（非作者）
 	if partner.UserID != userID {
 		_ = repository.IncrementPartnerViewCount(id)

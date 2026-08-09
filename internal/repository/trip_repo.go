@@ -263,6 +263,30 @@ func GetTripItemCounts(tripIDs []string) map[string]int64 {
 	return m
 }
 
+// UpdateTripStatus 审核行程（修改状态）
+func UpdateTripStatus(id string, status int) error {
+	return database.DB.Model(&model.Trip{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// ListAllTrips 后台行程列表（全部用户，支持状态/关键词筛选）
+func ListAllTrips(page, pageSize, status int, keyword string) ([]model.Trip, int64, error) {
+	var trips []model.Trip
+	var total int64
+	offset := (page - 1) * pageSize
+	query := database.DB.Model(&model.Trip{})
+	if status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+	if keyword != "" {
+		query = query.Where("title LIKE ? OR destinations LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&trips).Error
+	return trips, total, err
+}
+
 // IncrementTripViewCount 增加行程浏览量
 func IncrementTripViewCount(id string) error {
 	return database.DB.Model(&model.Trip{}).Where("id = ?", id).

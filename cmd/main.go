@@ -251,10 +251,18 @@ func main() {
 			// ---------- 攻略内容 ----------
 			adminGroup.GET("/guides", admin.ListGuides)                  // 攻略列表
 			adminGroup.PUT("/guide/:id/status", admin.UpdateGuideStatus) // 更新攻略状态
+			adminGroup.GET("/guide/:id", admin.GetGuideDetail)           // 攻略详情
 
-			// ---------- 官方搭子 ----------
-			adminGroup.POST("/partner", admin.CreatePartner) // 创建官方搭子
-			adminGroup.GET("/partners", admin.ListPartners)  // 官方搭子列表
+			// ---------- 行程审核 ----------
+			adminGroup.GET("/trips", admin.ListTrips)                  // 行程列表
+			adminGroup.PUT("/trip/:id/status", admin.UpdateTripStatus) // 审核行程（发布/下架/归档）
+			adminGroup.GET("/trip/:id", admin.GetTripDetail)           // 行程详情
+
+			// ---------- 搭子管理 ----------
+			adminGroup.POST("/partner", admin.CreatePartner)                 // 创建官方搭子
+			adminGroup.GET("/partners", admin.ListPartners)                  // 搭子列表
+			adminGroup.PUT("/partner/:id/status", admin.UpdatePartnerStatus) // 审核搭子（下架/恢复）
+			adminGroup.GET("/partner/:id", admin.GetPartnerDetail)           // 搭子详情
 
 			// ---------- 推荐内容 ----------
 			adminGroup.POST("/recommendation", admin.SaveRecommendation)   // 保存推荐

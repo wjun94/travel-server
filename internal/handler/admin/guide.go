@@ -58,3 +58,34 @@ func UpdateGuideStatus(c *gin.Context) {
 	}
 	response.Success(c, nil)
 }
+
+// GetGuideDetail 攻略详情（含每日行程、作者信息与统计）
+// @Summary 攻略详情
+// @Security BearerAuth
+// @Tags 后台-内容
+// @Param id path string true "攻略ID"
+// @Success 200 {object} response.Response{data=object{guide=model.Guide,days=[]model.GuideSection,favoriteCount=int,commentCount=int,authorName=string,authorAvatar=string}}
+// @Router /api/v1/admin/guide/{id} [get]
+func GetGuideDetail(c *gin.Context) {
+	id := c.Param("id")
+	guide, err := repository.GetGuideByID(id)
+	if err != nil {
+		response.Fail(c, 404, "攻略不存在")
+		return
+	}
+	days, _ := repository.GetDaysByGuideID(id)
+	// 作者信息与统计
+	authorName, authorAvatar := "", ""
+	if author, err := repository.GetUserByID(guide.UserID); err == nil && author != nil {
+		authorName = author.Nickname
+		authorAvatar = author.AvatarURL
+	}
+	response.Success(c, gin.H{
+		"guide":         guide,
+		"days":          days,
+		"favoriteCount": repository.GetGuideFavoriteCount(id),
+		"commentCount":  repository.GetGuideCommentCount(id),
+		"authorName":    authorName,
+		"authorAvatar":  authorAvatar,
+	})
+}
