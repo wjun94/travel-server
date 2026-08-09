@@ -3,7 +3,7 @@ package admin
 import (
 	"strconv"
 
-	_ "travel-server/internal/model" // swagger 类型引用需要
+	"travel-server/internal/model"
 	"travel-server/internal/repository"
 	"travel-server/pkg/response"
 
@@ -74,6 +74,9 @@ func GetGuideDetail(c *gin.Context) {
 		return
 	}
 	days, _ := repository.GetDaysByGuideID(id)
+	if days == nil {
+		days = []model.GuideSection{}
+	}
 	// 作者信息与统计
 	authorName, authorAvatar := "", ""
 	if author, err := repository.GetUserByID(guide.UserID); err == nil && author != nil {

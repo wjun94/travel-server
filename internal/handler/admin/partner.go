@@ -166,6 +166,9 @@ func GetPartnerDetail(c *gin.Context) {
 			days = trip.Days
 		}
 	}
+	if days == nil {
+		days = []model.TripDay{}
+	}
 	// 作者信息
 	authorName, authorAvatar := "", ""
 	if author, err := repository.GetUserByID(partner.UserID); err == nil && author != nil {
