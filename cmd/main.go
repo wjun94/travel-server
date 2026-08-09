@@ -129,7 +129,8 @@ func main() {
 			miniAuth.DELETE("/partner/:id", miniapp.DeletePartner)              // 删除搭子（仅作者）
 			miniAuth.POST("/partner/:id/apply", miniapp.ApplyPartner)           // 申请加入
 			miniAuth.PUT("/partner/:id/application", miniapp.HandleApplication) // 处理申请
-			miniAuth.PUT("/partner/:id/cancel", miniapp.CancelPartner)          // 取消搭子
+			miniAuth.PUT("/partner/:id/cancel", miniapp.CancelPartner)          // 解散搭子（发起人）
+			miniAuth.PUT("/partner/:id/leave", miniapp.LeavePartner)            // 退出搭子（成员）
 			miniAuth.POST("/partner/:id/like", miniapp.LikePartner)             // 点赞搭子
 			miniAuth.DELETE("/partner/:id/like", miniapp.UnlikePartner)         // 取消点赞搭子
 

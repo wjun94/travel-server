@@ -121,21 +121,22 @@ func GetNotificationList(c *gin.Context) {
 // @Summary 未读通知数量
 // @Security BearerAuth
 // @Tags 小程序-通知
-// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,commentCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64}}
+// @Success 200 {object} response.Response{data=object{partnerApplyCount=int64,commentCount=int64,likeCount=int64,followCount=int64,systemNotifyCount=int64,partnerDynamicCount=int64}}
 // @Router /api/v1/notification/unread [get]
 func GetUnreadNotificationCounts(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
-	partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, err := repository.GetUnreadCounts(userID)
+	partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, partnerDynamicCount, err := repository.GetUnreadCounts(userID)
 	if err != nil {
 		response.Fail(c, 500, "获取失败")
 		return
 	}
 	response.Success(c, gin.H{
-		"partnerApplyCount": partnerApplyCount,
-		"commentCount":      commentCount,
-		"likeCount":         likeCount,
-		"followCount":       followCount,
-		"systemNotifyCount": systemNotifyCount,
+		"partnerApplyCount":   partnerApplyCount,
+		"commentCount":        commentCount,
+		"likeCount":           likeCount,
+		"followCount":         followCount,
+		"systemNotifyCount":   systemNotifyCount,
+		"partnerDynamicCount": partnerDynamicCount,
 	})
 }
 
@@ -158,6 +159,7 @@ type notificationItemVO struct {
 	TargetType     string      `json:"targetType"`               // 跳转目标类型：guide/trip/partner/user
 	IsRead         int         `json:"isRead"`                   // 0未读 1已读
 	Content        string      `json:"content"`                  // 通知摘要文字
+	CancelReason   string      `json:"cancelReason,omitempty"`   // type=6 解散通知的解散原因（可空）
 	Title          string      `json:"title"`                    // 标题（type=4 系统通知）
 	LinkURL        string      `json:"linkUrl"`                  // 跳转链接（type=4 系统通知，可空）
 	CreatedAt      string      `json:"createdAt"`                // 创建时间（ISO8601）
@@ -194,6 +196,8 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 		case 3:
 			// RelatedID 即关注者ID，加入用户查询集合
 			fromIDs[n.RelatedID] = struct{}{}
+		case 6:
+			// 搭子动态 → 跳转搭子详情（RelatedID 即搭子ID），无需额外查询
 		}
 	}
 
@@ -363,6 +367,9 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 				targetID = ci.TargetID
 				targetType = ci.TargetType
 			}
+		case 6:
+			// 搭子动态（解散/退出/补位）→ 跳转到搭子详情页
+			targetType = "partner"
 		}
 
 		cc := ""
@@ -394,6 +401,7 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			TargetType:     targetType,
 			IsRead:         n.IsRead,
 			Content:        n.Content,
+			CancelReason:   n.CancelReason,
 			Title:          n.Title,
 			LinkURL:        n.LinkURL,
 			CreatedAt:      n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),

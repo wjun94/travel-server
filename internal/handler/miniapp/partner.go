@@ -739,6 +739,7 @@ func GetPartnerDetail(c *gin.Context) {
 		"allowCollect":    partner.AllowCollect,
 		"isDraft":         partner.IsDraft,
 		"status":          partner.Status,
+		"cancelReason":    partner.CancelReason,
 		"isPublic":        partner.IsPublic,
 		"viewCount":       partner.ViewCount,
 		"likeCount":       partner.LikeCount,
@@ -776,6 +777,16 @@ func ApplyPartner(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 校验搭子状态：仅招募中可申请（满员仍可申请作为候补）
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	if partner.Status != 0 {
+		response.Fail(c, 400, "搭子已结束招募，无法申请")
+		return
+	}
 	app := model.PartnerApplication{
 		PartnerID: id,
 		UserID:    c.MustGet("userID").(string),
@@ -786,7 +797,6 @@ func ApplyPartner(c *gin.Context) {
 		return
 	}
 	// 通知搭子发起人
-	partner, _ := repository.GetPartnerByID(id)
 	if partner != nil && partner.UserID != app.UserID {
 		if err := repository.CreateNotification(&model.Notification{
 			UserID:     partner.UserID,
@@ -860,16 +870,22 @@ func HandleApplication(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// CancelPartner 发起人取消搭子
-// @Summary 取消搭子
+// CancelPartner 发起人解散搭子（可选填写解散原因，自动通知所有已加入成员）
+// @Summary 解散搭子
 // @Security BearerAuth
 // @Tags 小程序-搭子
 // @Param id path string true "搭子ID"
+// @Param body body object{reason=string} false "解散原因（可选）"
 // @Success 200 {object} response.Response
 // @Router /api/v1/partner/{id}/cancel [put]
 func CancelPartner(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.MustGet("userID").(string)
+
+	var req struct {
+		Reason string `json:"reason"` // 解散原因（可选）
+	}
+	_ = c.ShouldBindJSON(&req)
 
 	// 验证是否为发起人
 	partner, err := repository.GetPartnerByID(id)
@@ -878,17 +894,109 @@ func CancelPartner(c *gin.Context) {
 		return
 	}
 	if partner.UserID != userID {
-		response.Fail(c, 403, "仅发起人可取消搭子")
+		response.Fail(c, 403, "仅发起人可解散搭子")
 		return
 	}
-	if partner.Status != 0 {
-		response.Fail(c, 400, "当前状态不可取消")
+	if partner.Status != 0 && partner.Status != 1 {
+		response.Fail(c, 400, "当前状态不可解散")
 		return
 	}
 
-	if err := repository.CancelPartner(id, userID); err != nil {
-		response.Fail(c, 500, "取消失败")
+	if err := repository.CancelPartner(id, userID, req.Reason); err != nil {
+		response.Fail(c, 500, "解散失败")
 		return
+	}
+
+	// 通知所有已加入成员（解散原因单独存 cancelReason 字段返回）
+	content := fmt.Sprintf("您加入的搭子「%s」已解散", partner.Title)
+	memberIDs, _ := repository.GetPartnerMemberIDs(id)
+	for _, mid := range memberIDs {
+		if mid == userID {
+			continue
+		}
+		if err := repository.CreateNotification(&model.Notification{
+			UserID:       mid,
+			FromUserID:   userID,
+			Type:         6,
+			RelatedID:    id,
+			Content:      content,
+			CancelReason: req.Reason,
+		}); err != nil {
+			log.Printf("解散搭子通知失败: %v", err)
+		}
+	}
+	response.Success(c, nil)
+}
+
+// LeavePartner 成员退出搭子（发起人不可退出，只能解散；满员时名额自动补位候补）
+// @Summary 退出搭子
+// @Security BearerAuth
+// @Tags 小程序-搭子
+// @Param id path string true "搭子ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/partner/{id}/leave [put]
+func LeavePartner(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+
+	partner, err := repository.GetPartnerByID(id)
+	if err != nil {
+		response.Fail(c, 404, "搭子不存在")
+		return
+	}
+	if partner.UserID == userID {
+		response.Fail(c, 400, "发起人不能退出，只能解散搭子")
+		return
+	}
+	if partner.Status != 0 && partner.Status != 1 {
+		response.Fail(c, 400, "当前状态不可退出")
+		return
+	}
+	// 已开始（出发日期已过）不可退出
+	if partner.StartDate != nil && partner.StartDate.Before(time.Now()) {
+		response.Fail(c, 400, "行程已开始，无法退出")
+		return
+	}
+	// 校验已加入
+	if _, err := repository.GetApplicationByPartnerAndUser(id, userID); err != nil {
+		response.Fail(c, 400, "您尚未加入该搭子")
+		return
+	}
+
+	// 满员（状态满员或人数已达上限）时退出 → 名额释放，自动补位最早的候补（补位成功会通知候补用户）
+	wasFull := partner.Status == 1 || (partner.MaxMembers > 0 && partner.CurrentMembers >= partner.MaxMembers)
+	if err := repository.LeavePartner(id, userID); err != nil {
+		response.Fail(c, 500, "退出失败")
+		return
+	}
+
+	// 满员时退出 → 名额释放，自动补位最早的候补（补位成功会通知候补用户）
+	if wasFull {
+		if app, err := repository.GetEarliestPendingApplication(id); err == nil {
+			if err := service.ApproveApplication(app.ID); err != nil {
+				log.Printf("退出后自动补位失败: %v", err)
+			}
+		}
+		// 补位后若再次满员，恢复满员状态
+		if after, err := repository.GetPartnerByID(id); err == nil && after.CurrentMembers >= after.MaxMembers {
+			_ = repository.UpdatePartnerStatus(id, 1)
+		}
+	}
+
+	// 通知发起人
+	user, _ := repository.GetUserByID(userID)
+	nickname := "该用户"
+	if user != nil && user.Nickname != "" {
+		nickname = user.Nickname
+	}
+	if err := repository.CreateNotification(&model.Notification{
+		UserID:     partner.UserID,
+		FromUserID: userID,
+		Type:       6,
+		RelatedID:  id,
+		Content:    fmt.Sprintf("成员「%s」退出了您创建的搭子「%s」", nickname, partner.Title),
+	}); err != nil {
+		log.Printf("退出搭子通知失败: %v", err)
 	}
 	response.Success(c, nil)
 }

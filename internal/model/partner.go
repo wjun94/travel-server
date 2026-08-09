@@ -53,13 +53,14 @@ type Partner struct {
 	FeeExclude      string  `gorm:"type:text" json:"feeExclude"`    // 费用不含
 	EstTotal        int     `json:"estTotal"`                       // 预估总价
 	// 隐私管控
-	Visibility   int `gorm:"default:0" json:"visibility"`   // 0全部可见 1同城可见 2好友可见
-	JoinMode     int `gorm:"default:0" json:"joinMode"`     // 0需审核 1直接加入
-	AutoClose    int `gorm:"default:1" json:"autoClose"`    // 满员自动关闭：0否 1是
-	AllowShare   int `gorm:"default:1" json:"allowShare"`   // 允许转发：0否 1是
-	AllowCollect int `gorm:"default:1" json:"allowCollect"` // 允许收藏：0否 1是
-	IsDraft      int `gorm:"default:0" json:"isDraft"`      // 0已发布 1草稿
-	IsAI         int `gorm:"default:0" json:"isAI"`         // 是否AI生成：0手动 1AI
+	Visibility   int    `gorm:"default:0" json:"visibility"`   // 0全部可见 1同城可见 2好友可见
+	CancelReason string `gorm:"size:500" json:"cancelReason"`  // 解散原因（发起人解散时填写，可空）
+	JoinMode     int    `gorm:"default:0" json:"joinMode"`     // 0需审核 1直接加入
+	AutoClose    int    `gorm:"default:1" json:"autoClose"`    // 满员自动关闭：0否 1是
+	AllowShare   int    `gorm:"default:1" json:"allowShare"`   // 允许转发：0否 1是
+	AllowCollect int    `gorm:"default:1" json:"allowCollect"` // 允许收藏：0否 1是
+	IsDraft      int    `gorm:"default:0" json:"isDraft"`      // 0已发布 1草稿
+	IsAI         int    `gorm:"default:0" json:"isAI"`         // 是否AI生成：0手动 1AI
 	// 状态
 	Status   int `gorm:"default:0;index" json:"status"` // 0招募中 1满员 2取消 3已过期 4行程结束
 	IsPublic int `gorm:"default:1" json:"isPublic"`     // 0仅自己可见 1公开招募

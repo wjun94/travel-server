@@ -25,11 +25,12 @@ func CountTodayAIPartners(userID string) (int64, error) {
 }
 
 // GetPartnerList 分页获取搭子列表，支持关键词搜索（标题/目的地/简述/标签）
+// 只返回可申请加入的搭子（0招募中/1满员可候补），已解散/已过期/已下架不可见
 func GetPartnerList(page, pageSize int, keyword string) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
-	query := database.DB.Model(&model.Partner{}).Where("status != ?", 4) // 排除后台已下架
+	query := database.DB.Model(&model.Partner{}).Where("status IN (0, 1)") // 可申请加入：招募中/满员（满员可申请候补）
 	if keyword != "" {
 		kw := "%" + keyword + "%"
 		query = query.Where("title LIKE ? OR destination LIKE ? OR `desc` LIKE ? OR tags LIKE ?", kw, kw, kw, kw)
@@ -184,22 +185,67 @@ func DeletePartnerCascade(id string) error {
 	})
 }
 
-// CancelPartner 发起人主动取消搭子（状态置为2），并拒绝所有待审核申请
-func CancelPartner(id, userID string) error {
-	tx := database.DB.Begin()
-	// 拒绝待审核申请
-	tx.Model(&model.PartnerApplication{}).
-		Where("partner_id = ? AND status = 0", id).
-		Update("status", 2)
-	// 更新搭子状态
-	err := tx.Model(&model.Partner{}).
-		Where("id = ? AND user_id = ?", id, userID).
-		Update("status", 2).Error
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit().Error
+// CancelPartner 发起人解散搭子（状态置为2，保存解散原因），并拒绝所有待审核申请
+func CancelPartner(id, userID, reason string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 拒绝待审核申请
+		if err := tx.Model(&model.PartnerApplication{}).
+			Where("partner_id = ? AND status = 0", id).
+			Update("status", 2).Error; err != nil {
+			return err
+		}
+		// 更新搭子状态 + 解散原因
+		return tx.Model(&model.Partner{}).
+			Where("id = ? AND user_id = ?", id, userID).
+			Updates(map[string]interface{}{"status": 2, "cancel_reason": reason}).Error
+	})
+}
+
+// GetPartnerMemberIDs 获取搭子已加入成员（申请已通过）的用户ID列表
+func GetPartnerMemberIDs(partnerID string) ([]string, error) {
+	var ids []string
+	err := database.DB.Model(&model.PartnerApplication{}).
+		Where("partner_id = ? AND status = 1", partnerID).
+		Pluck("user_id", &ids).Error
+	return ids, err
+}
+
+// GetEarliestPendingApplication 获取搭子最早的待审核申请
+func GetEarliestPendingApplication(partnerID string) (*model.PartnerApplication, error) {
+	var app model.PartnerApplication
+	err := database.DB.Where("partner_id = ? AND status = 0", partnerID).
+		Order("created_at asc").First(&app).Error
+	return &app, err
+}
+
+// GetApplicationByPartnerAndUser 获取用户在该搭子的已通过申请（判断是否已加入）
+func GetApplicationByPartnerAndUser(partnerID, userID string) (*model.PartnerApplication, error) {
+	var app model.PartnerApplication
+	err := database.DB.Where("partner_id = ? AND user_id = ? AND status = 1", partnerID, userID).
+		First(&app).Error
+	return &app, err
+}
+
+// LeavePartner 成员退出搭子（申请置为3主动退出，人数减一；原满员则恢复招募中）
+func LeavePartner(partnerID, userID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 申请状态置为主动退出
+		if err := tx.Model(&model.PartnerApplication{}).
+			Where("partner_id = ? AND user_id = ? AND status = 1", partnerID, userID).
+			Update("status", 3).Error; err != nil {
+			return err
+		}
+		// 已通过人数减一
+		if err := tx.Model(&model.Partner{}).
+			Where("id = ? AND current_members > 0", partnerID).
+			UpdateColumn("current_members", gorm.Expr("current_members - 1")).Error; err != nil {
+			return err
+		}
+		// 满员状态下有人退出 → 恢复招募中（有候补时由调用方自动补位）
+		return tx.Model(&model.Partner{}).
+			Where("id = ? AND status = 1 AND current_members < max_members", partnerID).
+			Update("status", 0).Error
+	})
 }
 
 // AutoCloseExpiredPartners 系统自动关闭过期未满员搭子（状态置为3），返回受影响条数

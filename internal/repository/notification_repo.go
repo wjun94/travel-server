@@ -27,7 +27,10 @@ func ListNotifications(userID string, notiType, page, pageSize int) ([]model.Not
 	var total int64
 	offset := (page - 1) * pageSize
 	query := database.DB.Model(&model.Notification{}).Where("user_id = ?", userID)
-	if notiType > 0 {
+	if notiType == 1 {
+		// 搭子申请分类包含搭子动态（type=6 解散/退出/补位）
+		query = query.Where("type IN (1, 6)")
+	} else if notiType > 0 {
 		query = query.Where("type = ?", notiType)
 	}
 	query.Count(&total)
@@ -57,9 +60,15 @@ func MarkAllNotificationsRead(userID string) error {
 
 // MarkTypeNotificationsRead 标记当前用户指定类型的所有通知为已读（点击tab清空未读数）
 func MarkTypeNotificationsRead(userID string, notiType int) error {
-	return database.DB.Model(&model.Notification{}).
-		Where("user_id = ? AND type = ? AND is_read = 0", userID, notiType).
-		Update("is_read", 1).Error
+	q := database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND is_read = 0", userID)
+	if notiType == 1 {
+		// 搭子申请分类包含搭子动态（type=6 解散/退出/补位）
+		q = q.Where("type IN (1, 6)")
+	} else {
+		q = q.Where("type = ?", notiType)
+	}
+	return q.Update("is_read", 1).Error
 }
 
 // DeleteSystemNotifications 清空当前用户的全部系统通知（type=4）
@@ -69,10 +78,10 @@ func DeleteSystemNotifications(userID string) error {
 }
 
 // GetUnreadCounts 获取当前用户各类未读通知的数量（统一按 Notification 表统计）
-func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount int64, err error) {
-	// 1. 搭子申请通知
+func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, commentCount, systemNotifyCount, partnerDynamicCount int64, err error) {
+	// 1. 搭子申请通知（含搭子动态 type=6）
 	database.DB.Model(&model.Notification{}).
-		Where("user_id = ? AND type = 1 AND is_read = 0", userID).
+		Where("user_id = ? AND type IN (1, 6) AND is_read = 0", userID).
 		Count(&partnerApplyCount)
 
 	// 2. 点赞通知
@@ -94,6 +103,11 @@ func GetUnreadCounts(userID string) (partnerApplyCount, likeCount, followCount, 
 	database.DB.Model(&model.Notification{}).
 		Where("user_id = ? AND type = 4 AND is_read = 0", userID).
 		Count(&systemNotifyCount)
+
+	// 6. 搭子动态通知（Notification type=6）
+	database.DB.Model(&model.Notification{}).
+		Where("user_id = ? AND type = 6 AND is_read = 0", userID).
+		Count(&partnerDynamicCount)
 
 	return
 }
