@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"gorm.io/gorm/clause"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 )
@@ -170,13 +172,16 @@ func GetChatList(userID string) ([]ChatItemVO, error) {
 
 	// 2. 群聊会话（群聊名称取关联搭子的标题，最后消息取自 conversation_messages 表）
 	var convs []ChatItemVO
+	// 注意：Select 子查询中的 userID 直接拼接（GORM 不支持 Select 内 ? 参数绑定；userID 为服务端生成的雪花ID，无注入风险）
 	err := database.DB.Table("conversations c").
-		Select("c.id, COALESCE(p.title, c.name) AS name, c.partner_id, "+
-			"(SELECT COUNT(*) FROM conversation_members cm WHERE cm.conversation_id = c.id AND cm.deleted_at IS NULL) as member_count, "+
-			"(SELECT content FROM conversation_messages cm3 WHERE cm3.conversation_id = c.id ORDER BY cm3.created_at DESC LIMIT 1) as last_content, "+
-			"(SELECT created_at FROM conversation_messages cm3 WHERE cm3.conversation_id = c.id ORDER BY cm3.created_at DESC LIMIT 1) as last_time").
+		Select("c.id, COALESCE(p.title, c.name) AS name, c.partner_id, " +
+			"(SELECT COUNT(*) FROM conversation_members cm WHERE cm.conversation_id = c.id AND cm.deleted_at IS NULL) as member_count, " +
+			"(SELECT content FROM conversation_messages cm3 WHERE cm3.conversation_id = c.id ORDER BY cm3.created_at DESC LIMIT 1) as last_content, " +
+			"(SELECT created_at FROM conversation_messages cm3 WHERE cm3.conversation_id = c.id ORDER BY cm3.created_at DESC LIMIT 1) as last_time, " +
+			"COALESCE((SELECT COUNT(*) FROM conversation_messages cm4 WHERE cm4.conversation_id = c.id AND cm4.from_user_id != '" + userID + "' " +
+			"AND cm4.created_at > COALESCE((SELECT cr.last_read_at FROM conversation_reads cr WHERE cr.conversation_id = c.id AND cr.user_id = '" + userID + "'), '2000-01-01 00:00:00')), 0) as unread_count").
 		Joins("LEFT JOIN partners p ON p.id = c.partner_id").
-		Joins("JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id = ? AND cm2.deleted_at IS NULL", userID).
+		Joins("JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id = '" + userID + "' AND cm2.deleted_at IS NULL").
 		Where("c.deleted_at IS NULL").
 		Scan(&convs).Error
 	if err != nil {
@@ -231,8 +236,28 @@ type ConversationMessageVO struct {
 	CreatedAt      time.Time `json:"createdAt"`      // 发送时间
 }
 
-// GetConversationMessages 分页获取群聊消息（最新一页，按时间正序返回）
-func GetConversationMessages(convID string, page, pageSize int) ([]ConversationMessageVO, int64, error) {
+// MarkConversationRead 标记群聊已读（记录该会话最新消息时间作为已读游标）
+func MarkConversationRead(convID, userID string) error {
+	var lastMsg struct{ CreatedAt time.Time }
+	if err := database.DB.Model(&model.ConversationMessage{}).
+		Where("conversation_id = ?", convID).
+		Order("created_at desc").First(&lastMsg).Error; err != nil {
+		return nil // 无消息无需标记
+	}
+	return database.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "conversation_id"}, {Name: "user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"last_read_at"}),
+	}).Create(&model.ConversationRead{
+		ConversationID: convID,
+		UserID:         userID,
+		LastReadAt:     lastMsg.CreatedAt,
+	}).Error
+}
+
+// GetConversationMessages 分页获取群聊消息（最新一页，按时间正序返回）；拉取消息即标记该会话已读
+func GetConversationMessages(convID, userID string, page, pageSize int) ([]ConversationMessageVO, int64, error) {
+	// 拉取消息视为已读：记录已读游标，会话列表未读数随之清零
+	_ = MarkConversationRead(convID, userID)
 	var total int64
 	database.DB.Model(&model.ConversationMessage{}).
 		Where("conversation_id = ?", convID).Count(&total)

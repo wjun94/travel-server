@@ -44,6 +44,13 @@ func (cm *ConversationMember) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// ConversationRead 群聊已读游标（记录用户最后已读时间，用于计算群聊未读数）
+type ConversationRead struct {
+	ConversationID string    `gorm:"primaryKey;size:64" json:"conversationId"` // 群聊ID
+	UserID         string    `gorm:"primaryKey;size:191" json:"userId"`        // 成员用户ID
+	LastReadAt     time.Time `json:"lastReadAt"`                               // 最后已读时间（此时间之后的消息计入未读）
+}
+
 // ConversationMessage 群聊消息（独立于私聊 Message 表）
 type ConversationMessage struct {
 	ID             string    `gorm:"primaryKey;size:64" json:"id"`

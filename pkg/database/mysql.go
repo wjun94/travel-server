@@ -80,6 +80,7 @@ func InitMySQL() {
 		&model.Conversation{},
 		&model.ConversationMember{},
 		&model.ConversationMessage{},
+		&model.ConversationRead{},
 		&model.Complaint{},
 		&model.SysMessage{},
 	)

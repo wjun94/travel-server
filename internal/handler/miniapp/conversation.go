@@ -7,6 +7,7 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/internal/ws"
 	"travel-server/pkg/response"
 )
 
@@ -78,7 +79,7 @@ func GetGroupMessages(c *gin.Context) {
 	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	list, total, err := repository.GetConversationMessages(convID, page, pageSize)
+	list, total, err := repository.GetConversationMessages(convID, userID, page, pageSize)
 	if err != nil {
 		response.Fail(c, 500, "获取消息失败")
 		return
@@ -118,6 +119,20 @@ func SendGroupMessage(c *gin.Context) {
 		response.Fail(c, 500, "发送失败")
 		return
 	}
+	// 实时推送新消息给群内所有在线成员（收到后刷新会话列表，未读数+1）
+	go func() {
+		members, err := repository.GetConversationMembers(convID)
+		if err != nil {
+			return
+		}
+		payload := gin.H{"action": "group_message", "conversationId": convID, "message": msg}
+		for _, m := range members {
+			if m.UserID == userID {
+				continue // 发送者本人不需推送（自己已发消息）
+			}
+			ws.WsHub.PushToUser(m.UserID, payload)
+		}
+	}()
 	response.Success(c, msg)
 }
 
