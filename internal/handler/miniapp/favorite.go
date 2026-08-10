@@ -5,6 +5,7 @@ import (
 
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/internal/ws"
 	"travel-server/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,41 @@ func AddFavorite(c *gin.Context) {
 	if err := repository.AddFavorite(&fav); err != nil {
 		response.Fail(c, 500, "收藏失败")
 		return
+	}
+	// 通知内容作者（非本人收藏才通知）+ 实时推送，type=2 与点赞同属"点赞收藏"分类
+	var authorID, content string
+	switch req.TargetType {
+	case "guide":
+		if g, err := repository.GetGuideByID(req.TargetID); err == nil && g != nil {
+			authorID = g.UserID
+			content = "您的攻略收到一个收藏"
+		}
+	case "trip":
+		if t, err := repository.GetTripByID(req.TargetID); err == nil && t != nil {
+			authorID = t.UserID
+			content = "您的行程收到一个收藏"
+		}
+	case "partner":
+		if p, err := repository.GetPartnerByID(req.TargetID); err == nil && p != nil {
+			authorID = p.UserID
+			content = "您的搭子收到一个收藏"
+		}
+	}
+	if authorID != "" && authorID != userID {
+		notification := model.Notification{
+			UserID:     authorID,
+			FromUserID: userID,
+			Type:       2,
+			RelatedID:  req.TargetID,
+			Content:    content,
+		}
+		if err := repository.CreateNotification(&notification); err == nil {
+			ws.WsHub.PushToUser(authorID, map[string]interface{}{
+				"action":  "new_notification",
+				"type":    2, // 点赞收藏
+				"content": notification.Content,
+			})
+		}
 	}
 	response.Success(c, fav)
 }

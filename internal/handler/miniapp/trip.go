@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -27,6 +28,7 @@ func AIGenerateTrip(c *gin.Context) {
 	var req struct {
 		Destination string `json:"destination" binding:"required"`
 		Days        int    `json:"days" binding:"required"`
+		StartDate   string `json:"startDate"` // 用户选择的出发日期（可选，指定后每天日期按此顺延）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -45,7 +47,12 @@ func AIGenerateTrip(c *gin.Context) {
 		}
 	}
 
-	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days)
+	// 出发日期说明（未指定时提示从今天开始）
+	startDesc := "未指定（从今天开始）"
+	if req.StartDate != "" {
+		startDesc = req.StartDate
+	}
+	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, startDesc)
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
@@ -62,7 +69,8 @@ func AIGenerateTrip(c *gin.Context) {
 		TotalBudget float64  `json:"totalBudget"`
 		Summary     string   `json:"summary"`
 		Days        []struct {
-			Day   int `json:"day"`
+			Day   int    `json:"day"`
+			Date  string `json:"date"`
 			Items []struct {
 				Time        string `json:"time"`
 				Name        string `json:"name"`
@@ -90,6 +98,7 @@ func AIGenerateTrip(c *gin.Context) {
 		TotalBudget:  aiResult.TotalBudget,
 		Summary:      aiResult.Summary,
 		Status:       1, // 草稿
+		IsPublic:     1, // 默认公开
 		IsAI:         1, // AI生成
 	}
 	// 兜底：AI未返回标题时用目的地+天数拼接
@@ -101,12 +110,21 @@ func AIGenerateTrip(c *gin.Context) {
 		return
 	}
 
-	// 创建行程日及行程项
-	for _, d := range aiResult.Days {
+	// 创建行程日及行程项（用户指定出发日期时，每天日期按出发日期顺延，AI 返回的日期不采用）
+	for i, d := range aiResult.Days {
+		dayNumber := d.Day
+		if dayNumber <= 0 {
+			dayNumber = i + 1
+		}
+		dayDate := d.Date
+		if req.StartDate != "" {
+			dayDate = addDaysStr(req.StartDate, dayNumber-1)
+		}
 		day := model.TripDay{
 			TripID:    trip.ID,
-			DayNumber: d.Day,
-			Title:     fmt.Sprintf("第%d天", d.Day),
+			DayNumber: dayNumber,
+			Date:      dayDate,
+			Title:     fmt.Sprintf("第%d天", dayNumber),
 		}
 		repository.CreateTripDay(&day)
 		for _, item := range d.Items {
@@ -125,6 +143,15 @@ func AIGenerateTrip(c *gin.Context) {
 	// 重新加载完整数据
 	fullTrip, _ := repository.GetTripByID(trip.ID)
 	response.Success(c, fullTrip)
+}
+
+// addDaysStr 按偏移天数计算日期字符串（YYYY-MM-DD + offset 天）
+func addDaysStr(dateStr string, offset int) string {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return dateStr
+	}
+	return t.AddDate(0, 0, offset).Format("2006-01-02")
 }
 
 // CreateTrip 手动创建行程
@@ -411,6 +438,15 @@ func UpdateTrip(c *gin.Context) {
 	delete(updates, "view_count")
 	delete(updates, "like_count")
 	delete(updates, "favorite_count")
+
+	// JSON 数组字段：map 更新不应用 serializer，需显式序列化，避免存明文
+	for _, f := range []string{"countries", "provinces", "cities", "destinations"} {
+		if v, ok := updates[f]; ok && v != nil {
+			if b, err := json.Marshal(v); err == nil {
+				updates[f] = string(b)
+			}
+		}
+	}
 
 	// 传入 days 时全量替换行程日（删除旧行程重建）
 	days, hasDays := updates["days"].([]interface{})

@@ -140,24 +140,16 @@ func CreatePartner(c *gin.Context) {
 	p.UserID = userID
 	p.Status = 0         // 默认招募中
 	p.CurrentMembers = 1 // 发起人计入
+
+	// 行程安排：直接存搭子自身（不自动创建行程记录）
+	if len(req.Days) > 0 {
+		if b, err := json.Marshal(req.Days); err == nil {
+			p.Itinerary = string(b)
+		}
+	}
 	if err := repository.CreatePartner(&p); err != nil {
 		response.Fail(c, 500, "发布失败")
 		return
-	}
-
-	// 行程安排：优先关联已有行程，否则由 days 自动创建关联草稿行程（搭子草稿持久化行程安排）
-	if p.TripID == "" && len(req.Days) > 0 {
-		trip := model.Trip{
-			UserID:   userID,
-			Title:    req.Title,
-			Status:   1, // 草稿
-			IsPublic: 0,
-			Days:     req.Days,
-		}
-		if err := repository.CreateTrip(&trip); err == nil {
-			p.TripID = trip.ID
-			_ = repository.UpdatePartner(&p)
-		}
 	}
 	response.Success(c, p)
 }
@@ -590,6 +582,10 @@ func UpdatePartner(c *gin.Context) {
 	if req.IsPublic != nil {
 		partner.IsPublic = *req.IsPublic
 	}
+	// 草稿转正式发布：重置为招募中（防止草稿期被定时任务置为已过期后发布仍显示过期）
+	if req.IsDraft != nil && *req.IsDraft == 0 && partner.Status == 3 {
+		partner.Status = 0
+	}
 	if req.TripID != nil && *req.TripID != "" {
 		partner.TripID = *req.TripID
 	}
@@ -599,23 +595,11 @@ func UpdatePartner(c *gin.Context) {
 		return
 	}
 
-	// 行程安排：优先全量替换关联行程 days，无关联时由 days 自动创建关联草稿行程
+	// 行程安排：直接更新搭子自身行程安排（不自动创建行程记录）
 	if len(req.Days) > 0 {
-		tripID := partner.TripID
-		if tripID != "" {
-			_ = repository.UpdateTripWithDays(tripID, nil, req.Days)
-		} else {
-			trip := model.Trip{
-				UserID:   partner.UserID,
-				Title:    partner.Title,
-				Status:   1, // 草稿
-				IsPublic: 0,
-				Days:     req.Days,
-			}
-			if err := repository.CreateTrip(&trip); err == nil {
-				partner.TripID = trip.ID
-				_ = repository.UpdatePartner(partner)
-			}
+		if b, err := json.Marshal(req.Days); err == nil {
+			partner.Itinerary = string(b)
+			_ = repository.UpdatePartner(partner)
 		}
 	}
 	response.Success(c, nil)
@@ -681,12 +665,23 @@ func GetPartnerDetail(c *gin.Context) {
 	isLiked := repository.IsPartnerLiked(userID, id)
 	isFavorited := repository.IsFavorited(userID, id, "partner")
 
-	// 如果有关联行程，获取行程详情（含日程日表）
+	// 行程安排：优先解析搭子自身 Itinerary，老数据兜底关联行程（含每日行程项）
+	var itineraryData interface{}
+	if partner.Itinerary != "" {
+		var days []model.TripDay
+		if err := json.Unmarshal([]byte(partner.Itinerary), &days); err == nil {
+			itineraryData = days
+		}
+	}
 	var tripData interface{}
 	if partner.TripID != "" {
 		trip, err := repository.GetTripByID(partner.TripID)
 		if err == nil {
 			tripData = trip
+			// 老数据：搭子未存 Itinerary 时用关联行程 days 兜底
+			if itineraryData == nil && len(trip.Days) > 0 {
+				itineraryData = trip.Days
+			}
 		}
 	}
 
@@ -756,6 +751,7 @@ func GetPartnerDetail(c *gin.Context) {
 		"application":     application,
 		"isLiked":         isLiked,
 		"isFavorited":     isFavorited,
+		"itinerary":       itineraryData,
 		"trip":            tripData,
 	})
 }
@@ -1014,6 +1010,8 @@ func AIGeneratePartner(c *gin.Context) {
 		Destination string `json:"destination" binding:"required"`
 		Days        int    `json:"days" binding:"required"`
 		Category    string `json:"category"`
+		StartDate   string `json:"startDate"` // 用户选择的出发日期（可选，指定后强制采用）
+		EndDate     string `json:"endDate"`   // 用户选择的结束日期（可选）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
@@ -1032,7 +1030,12 @@ func AIGeneratePartner(c *gin.Context) {
 		}
 	}
 
-	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, req.Days)
+	// 出发日期说明（未指定时提示从今天开始）
+	startDesc := "未指定（从今天开始）"
+	if req.StartDate != "" {
+		startDesc = req.StartDate
+	}
+	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, req.Days, startDesc)
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
@@ -1146,18 +1149,27 @@ func AIGeneratePartner(c *gin.Context) {
 		FeeInclude:      aiResult.FeeInclude,
 		FeeExclude:      aiResult.FeeExclude,
 		EstTotal:        aiResult.EstTotal,
-		IsDraft:         0,
+		IsDraft:         1, // AI生成先存草稿，用户编辑确认后再发布（复用草稿ID更新，避免重复创建）
 		IsPublic:        1,
 		IsAI:            1,
 	}
 	p.Status = 0         // 默认招募中
 	p.CurrentMembers = 1 // 发起人计入
+	// 用户指定出发日期时强制采用（AI 返回日期不可靠，防止乱编过去/错误日期）
+	if req.StartDate != "" {
+		p.StartDate = parseDate(req.StartDate)
+		if req.EndDate != "" {
+			p.EndDate = parseDate(req.EndDate)
+		} else {
+			p.EndDate = parseDate(addDaysStr(req.StartDate, aiResult.Days-1))
+		}
+	}
 	if err := repository.CreatePartner(&p); err != nil {
 		response.Fail(c, 500, "发布失败")
 		return
 	}
 
-	// 行程安排：AI 生成的 schedule 自动创建关联草稿行程（与手动创建搭子一致）
+	// 行程安排：AI 生成的 schedule 直接存搭子自身（不自动创建行程记录）
 	if len(aiResult.Schedule) > 0 {
 		dayList := make([]model.TripDay, 0, len(aiResult.Schedule))
 		for i, d := range aiResult.Schedule {
@@ -1179,33 +1191,28 @@ func AIGeneratePartner(c *gin.Context) {
 					TransportMode: it.TransportMode,
 				})
 			}
+			// 用户指定出发日期时，每天日期按出发日期顺延（AI 返回的日期不采用）
+			dayDate := d.Date
+			if req.StartDate != "" {
+				dayDate = addDaysStr(req.StartDate, dayNumber-1)
+			}
 			dayList = append(dayList, model.TripDay{
 				DayNumber: dayNumber,
-				Date:      d.Date,
+				Date:      dayDate,
 				Title:     d.Title,
 				Items:     items,
 			})
 		}
-		trip := model.Trip{
-			UserID:   userID,
-			Title:    p.Title,
-			Status:   1, // 草稿
-			IsPublic: 0,
-			IsAI:     1, // AI生成
-			Days:     dayList,
-		}
-		if err := repository.CreateTrip(&trip); err == nil {
-			p.TripID = trip.ID
+		if b, err := json.Marshal(dayList); err == nil {
+			p.Itinerary = string(b)
 			_ = repository.UpdatePartner(&p)
 		}
 	}
 
-	// 重新加载关联行程（含每日行程项）
+	// 行程安排数组（前端 AI 流程依赖 days 数组结构）
 	var tripDays []model.TripDay
-	if p.TripID != "" {
-		if trip, err := repository.GetTripByID(p.TripID); err == nil {
-			tripDays = trip.Days
-		}
+	if p.Itinerary != "" {
+		_ = json.Unmarshal([]byte(p.Itinerary), &tripDays)
 	}
 
 	// 响应：搭子完整字段 + 行程安排数组（前端 AI 流程依赖 days 数组结构）

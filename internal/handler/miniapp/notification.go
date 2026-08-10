@@ -276,15 +276,17 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 	guideSet := make(map[string]struct{})
 	partnerSet := make(map[string]struct{})
 	tripSet := make(map[string]struct{})
+	likeTitleMap := make(map[string]string) // 被点赞/收藏内容的标题
 	if len(likeIDs) > 0 {
 		ids := make([]string, 0, len(likeIDs))
 		for id := range likeIDs {
 			ids = append(ids, id)
 		}
-		var guides []struct{ ID string }
-		database.DB.Model(&model.Guide{}).Select("id").Where("id IN ?", ids).Find(&guides)
+		var guides []struct{ ID, Title string }
+		database.DB.Model(&model.Guide{}).Select("id", "title").Where("id IN ?", ids).Find(&guides)
 		for _, g := range guides {
 			guideSet[g.ID] = struct{}{}
+			likeTitleMap[g.ID] = g.Title
 			delete(likeIDs, g.ID)
 		}
 		if len(likeIDs) > 0 {
@@ -292,10 +294,11 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			for id := range likeIDs {
 				ids = append(ids, id)
 			}
-			var partners []struct{ ID string }
-			database.DB.Model(&model.Partner{}).Select("id").Where("id IN ?", ids).Find(&partners)
+			var partners []struct{ ID, Title string }
+			database.DB.Model(&model.Partner{}).Select("id", "title").Where("id IN ?", ids).Find(&partners)
 			for _, p := range partners {
 				partnerSet[p.ID] = struct{}{}
+				likeTitleMap[p.ID] = p.Title
 				delete(likeIDs, p.ID)
 			}
 		}
@@ -304,10 +307,11 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			for id := range likeIDs {
 				ids = append(ids, id)
 			}
-			var trips []struct{ ID string }
-			database.DB.Model(&model.Trip{}).Select("id").Where("id IN ?", ids).Find(&trips)
+			var trips []struct{ ID, Title string }
+			database.DB.Model(&model.Trip{}).Select("id", "title").Where("id IN ?", ids).Find(&trips)
 			for _, t := range trips {
 				tripSet[t.ID] = struct{}{}
+				likeTitleMap[t.ID] = t.Title
 			}
 		}
 	}
@@ -406,6 +410,14 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			rejectReason = appRejectMap[n.RelatedID]
 		}
 
+		// 点赞/收藏通知：标题展示被操作内容标题（攻略/行程/搭子名）
+		title := n.Title
+		if n.Type == 2 {
+			if t, ok := likeTitleMap[n.RelatedID]; ok && t != "" {
+				title = t
+			}
+		}
+
 		items = append(items, notificationItemVO{
 			ID:             n.ID,
 			UserID:         n.UserID,
@@ -417,7 +429,7 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			IsRead:         n.IsRead,
 			Content:        n.Content,
 			CancelReason:   n.CancelReason,
-			Title:          n.Title,
+			Title:          title,
 			LinkURL:        n.LinkURL,
 			CreatedAt:      n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			FromUser:       fu,

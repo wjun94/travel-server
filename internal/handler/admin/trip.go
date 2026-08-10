@@ -2,6 +2,7 @@ package admin
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -54,7 +55,7 @@ func ListTrips(c *gin.Context) {
 			"userId":       t.UserID,
 			"title":        t.Title,
 			"coverImage":   t.CoverImage,
-			"destinations": t.Destinations,
+			"destinations": cleanDestinations(t.Destinations),
 			"totalBudget":  t.TotalBudget,
 			"isOverseas":   t.IsOverseas,
 			"viewCount":    t.ViewCount,
@@ -70,6 +71,17 @@ func ListTrips(c *gin.Context) {
 		})
 	}
 	response.Success(c, gin.H{"list": list, "total": total})
+}
+
+// cleanDestinations 过滤目的地数组中的空字符串（历史数据可能存了 [""]）
+func cleanDestinations(ds []string) []string {
+	out := make([]string, 0, len(ds))
+	for _, d := range ds {
+		if strings.TrimSpace(d) != "" {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 // UpdateTripStatus 审核行程（发布/下架/归档）
@@ -135,7 +147,7 @@ func GetTripDetail(c *gin.Context) {
 		"guideId":       trip.GuideID,
 		"title":         trip.Title,
 		"coverImage":    trip.CoverImage,
-		"destinations":  destinations,
+		"destinations":  cleanDestinations(destinations),
 		"totalBudget":   trip.TotalBudget,
 		"isOverseas":    trip.IsOverseas,
 		"summary":       trip.Summary,
