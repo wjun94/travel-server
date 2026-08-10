@@ -112,7 +112,7 @@ func DeleteTripCascade(id string) error {
 // GetTripFavoriteCount 获取行程收藏数
 func GetTripFavoriteCount(tripID string) int64 {
 	var count int64
-	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ?", "trip", tripID).Count(&count)
+	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ? AND action = 2", "trip", tripID).Count(&count)
 	return count
 }
 
@@ -291,4 +291,56 @@ func ListAllTrips(page, pageSize, status int, keyword string) ([]model.Trip, int
 func IncrementTripViewCount(id string) error {
 	return database.DB.Model(&model.Trip{}).Where("id = ?", id).
 		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
+}
+
+// ==================== 点赞 / 取消点赞 ====================
+
+// IsTripLikedByUser 判断用户是否已点赞行程
+func IsTripLikedByUser(userID, tripID string) bool {
+	var count int64
+	database.DB.Model(&model.Favorite{}).
+		Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "trip", tripID).
+		Count(&count)
+	return count > 0
+}
+
+// LikeTrip 点赞行程（幂等：已点赞则直接成功；点赞记录 action=1，与收藏分离）
+func LikeTrip(userID, tripID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 检查是否已点赞
+		var count int64
+		tx.Model(&model.Favorite{}).
+			Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "trip", tripID).
+			Count(&count)
+		if count > 0 {
+			return nil // 已点赞，直接成功
+		}
+		// 创建点赞记录
+		fav := model.Favorite{
+			UserID:     userID,
+			TargetType: "trip",
+			TargetID:   tripID,
+			Action:     1,
+		}
+		if err := tx.Create(&fav).Error; err != nil {
+			return err
+		}
+		// 点赞数 +1
+		return tx.Model(&model.Trip{}).Where("id = ?", tripID).
+			UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
+	})
+}
+
+// UnlikeTrip 取消点赞行程（幂等：未点赞也视为成功）
+func UnlikeTrip(userID, tripID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "trip", tripID).
+			Delete(&model.Favorite{})
+		if result.RowsAffected == 0 {
+			return nil // 未点赞也视为成功（幂等）
+		}
+		// 点赞数 -1（确保不小于 0）
+		return tx.Model(&model.Trip{}).Where("id = ?", tripID).
+			UpdateColumn("like_count", gorm.Expr("GREATEST(like_count - 1, 0)")).Error
+	})
 }

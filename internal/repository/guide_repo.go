@@ -789,7 +789,7 @@ func IncrementGuideViewCount(id string) error {
 // GetGuideFavoriteCount 获取攻略收藏数
 func GetGuideFavoriteCount(guideID string) int64 {
 	var count int64
-	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ?", "guide", guideID).Count(&count)
+	database.DB.Model(&model.Favorite{}).Where("target_type = ? AND target_id = ? AND action = 2", "guide", guideID).Count(&count)
 	return count
 }
 
@@ -803,7 +803,7 @@ func GetGuideCommentCount(guideID string) int64 {
 // IsGuideLikedByUser 判断用户是否已点赞攻略
 func IsGuideLikedByUser(userID, guideID string) bool {
 	var count int64
-	database.DB.Model(&model.Favorite{}).Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).Count(&count)
+	database.DB.Model(&model.Favorite{}).Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "guide", guideID).Count(&count)
 	return count > 0
 }
 
@@ -905,13 +905,13 @@ func GetDayItemByID(id string) (*model.GuideDayItem, error) {
 
 // ==================== 点赞 / 取消点赞 ====================
 
-// LikeGuide 点赞攻略（幂等：已点赞则直接成功）
+// LikeGuide 点赞攻略（幂等：已点赞则直接成功；点赞记录 action=1，与收藏分离）
 func LikeGuide(userID, guideID string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查是否已点赞
 		var count int64
 		tx.Model(&model.Favorite{}).
-			Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
+			Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "guide", guideID).
 			Count(&count)
 		if count > 0 {
 			return nil // 已点赞，直接成功
@@ -921,6 +921,7 @@ func LikeGuide(userID, guideID string) error {
 			UserID:     userID,
 			TargetType: "guide",
 			TargetID:   guideID,
+			Action:     1,
 		}
 		if err := tx.Create(&fav).Error; err != nil {
 			return err
@@ -934,7 +935,7 @@ func LikeGuide(userID, guideID string) error {
 // UnlikeGuide 取消点赞攻略（兼容前端传参：支持 guideID 或 Favorite 记录ID）
 func UnlikeGuide(userID, guideID string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "guide", guideID).
+		result := tx.Where("user_id = ? AND target_type = ? AND target_id = ? AND action = 1", userID, "guide", guideID).
 			Delete(&model.Favorite{})
 		if result.RowsAffected == 0 {
 			// 未匹配到，尝试按记录ID删除

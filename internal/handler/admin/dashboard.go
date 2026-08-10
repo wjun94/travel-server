@@ -50,13 +50,32 @@ func Dashboard(c *gin.Context) {
 		}
 	}
 
+	// 收藏维度：仅统计收藏记录（action=2），点赞记录不纳入
+	favStat := func(m interface{}) gin.H {
+		count := func(since *time.Time) int64 {
+			var c int64
+			q := database.DB.Model(m).Where("action = 2")
+			if since != nil {
+				q = q.Where("created_at >= ?", since)
+			}
+			q.Count(&c)
+			return c
+		}
+		return gin.H{
+			"total": count(nil),
+			"today": count(&todayStart),
+			"week":  count(&weekStart),
+			"month": count(&monthStart),
+		}
+	}
+
 	response.Success(c, gin.H{
 		"user":        stat(&model.User{}),
 		"guide":       stat(&model.Guide{}),
 		"partner":     stat(&model.Partner{}),
 		"trip":        stat(&model.Trip{}),
 		"comment":     stat(&model.Comment{}),
-		"favorite":    stat(&model.Favorite{}),
+		"favorite":    favStat(&model.Favorite{}),
 		"application": stat(&model.PartnerApplication{}),
 		"complaint":   stat(&model.Complaint{}),
 	})

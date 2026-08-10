@@ -109,6 +109,8 @@ func main() {
 			miniAuth.GET("/my/trips", miniapp.GetMyTrips)              // 我的行程列表（status可筛草稿）
 			miniAuth.POST("/trip/ai-generate", miniapp.AIGenerateTrip) // AI智能生成行程
 			miniAuth.GET("/trip/:id", miniapp.GetTrip)                 // 行程详情
+			miniAuth.POST("/trip/:id/like", miniapp.LikeTrip)          // 点赞行程
+			miniAuth.DELETE("/trip/:id/like", miniapp.UnlikeTrip)      // 取消点赞行程
 			miniAuth.PUT("/trip/:id", miniapp.UpdateTrip)              // 更新行程
 			miniAuth.DELETE("/trip/:id", miniapp.DeleteTrip)           // 删除行程（仅作者）
 			miniAuth.POST("/trip/day", miniapp.AddTripDay)             // 添加行程日

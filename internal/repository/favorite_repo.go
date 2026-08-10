@@ -18,6 +18,10 @@ type FavoriteItem struct {
 
 // AddFavorite 添加收藏
 func AddFavorite(fav *model.Favorite) error {
+	// 默认收藏（点赞走独立 Like 逻辑，action=1）
+	if fav.Action == 0 {
+		fav.Action = 2
+	}
 	tx := database.DB.Begin()
 	if err := tx.Create(fav).Error; err != nil {
 		tx.Rollback()
@@ -39,7 +43,7 @@ func AddFavorite(fav *model.Favorite) error {
 func RemoveFavorite(userID, targetID string, targetType string) error {
 	// 先按 targetID + targetType 匹配记录（前端传目标ID）
 	var fav model.Favorite
-	err := database.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
+	err := database.DB.Where("user_id = ? AND target_id = ? AND target_type = ? AND action = 2", userID, targetID, targetType).
 		First(&fav).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -70,7 +74,7 @@ func RemoveFavorite(userID, targetID string, targetType string) error {
 func IsFavorited(userID, targetID string, targetType string) bool {
 	var count int64
 	database.DB.Model(&model.Favorite{}).
-		Where("user_id = ? AND target_id = ? AND target_type = ?", userID, targetID, targetType).
+		Where("user_id = ? AND target_id = ? AND target_type = ? AND action = 2", userID, targetID, targetType).
 		Count(&count)
 	return count > 0
 }
@@ -80,7 +84,7 @@ func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]
 	var favs []model.Favorite
 	var total int64
 	offset := (page - 1) * pageSize
-	query := database.DB.Model(&model.Favorite{}).Where("user_id = ?", userID)
+	query := database.DB.Model(&model.Favorite{}).Where("user_id = ? AND action = 2", userID)
 	if targetType != "" {
 		query = query.Where("target_type = ?", targetType)
 	}
@@ -101,10 +105,11 @@ func ListUserFavorites(userID string, targetType string, page, pageSize int) ([]
 			items[i].Title = g.Title
 			items[i].CoverImage = g.CoverImage
 		case "trip":
-			var t struct{ Title string }
-			database.DB.Model(&model.Trip{}).Select("title").
+			var t struct{ Title, CoverImage string }
+			database.DB.Model(&model.Trip{}).Select("title", "cover_image").
 				Where("id = ?", f.TargetID).Scan(&t)
 			items[i].Title = t.Title
+			items[i].CoverImage = t.CoverImage
 		case "partner":
 			var p struct{ Title, Cover string }
 			database.DB.Model(&model.Partner{}).Select("title", "cover").

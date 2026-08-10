@@ -272,9 +272,10 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 		}
 	}
 
-	// 批量查攻略/搭子：区分 type=2 点赞通知的目标类型（RelatedID 可能是攻略ID或搭子ID）
+	// 批量查攻略/搭子/行程：区分 type=2 点赞通知的目标类型（RelatedID 可能是攻略ID/搭子ID/行程ID）
 	guideSet := make(map[string]struct{})
 	partnerSet := make(map[string]struct{})
+	tripSet := make(map[string]struct{})
 	if len(likeIDs) > 0 {
 		ids := make([]string, 0, len(likeIDs))
 		for id := range likeIDs {
@@ -295,6 +296,18 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			database.DB.Model(&model.Partner{}).Select("id").Where("id IN ?", ids).Find(&partners)
 			for _, p := range partners {
 				partnerSet[p.ID] = struct{}{}
+				delete(likeIDs, p.ID)
+			}
+		}
+		if len(likeIDs) > 0 {
+			ids = ids[:0]
+			for id := range likeIDs {
+				ids = append(ids, id)
+			}
+			var trips []struct{ ID string }
+			database.DB.Model(&model.Trip{}).Select("id").Where("id IN ?", ids).Find(&trips)
+			for _, t := range trips {
+				tripSet[t.ID] = struct{}{}
 			}
 		}
 	}
@@ -352,9 +365,11 @@ func enrichNotifications(list []model.Notification) []notificationItemVO {
 			}
 			targetType = "partner"
 		case 2:
-			// 攻略/搭子点赞 → 跳转到对应内容详情（RelatedID 命中搭子表则为搭子）
+			// 攻略/搭子/行程点赞 → 跳转到对应内容详情（RelatedID 命中搭子表则为搭子，命中行程表则为行程，否则为攻略）
 			if _, ok := partnerSet[n.RelatedID]; ok {
 				targetType = "partner"
+			} else if _, ok := tripSet[n.RelatedID]; ok {
+				targetType = "trip"
 			} else {
 				targetType = "guide"
 			}

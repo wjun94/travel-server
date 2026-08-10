@@ -1238,16 +1238,23 @@ func LikePartner(c *gin.Context) {
 		response.Fail(c, 400, err.Error())
 		return
 	}
-	// 通知搭子发起人（非本人点赞才通知）
+	// 通知搭子发起人（非本人点赞才通知）+ 实时推送
 	partner, _ := repository.GetPartnerByID(id)
 	if partner != nil && partner.UserID != userID {
-		repository.CreateNotification(&model.Notification{
+		notification := model.Notification{
 			UserID:     partner.UserID,
 			FromUserID: userID,
 			Type:       2,
 			RelatedID:  id,
 			Content:    "您的搭子收到一个赞",
-		})
+		}
+		if err := repository.CreateNotification(&notification); err == nil {
+			ws.WsHub.PushToUser(partner.UserID, map[string]interface{}{
+				"action":  "new_notification",
+				"type":    2, // 点赞
+				"content": notification.Content,
+			})
+		}
 	}
 	response.Success(c, nil)
 }

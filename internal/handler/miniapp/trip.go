@@ -10,6 +10,7 @@ import (
 	"travel-server/internal/ai"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/internal/ws"
 	"travel-server/pkg/database"
 	"travel-server/pkg/response"
 )
@@ -211,10 +212,11 @@ func GetTrip(c *gin.Context) {
 	followStatus, _ := repository.GetFollowStatus(userID, trip.UserID)
 	isFollowed := followStatus == 1 || followStatus == 2
 
-	// 收藏数、评论数、点赞状态
+	// 收藏数、评论数、点赞状态（点赞与收藏独立，action 区分）
 	favoriteCount := repository.GetTripFavoriteCount(id)
 	commentCount := repository.GetTripCommentCount(id)
-	isLiked := repository.IsFavorited(userID, id, "trip")
+	isLiked := repository.IsTripLikedByUser(userID, id)
+	isFavorited := repository.IsFavorited(userID, id, "trip")
 
 	// 将 trip 展开到顶层，不嵌套在单独的 trip 字段里
 	result := gin.H{
@@ -241,7 +243,7 @@ func GetTrip(c *gin.Context) {
 		"days":          trip.Days,
 		"members":       trip.Members,
 		"isLiked":       isLiked,
-		"isFavorited":   isLiked,
+		"isFavorited":   isFavorited,
 		"authorName":    authorName,
 		"authorAvatar":  authorAvatar,
 		"isFollowed":    isFollowed,
@@ -595,6 +597,58 @@ func RemoveMember(c *gin.Context) {
 	id := c.Param("id")
 	if err := repository.RemoveTripMember(id); err != nil {
 		response.Fail(c, 500, "移除失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+// LikeTrip 点赞行程
+// @Summary 点赞行程
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path string true "行程ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/{id}/like [post]
+func LikeTrip(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.LikeTrip(userID, id); err != nil {
+		response.Fail(c, 400, err.Error())
+		return
+	}
+	// 通知行程作者（非本人点赞才通知）+ 实时推送
+	trip, _ := repository.GetTripByID(id)
+	if trip != nil && trip.UserID != userID {
+		notification := model.Notification{
+			UserID:     trip.UserID,
+			FromUserID: userID,
+			Type:       2,
+			RelatedID:  id,
+			Content:    "您的行程收到一个赞",
+		}
+		if err := repository.CreateNotification(&notification); err == nil {
+			ws.WsHub.PushToUser(trip.UserID, map[string]interface{}{
+				"action":  "new_notification",
+				"type":    2, // 点赞
+				"content": notification.Content,
+			})
+		}
+	}
+	response.Success(c, nil)
+}
+
+// UnlikeTrip 取消点赞行程
+// @Summary 取消点赞行程
+// @Security BearerAuth
+// @Tags 小程序-行程
+// @Param id path string true "行程ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/trip/{id}/like [delete]
+func UnlikeTrip(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.MustGet("userID").(string)
+	if err := repository.UnlikeTrip(userID, id); err != nil {
+		response.Fail(c, 400, err.Error())
 		return
 	}
 	response.Success(c, nil)

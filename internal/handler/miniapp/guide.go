@@ -8,6 +8,7 @@ import (
 	"travel-server/internal/middleware"
 	"travel-server/internal/model"
 	"travel-server/internal/repository"
+	"travel-server/internal/ws"
 	"travel-server/pkg/response"
 	"travel-server/pkg/snowflake"
 
@@ -584,16 +585,23 @@ func LikeGuide(c *gin.Context) {
 		response.Fail(c, 400, err.Error())
 		return
 	}
-	// 通知攻略作者（非本人点赞才通知）
+	// 通知攻略作者（非本人点赞才通知）+ 实时推送
 	guide, _ := repository.GetGuideByID(guideID)
 	if guide != nil && guide.UserID != userID {
-		repository.CreateNotification(&model.Notification{
+		notification := model.Notification{
 			UserID:     guide.UserID,
 			FromUserID: userID,
 			Type:       2,
 			RelatedID:  guideID,
 			Content:    "您的攻略收到一个赞",
-		})
+		}
+		if err := repository.CreateNotification(&notification); err == nil {
+			ws.WsHub.PushToUser(guide.UserID, map[string]interface{}{
+				"action":  "new_notification",
+				"type":    2, // 点赞
+				"content": notification.Content,
+			})
+		}
 	}
 	response.Success(c, nil)
 }
