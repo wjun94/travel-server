@@ -18,7 +18,26 @@
       "Bash(which certbot 2>/dev/null || which acme.sh 2>/dev/null || echo \"Neither certbot nor acme.sh found\"; crontab -l 2>/dev/null | grep -i ssl || echo \"No SSL cron jobs\")",
       "Bash(git -C /home/ubuntu/www/backend/travel-server show --stat HEAD | head -30 && git -C /home/ubuntu/www/backend/travel-server log --oneline -8)",
       "Bash(ssh-keygen -t ed25519 -f ~/.ssh/travel_admin_deploy -N \"\" -C \"github-actions-deploy\" && cat ~/.ssh/travel_admin_deploy.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh && ssh -i ~/.ssh/travel_admin_deploy -o StrictHostKeyChecking=no localhost 'echo key-login-ok')",
-      "Bash(ls -la static/ && cat .gitignore 2>/dev/null && git check-ignore static/admin static/h5)"
+      "Bash(ls -la static/ && cat .gitignore 2>/dev/null && git check-ignore static/admin static/h5)",
+      "Bash(for f in /home/ubuntu/www/backend/travel-server/ssl/fullchain.pem /home/ubuntu/www/backend/travel-server/ssl/www/fullchain.pem; do echo \"=== $f ===\"; openssl x509 -in \"$f\" -noout -subject -issuer -dates -ext subjectAltName 2>&1; echo; done)",
+      "Bash(git -C /home/ubuntu/www/backend/travel-server status && git -C /home/ubuntu/www/backend/travel-server log --oneline -5)",
+      "Bash(docker ps 2>/dev/null | head -20; systemctl list-units --type=service 2>/dev/null | grep -iE \"travel|backend\" | head -5)",
+      "Bash(docker logs --tail 50 travel-server 2>&1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8082/api/v1/destinations/search -H \"Content-Type: application/json\" -d '{}'; echo; curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8082/health 2>/dev/null; echo)",
+      "Bash(grep -n \"proxy_pass\\\\|location\" /home/ubuntu/www/backend/travel-server/api.conf | head -40)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8082/api/v1/destinations/search?keyword=北京\"; curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8082/api/v1/regions/all\"; curl -s \"http://localhost:8082/api/v1/destinations/search?keyword=%E5%8C%97%E4%BA%AC\" | head -c 500; echo)",
+      "Bash(curl -sv --max-time 5 \"http://localhost:8082/api/v1/destinations/search?keyword=1\" 2>&1 | tail -15; echo \"---\"; docker ps | grep travel-server)",
+      "Bash(docker inspect travel-server --format '{{.RestartCount}} restarts, {{.State.Status}}'; echo \"---\"; docker logs --tail 30 travel-server 2>&1 | grep -vE \"GIN-debug|\\\\[GIN\\\\]\" | tail -30)",
+      "Bash(docker logs travel-server 2>&1 | grep -iE \"panic|fatal|error|failed|exit\" | grep -v \"GIN-debug\" | tail -20)",
+      "Bash(docker logs --since 2m travel-server 2>&1 | tail -5; echo \"===\"; docker inspect travel-server --format '{{json .State}}' | head -c 800)",
+      "Bash(for i in 1 2 3 4 5; do curl -s -o /dev/null -w \"%{http_code} \" --max-time 5 \"http://localhost:8082/api/v1/destinations/search?keyword=%E5%8C%97%E4%BA%AC\"; done; echo; docker ps --format '{{.Names}} {{.Status}}' | grep travel-server)",
+      "Bash(docker exec travel-server ps aux 2>/dev/null; echo \"---\"; docker stats --no-stream travel-server 2>/dev/null; echo \"---\"; docker exec travel-server wget -qO- --timeout=3 http://localhost:8080/api/v1/ping 2>&1 | head -c 300)",
+      "Bash(curl -s -o /dev/null -w \"v4: %{http_code}\\\\n\" --max-time 5 \"http://127.0.0.1:8082/api/v1/destinations/search?keyword=1\"; curl -s -o /dev/null -w \"v6: %{http_code}\\\\n\" --max-time 5 \"http://[::1]:8082/api/v1/destinations/search?keyword=1\"; curl -s -o /dev/null -w \"external-ip: %{http_code}\\\\n\" --max-time 5 \"http://$\\(hostname -I | awk '{print $1}'\\):8082/api/v1/destinations/search?keyword=1\"; docker exec travel-server wget -qO- --timeout=3 \"http://localhost:8080/api/v1/destinations/search?keyword=1\" 2>&1 | head -c 200)",
+      "Bash(docker inspect travel-server --format '{{.RestartCount}}'; docker ps -a --filter name=travel-server --format '{{.Status}}'; docker logs travel-server 2>&1 | grep -c \"Server running\"; docker logs travel-server 2>&1 | grep -E \"Server running|panic|exit\" | tail -10)",
+      "Bash(docker events --since 20m --until 1s --filter container=travel-server 2>/dev/null | head -30)",
+      "Bash(ps aux | grep -iE \"docker|watchtower|cron\" | grep -v grep | head -20; echo ---; crontab -l 2>/dev/null | grep -iE \"docker|travel\" | head)",
+      "Bash(docker logs --since 08:41:19 travel-server 2>&1 | head -40)",
+      "Bash(docker logs travel-server 2>&1 | grep -E \"❌|pca-code|省市区\" | tail -10; echo \"---data---\"; ls /home/ubuntu/www/backend/travel-server/data/ | head; echo \"---in-container---\"; docker exec travel-server ls /app/data 2>&1)"
     ]
   }
 }

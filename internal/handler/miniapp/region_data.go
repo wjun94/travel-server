@@ -42,7 +42,8 @@ func loadRegionTree() []RegionNode {
 		// 获取当前工作目录
 		wd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("❌ 获取工作目录失败: %v", err)
+			log.Printf("❌ 获取工作目录失败: %v", err)
+			return
 		}
 		log.Printf("📂 当前工作目录: %s", wd)
 
@@ -53,13 +54,16 @@ func loadRegionTree() []RegionNode {
 		// 读取文件
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			log.Fatalf("❌ 读取 pca-code.json 失败: %v", err)
+			// 文件缺失不致命：返回空树，避免在请求路径中杀死整个进程
+			log.Printf("❌ 读取 pca-code.json 失败: %v", err)
+			return
 		}
 
 		// ✅ 修正2：直接解析为树形结构 (不再需要手动组装)
 		var rawTree []rawRegion
 		if err := json.Unmarshal(data, &rawTree); err != nil {
-			log.Fatalf("❌ 解析 pca-code.json 失败: %v", err)
+			log.Printf("❌ 解析 pca-code.json 失败: %v", err)
+			return
 		}
 		log.Printf("✅ 成功加载 %d 个省级节点 (含子节点)", len(rawTree))
 

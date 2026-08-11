@@ -31,5 +31,8 @@ COPY --from=builder /app/travel-backend .
 # 复制静态文件（关键！）
 COPY --from=builder /app/static ./static
 
+# 复制省市区数据（destinations/search 运行时要读取）
+COPY --from=builder /app/data ./data
+
 EXPOSE 8080
 CMD ["./travel-backend"]
