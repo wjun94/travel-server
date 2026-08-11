@@ -53,7 +53,8 @@ func main() {
 	// Swagger 文档面板
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	api := r.Group("/api/v1")
+	// 业务路由组（前缀由 API_VERSION_PREFIX 配置：测试 /api/testv1，线上 /api/v1）
+	api := r.Group(config.AppConfig.APIVersionPrefix)
 	{
 		// ==================== 公开接口（无需登录） ====================
 		api.POST("/user/login", miniapp.UserLogin)                                     // 微信登录

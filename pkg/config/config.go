@@ -20,6 +20,7 @@ type Config struct {
 	ServerPort         string // 监听端口
 	SnowflakeMachineID int64  // 雪花算法机器 ID
 	Env                string // 运行环境：development / production
+	APIVersionPrefix   string // API 版本前缀（如 /api/v1、/api/testv1）
 
 	// Redis 配置
 	REDIS_HOST     string
@@ -64,12 +65,13 @@ var AppConfig *Config
 // LoadConfig 从环境变量加载配置，未设置的变量使用默认值
 func LoadConfig() {
 	AppConfig = &Config{
-		DBHost:     getEnv("DB_HOST", "127.0.0.1"),
-		DBPort:     getEnv("DB_PORT", "3306"),
-		DBUser:     getEnv("DB_USER", "root"),
-		DBPassword: getEnv("DB_PASSWORD", "123456"),
-		DBName:     getEnv("DB_NAME", "travel"),
-		ServerPort: getEnv("SERVER_PORT", "8080"),
+		DBHost:           getEnv("DB_HOST", "127.0.0.1"),
+		DBPort:           getEnv("DB_PORT", "3306"),
+		DBUser:           getEnv("DB_USER", "root"),
+		DBPassword:       getEnv("DB_PASSWORD", "123456"),
+		DBName:           getEnv("DB_NAME", "travel"),
+		ServerPort:       getEnv("SERVER_PORT", "8080"),
+		APIVersionPrefix: getEnv("API_VERSION_PREFIX", "/api/v1"),
 
 		REDIS_HOST:     getEnv("REDIS_HOST", "127.0.0.1"),
 		REDIS_PORT:     getEnv("REDIS_PORT", "6379"),
