@@ -143,6 +143,7 @@ func main() {
 			miniAuth.GET("/conversation/:id/messages", miniapp.GetGroupMessages)   // 群聊消息列表
 			miniAuth.POST("/conversation/:id/message", miniapp.SendGroupMessage)   // 发送群聊消息
 			miniAuth.PUT("/conversation/:id/kick", miniapp.KickConversationMember) // 踢出群成员（群主）
+			miniAuth.DELETE("/conversation/:id", miniapp.DissolveConversation)     // 解散群聊（群主）
 
 			// ---------- 消息 ----------
 			miniAuth.GET("/message/list", miniapp.GetMessageList)              // 消息列表
