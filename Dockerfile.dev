@@ -8,6 +8,9 @@ ENV GOPROXY=https://goproxy.cn,direct
 
 WORKDIR /app
 
+# 容器内以 root 访问宿主机挂载的 .git 时需豁免所有权检查，否则 go build 的 VCS 探测失败
+RUN git config --global --add safe.directory /app
+
 # 安装开发工具
 RUN go install github.com/air-verse/air@latest
 RUN go install github.com/swaggo/swag/cmd/swag@latest
