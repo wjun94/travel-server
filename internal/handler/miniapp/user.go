@@ -105,18 +105,30 @@ func GetUserInfo(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /api/v1/user/profile [put]
 func UpdateProfile(c *gin.Context) {
+	// 指针接收：nil 表示未传该字段，仅更新传入的字段（头像/昵称单独更新互不影响）
 	var req struct {
-		Nickname  string `json:"nickname"`
-		AvatarURL string `json:"avatarUrl"`
+		Nickname  *string `json:"nickname"`
+		AvatarURL *string `json:"avatarUrl"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	updates := map[string]interface{}{}
+	if req.Nickname != nil {
+		updates["nickname"] = *req.Nickname
+	}
+	if req.AvatarURL != nil {
+		updates["avatar_url"] = *req.AvatarURL
+	}
+	if len(updates) == 0 {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
 	uid := c.MustGet("userID").(string)
-	database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(map[string]interface{}{
-		"nickname":   req.Nickname,
-		"avatar_url": req.AvatarURL,
-	})
+	if err := database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(updates).Error; err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
+	}
 	response.Success(c, nil)
 }
