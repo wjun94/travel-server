@@ -58,7 +58,13 @@
       "Bash(docker ps --format 'table {{.Names}}\\\\t{{.Status}}\\\\t{{.Ports}}' && echo \"=== dev logs ===\" && docker logs travel-server-dev 2>&1 | tail -5)",
       "Bash(docker logs travel-server-dev 2>&1 | head -40)",
       "Bash(docker logs travel-server-dev 2>&1 | grep -n -B5 -A5 \"error\" | head -40)",
-      "Bash(ls -la /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null && cat /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null | head -30)"
+      "Bash(ls -la /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null && cat /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null | head -30)",
+      "Bash(ls:*)",
+      "Bash(docker ps --format 'table {{.Names}}\\\\t{{.Ports}}\\\\t{{.Status}}' 2>/dev/null | head -20)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' 'https://www.cnicu.top/api/testv1/guide/feed?page=1&pageSize=10&category=recommend'; curl -s -o /dev/null -w '%{http_code}\\\\n' 'https://www.cnicu.top/api/v1/guide/feed?page=1&pageSize=10&category=recommend')",
+      "Bash(curl:*)",
+      "Bash(docker inspect travel-nginx --format '{{json .NetworkSettings.Networks}}' | head -c 600; echo; docker inspect travel-server-dev --format '{{json .NetworkSettings.Networks}}' | head -c 600)",
+      "Bash(docker exec travel-nginx wget -q -O /dev/null --timeout=3 'http://172.17.0.1:9000/api/testv1/guide/feed?page=1&pageSize=1' && echo GATEWAY-OK; docker exec travel-nginx wget -q -O /dev/null --timeout=3 'http://host.docker.internal:9000/api/testv1/guide/feed?page=1&pageSize=1' && echo HD-OK || echo HD-FAIL)"
     ]
   }
 }
