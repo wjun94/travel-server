@@ -37,7 +37,28 @@
       "Bash(docker events --since 20m --until 1s --filter container=travel-server 2>/dev/null | head -30)",
       "Bash(ps aux | grep -iE \"docker|watchtower|cron\" | grep -v grep | head -20; echo ---; crontab -l 2>/dev/null | grep -iE \"docker|travel\" | head)",
       "Bash(docker logs --since 08:41:19 travel-server 2>&1 | head -40)",
-      "Bash(docker logs travel-server 2>&1 | grep -E \"❌|pca-code|省市区\" | tail -10; echo \"---data---\"; ls /home/ubuntu/www/backend/travel-server/data/ | head; echo \"---in-container---\"; docker exec travel-server ls /app/data 2>&1)"
+      "Bash(docker logs travel-server 2>&1 | grep -E \"❌|pca-code|省市区\" | tail -10; echo \"---data---\"; ls /home/ubuntu/www/backend/travel-server/data/ | head; echo \"---in-container---\"; docker exec travel-server ls /app/data 2>&1)",
+      "Bash(cd /home/ubuntu/www/backend/travel-server && git log --oneline -5 && git status)",
+      "Bash(docker ps:*)",
+      "Bash(ls /home/ubuntu/www/backend/travel-server/.qoder/repowiki/ 2>/dev/null; grep -n -A 20 -i \"部署\\\\|deploy\\\\|docker\" /home/ubuntu/www/backend/travel-server/README.md | head -80)",
+      "Bash(ls -R /home/ubuntu/www/backend/travel-server/.qoder/repowiki/ 2>/dev/null | head -40)",
+      "Bash(docker exec:*)",
+      "Bash(docker exec travel-redis redis-cli DBSIZE 2>/dev/null; docker exec travel-redis redis-cli KEYS '*' 2>/dev/null | head -10)",
+      "Bash(docker exec travel-db mysql -uroot -p123456 -N -e \"SELECT CONCAT\\('TRUNCATE TABLE \\\\`', table_name, '\\\\`;'\\) FROM information_schema.tables WHERE table_schema='travel';\" 2>/dev/null | { echo \"SET FOREIGN_KEY_CHECKS=0;\"; cat; echo \"SET FOREIGN_KEY_CHECKS=1;\"; } | docker exec -i travel-db mysql -uroot -p123456 travel 2>&1 && echo \"TRUNCATE OK\")",
+      "Bash(cd /home/ubuntu/www/backend/travel-server && docker compose up -d --build backend 2>&1 | tail -20)",
+      "Bash(sleep 5 && docker ps --format \"table {{.Names}}\\\\t{{.Status}}\" | grep travel && echo \"---logs---\" && docker logs --tail 20 travel-server 2>&1 | grep -vE \"GIN-debug|\\\\[GIN\\\\]\" | tail -15)",
+      "Bash(docker logs travel-server 2>&1 | grep -E \"Server running|listen|启动|migrate|AutoMigrate\" | tail -5; echo \"---health---\"; curl -s -o /dev/null -w \"%{http_code}\" --max-time 5 \"http://127.0.0.1:8082/api/v1/destinations/search?keyword=北京\"; echo; curl -s --max-time 5 \"http://127.0.0.1:8082/api/v1/regions/all\" | head -c 300; echo)",
+      "Bash(git:*)",
+      "Bash(docker compose -f /home/ubuntu/www/backend/travel-server/docker-compose.dev.yml ps 2>&1 | head -20)",
+      "Bash(ls -la /home/ubuntu/www/backend/travel-server/.env* /home/ubuntu/www/backend/travel-server/Dockerfile* 2>&1; cat /home/ubuntu/www/backend/travel-server/.env.dev 2>/dev/null)",
+      "Bash(cd /home/ubuntu/www/backend/travel-server && docker compose -f docker-compose.dev.yml up -d --build 2>&1 | tail -30)",
+      "Bash(ls /home/ubuntu/www/backend/travel-server/docker-compose* ; echo \"---\"; docker inspect travel-db --format '{{.Name}} ports={{json .HostConfig.PortBindings}} started={{.State.StartedAt}}' ; docker inspect travel-redis --format '{{.Name}} ports={{json .HostConfig.PortBindings}} started={{.State.StartedAt}}'; docker inspect travel-server --format '{{.Name}} ports={{json .HostConfig.PortBindings}} started={{.State.StartedAt}}')",
+      "Bash(cd /home/ubuntu/www/backend/travel-server && docker rm -f travel-db-dev travel-redis-dev travel-server-dev && docker compose -f docker-compose.yml up -d 2>&1 | tail -15)",
+      "Bash(cd /home/ubuntu/www/backend/travel-server && docker compose -p travel-dev -f docker-compose.dev.yml up -d --build 2>&1 | tail -12)",
+      "Bash(docker ps --format 'table {{.Names}}\\\\t{{.Status}}\\\\t{{.Ports}}' && echo \"=== dev logs ===\" && docker logs travel-server-dev 2>&1 | tail -5)",
+      "Bash(docker logs travel-server-dev 2>&1 | head -40)",
+      "Bash(docker logs travel-server-dev 2>&1 | grep -n -B5 -A5 \"error\" | head -40)",
+      "Bash(ls -la /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null && cat /home/ubuntu/www/backend/travel-server/.air.toml 2>/dev/null | head -30)"
     ]
   }
 }

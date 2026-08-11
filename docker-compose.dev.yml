@@ -23,7 +23,7 @@ services:
     container_name: travel-redis-dev
     restart: unless-stopped
     ports:
-      - "6379:6379" # 可选：映射到宿主机方便调试
+      - "6380:6379" # 与线上 6379 区分，方便同时运行调试
     volumes:
       - redis_data_dev:/data # 持久化 Redis 数据
     healthcheck:
