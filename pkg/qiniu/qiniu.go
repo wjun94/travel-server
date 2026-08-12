@@ -3,6 +3,8 @@ package qiniu
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"travel-server/pkg/config"
 
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
@@ -20,7 +22,7 @@ var (
 func InitQiniu() {
 	cfg := config.AppConfig
 	if cfg.QiniuAccessKey == "" || cfg.QiniuSecretKey == "" {
-		fmt.Errorf("七牛云未配置，上传功能不可用")
+		log.Printf("七牛云未配置，上传功能不可用")
 		return
 	}
 	mac = qbox.NewMac(cfg.QiniuAccessKey, cfg.QiniuSecretKey)
