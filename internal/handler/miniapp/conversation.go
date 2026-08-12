@@ -136,6 +136,32 @@ func SendGroupMessage(c *gin.Context) {
 	response.Success(c, msg)
 }
 
+// DissolveConversation 解散群聊（仅群主，解散后成员不可再进入/发言）
+// @Summary 解散群聊
+// @Security BearerAuth
+// @Tags 小程序-群聊
+// @Param id path string true "群聊ID"
+// @Success 200 {object} response.Response
+// @Router /api/v1/conversation/{id} [delete]
+func DissolveConversation(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	convID := c.Param("id")
+	conv, err := repository.GetConversationByID(convID)
+	if err != nil {
+		response.Fail(c, 404, "群聊不存在")
+		return
+	}
+	if conv.OwnerID != userID {
+		response.Fail(c, 403, "仅群主可解散群聊")
+		return
+	}
+	if err := repository.DissolveConversation(convID); err != nil {
+		response.Fail(c, 500, "解散失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
 // KickConversationMember 踢出群成员（仅群主可操作）
 // @Summary 踢出群成员
 // @Security BearerAuth

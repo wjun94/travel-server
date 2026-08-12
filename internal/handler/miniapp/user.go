@@ -105,34 +105,39 @@ func GetUserInfo(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /api/v1/user/profile [put]
 func UpdateProfile(c *gin.Context) {
+	// 指针接收：nil 表示未传该字段，仅更新传入的字段（头像/昵称/性别单独更新互不影响）
 	var req struct {
-		Nickname  string `json:"nickname"`
-		AvatarURL string `json:"avatarUrl"`
-		Gender    string `json:"gender"`
+		Nickname  *string `json:"nickname"`
+		AvatarURL *string `json:"avatarUrl"`
+		Gender    *string `json:"gender"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	uid := c.MustGet("userID").(string)
-	// 局部更新：仅更新传入的非空字段，避免只改性别时清空昵称/头像
 	updates := map[string]interface{}{}
-	if req.Nickname != "" {
-		updates["nickname"] = req.Nickname
+	if req.Nickname != nil {
+		updates["nickname"] = *req.Nickname
 	}
-	if req.AvatarURL != "" {
-		updates["avatar_url"] = req.AvatarURL
+	if req.AvatarURL != nil {
+		updates["avatar_url"] = *req.AvatarURL
 	}
-	// 性别：仅接受 unknown/male/female，空值不更新
-	if req.Gender != "" {
-		if req.Gender != "unknown" && req.Gender != "male" && req.Gender != "female" {
+	// 性别：仅接受 unknown/male/female
+	if req.Gender != nil {
+		if *req.Gender != "unknown" && *req.Gender != "male" && *req.Gender != "female" {
 			response.Fail(c, 400, "性别参数无效")
 			return
 		}
-		updates["gender"] = req.Gender
+		updates["gender"] = *req.Gender
 	}
-	if len(updates) > 0 {
-		database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(updates)
+	if len(updates) == 0 {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	uid := c.MustGet("userID").(string)
+	if err := database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(updates).Error; err != nil {
+		response.Fail(c, 500, "更新失败")
+		return
 	}
 	response.Success(c, nil)
 }

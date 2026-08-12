@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"travel-server/internal/model"
@@ -80,6 +81,16 @@ func GetConversationMembers(convID string) ([]ConversationMemberVO, error) {
 func KickConversationMember(convID, userID string) error {
 	return database.DB.Where("conversation_id = ? AND user_id = ?", convID, userID).
 		Delete(&model.ConversationMember{}).Error
+}
+
+// DissolveConversation 解散群聊（软删群聊与全部成员，解散后所有人均无法再进入/发言；仅群主可调用）
+func DissolveConversation(convID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ?", convID).Delete(&model.Conversation{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("conversation_id = ?", convID).Delete(&model.ConversationMember{}).Error
+	})
 }
 
 // ChatItemVO 统一会话列表项（系统消息/私聊/群聊）
