@@ -108,15 +108,31 @@ func UpdateProfile(c *gin.Context) {
 	var req struct {
 		Nickname  string `json:"nickname"`
 		AvatarURL string `json:"avatarUrl"`
+		Gender    string `json:"gender"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
 	uid := c.MustGet("userID").(string)
-	database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(map[string]interface{}{
-		"nickname":   req.Nickname,
-		"avatar_url": req.AvatarURL,
-	})
+	// 局部更新：仅更新传入的非空字段，避免只改性别时清空昵称/头像
+	updates := map[string]interface{}{}
+	if req.Nickname != "" {
+		updates["nickname"] = req.Nickname
+	}
+	if req.AvatarURL != "" {
+		updates["avatar_url"] = req.AvatarURL
+	}
+	// 性别：仅接受 unknown/male/female，空值不更新
+	if req.Gender != "" {
+		if req.Gender != "unknown" && req.Gender != "male" && req.Gender != "female" {
+			response.Fail(c, 400, "性别参数无效")
+			return
+		}
+		updates["gender"] = req.Gender
+	}
+	if len(updates) > 0 {
+		database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(updates)
+	}
 	response.Success(c, nil)
 }

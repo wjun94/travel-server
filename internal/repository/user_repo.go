@@ -10,6 +10,7 @@ type UserProfileStats struct {
 	ID                 string `json:"id"`
 	Nickname           string `json:"nickname"`
 	AvatarURL          string `json:"avatarUrl"`
+	Gender             string `json:"gender"`             // 性别：unknown未知 male男 female女
 	Role               int    `json:"role"`               // 0普通 1领队 2管理员
 	GuideCount         int64  `json:"guideCount"`         // 已发布的攻略数
 	TripCount          int64  `json:"tripCount"`          // 行程数
@@ -25,6 +26,7 @@ type UserPublicProfile struct {
 	ID                 string `json:"id"`
 	Nickname           string `json:"nickname"`
 	AvatarURL          string `json:"avatarUrl"`
+	Gender             string `json:"gender"`             // 性别：unknown未知 male男 female女
 	GuideCount         int64  `json:"guideCount"`         // 已发布的攻略数
 	TripCount          int64  `json:"tripCount"`          // 行程数
 	PartnerCount       int64  `json:"partnerCount"`       // 搭子数（发布的）
@@ -63,6 +65,7 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 		ID:                 user.ID,
 		Nickname:           user.Nickname,
 		AvatarURL:          user.AvatarURL,
+		Gender:             user.Gender,
 		Role:               user.Role,
 		GuideCount:         guideCount,
 		TripCount:          tripCount,
@@ -131,6 +134,7 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 		ID:                 user.ID,
 		Nickname:           user.Nickname,
 		AvatarURL:          user.AvatarURL,
+		Gender:             user.Gender,
 		GuideCount:         guideCount,
 		TripCount:          tripCount,
 		PartnerCount:       partnerCount,

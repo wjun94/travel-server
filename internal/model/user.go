@@ -16,6 +16,7 @@ type User struct {
 	UnionID       string    `gorm:"size:64" json:"unionid"`                // 微信 unionid
 	Nickname      string    `gorm:"size:50" json:"nickname"`               // 昵称
 	AvatarURL     string    `gorm:"size:500" json:"avatarUrl"`             // 头像链接
+	Gender        string    `gorm:"size:10;default:unknown" json:"gender"` // 性别：unknown未知 male男 female女
 	Role          int       `gorm:"default:0" json:"role"`                 // 0普通 1领队 2管理员
 	Phone         string    `gorm:"size:20" json:"phone"`                  // 手机号（微信授权绑定）
 	InviteCode    string    `gorm:"uniqueIndex;size:16" json:"inviteCode"` // 我的邀请码
