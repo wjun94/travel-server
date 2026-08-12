@@ -77,7 +77,7 @@ func ListPartners(c *gin.Context) {
 			"onlineLink":      p.OnlineLink,
 			"startDate":       p.StartDate,
 			"endDate":         p.EndDate,
-			"days":            p.Days,
+			"dayCount":        len(p.Days), // 出行天数（由行程日列表长度派生）
 			"travelTags":      p.TravelTags,
 			"desc":            p.Desc,
 			"requirement":     p.Requirement,
@@ -145,12 +145,12 @@ func UpdatePartnerStatus(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// GetPartnerDetail 搭子详情（含关联行程安排）
+// GetPartnerDetail 搭子详情（含行程日列表）
 // @Summary 搭子详情
 // @Security BearerAuth
 // @Tags 后台-搭子
 // @Param id path string true "搭子ID"
-// @Success 200 {object} response.Response{data=object{partner=model.Partner,days=[]model.TripDay}}
+// @Success 200 {object} response.Response{data=object{partner=model.Partner,days=[]model.PartnerDay}}
 // @Router /api/v1/admin/partner/{id} [get]
 func GetPartnerDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -159,15 +159,10 @@ func GetPartnerDetail(c *gin.Context) {
 		response.Fail(c, 404, "搭子不存在")
 		return
 	}
-	// 关联行程安排（搭子创建时自动生成草稿行程）
-	var days []model.TripDay
-	if partner.TripID != "" {
-		if trip, err := repository.GetTripByID(partner.TripID); err == nil {
-			days = trip.Days
-		}
-	}
+	// 行程安排：搭子自身行程日列表（关联表 partner_days，由 GetPartnerByID 预加载）
+	days := partner.Days
 	if days == nil {
-		days = []model.TripDay{}
+		days = []model.PartnerDay{}
 	}
 	// 作者信息
 	authorName, authorAvatar := "", ""

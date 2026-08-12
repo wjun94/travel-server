@@ -32,7 +32,6 @@ type CreatePartnerReq struct {
 	OnlineLink      string          `json:"onlineLink"`      // 线上链接
 	StartDate       string          `json:"startDate"`       // YYYY-MM-DD
 	EndDate         string          `json:"endDate"`         // YYYY-MM-DD
-	TotalDays       int             `json:"totalDays"`       // 出行天数
 	TravelTags      string          `json:"travelTags"`      // 逗号分隔（兼容旧版）
 	Tags            string          `json:"tags"`            // 多选标签JSON数组
 	Desc            string          `json:"desc"`            // 行程简述
@@ -74,6 +73,43 @@ func parseDate(s string) *time.Time {
 	return &t
 }
 
+// toPartnerDays 将行程日数据（TripDay）转换为搭子行程日列表（PartnerDay），用于落库关联表
+func toPartnerDays(days []model.TripDay) []model.PartnerDay {
+	res := make([]model.PartnerDay, 0, len(days))
+	for _, d := range days {
+		pd := model.PartnerDay{
+			DayNumber: d.DayNumber,
+			Date:      d.Date,
+			Title:     d.Title,
+		}
+		for _, it := range d.Items {
+			pd.Items = append(pd.Items, model.PartnerDayItem{
+				SectionType:     it.SectionType,
+				Title:           it.Title,
+				Description:     it.Description,
+				StartTime:       it.StartTime,
+				EndTime:         it.EndTime,
+				Latitude:        it.Latitude,
+				Longitude:       it.Longitude,
+				Address:         it.Address,
+				Images:          it.Images,
+				NeedReservation: it.NeedReservation,
+				TicketChannel:   it.TicketChannel,
+				TicketPrice:     it.TicketPrice,
+				TransportMode:   it.TransportMode,
+				StartPoint:      it.StartPoint,
+				EndPoint:        it.EndPoint,
+				StartLat:        it.StartLat,
+				StartLng:        it.StartLng,
+				EndLat:          it.EndLat,
+				EndLng:          it.EndLng,
+			})
+		}
+		res = append(res, pd)
+	}
+	return res
+}
+
 // CreatePartner 发布搭子信息
 // @Summary 发布搭子
 // @Security BearerAuth
@@ -110,7 +146,6 @@ func CreatePartner(c *gin.Context) {
 		OnlineLink:      req.OnlineLink,
 		StartDate:       parseDate(req.StartDate),
 		EndDate:         parseDate(req.EndDate),
-		Days:            req.TotalDays,
 		TravelTags:      req.TravelTags,
 		Tags:            req.Tags,
 		Desc:            req.Desc,
@@ -141,11 +176,9 @@ func CreatePartner(c *gin.Context) {
 	p.Status = 0         // 默认招募中
 	p.CurrentMembers = 1 // 发起人计入
 
-	// 行程安排：直接存搭子自身（不自动创建行程记录）
+	// 行程安排：转搭子行程日列表（关联表 partner_days，参考行程表结构）
 	if len(req.Days) > 0 {
-		if b, err := json.Marshal(req.Days); err == nil {
-			p.Itinerary = string(b)
-		}
+		p.Days = toPartnerDays(req.Days)
 	}
 	if err := repository.CreatePartner(&p); err != nil {
 		response.Fail(c, 500, "发布失败")
@@ -208,6 +241,7 @@ func GetPartnerList(c *gin.Context) {
 		IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
 		IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
 		ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
+		DayCount     int    `json:"dayCount"`     // 出行天数（由行程日列表长度派生）
 	}
 	result := make([]partnerVO, len(list))
 	for i, p := range list {
@@ -218,6 +252,9 @@ func GetPartnerList(c *gin.Context) {
 			authorName = u.Nickname
 			authorAvatar = u.AvatarURL
 		}
+		// 天数由行程日列表长度派生；置空 Days 避免列表响应携带完整行程数组
+		dayCount := len(p.Days)
+		p.Days = nil
 		result[i] = partnerVO{
 			Partner:      p,
 			AuthorID:     p.UserID,
@@ -226,6 +263,7 @@ func GetPartnerList(c *gin.Context) {
 			IsApplied:    loggedIn && appliedMap[p.ID],
 			IsSelf:       loggedIn && currentUserID == p.UserID,
 			IsFollowed:   loggedIn && (followMap[p.UserID] == 1 || followMap[p.UserID] == 2),
+			DayCount:     dayCount,
 		}
 	}
 
@@ -300,6 +338,7 @@ type partnerItemVO struct {
 	IsSelf       bool   `json:"isSelf"`       // 是否是自己创建的
 	IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
 	ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
+	DayCount     int    `json:"dayCount"`     // 出行天数（由行程日列表长度派生）
 }
 
 // enrichPartnerList 富化搭子列表：批量注入作者信息与关联行程项数（列表/我的/参与的共用）
@@ -321,6 +360,9 @@ func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerIt
 			authorName = u.Nickname
 			authorAvatar = u.AvatarURL
 		}
+		// 天数由行程日列表长度派生；置空 Days 避免列表响应携带完整行程数组
+		dayCount := len(p.Days)
+		p.Days = nil
 		result[i] = partnerItemVO{
 			Partner:      p,
 			AuthorID:     p.UserID,
@@ -329,6 +371,7 @@ func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerIt
 			IsApplied:    isApplied,
 			IsSelf:       isSelf,
 			IsFollowed:   false,
+			DayCount:     dayCount,
 		}
 	}
 
@@ -411,7 +454,6 @@ type UpdatePartnerReq struct {
 	OnlineLink      *string         `json:"onlineLink"`      // 线上链接
 	StartDate       *string         `json:"startDate"`       // YYYY-MM-DD
 	EndDate         *string         `json:"endDate"`         // YYYY-MM-DD
-	TotalDays       *int            `json:"totalDays"`       // 出行天数
 	TravelTags      *string         `json:"travelTags"`      // 逗号分隔（兼容旧版）
 	Tags            *string         `json:"tags"`            // 多选标签JSON数组
 	Desc            *string         `json:"desc"`            // 行程简述
@@ -504,9 +546,6 @@ func UpdatePartner(c *gin.Context) {
 	if req.EndDate != nil {
 		partner.EndDate = parseDate(*req.EndDate)
 	}
-	if req.TotalDays != nil {
-		partner.Days = *req.TotalDays
-	}
 	if req.TravelTags != nil {
 		partner.TravelTags = *req.TravelTags
 	}
@@ -595,11 +634,10 @@ func UpdatePartner(c *gin.Context) {
 		return
 	}
 
-	// 行程安排：直接更新搭子自身行程安排（不自动创建行程记录）
+	// 行程安排：全量替换搭子行程日列表（关联表 partner_days，编辑后详情页展示最新行程）
 	if len(req.Days) > 0 {
-		if b, err := json.Marshal(req.Days); err == nil {
-			partner.Itinerary = string(b)
-			_ = repository.UpdatePartner(partner)
+		if err := repository.UpdatePartnerWithDays(partner.ID, nil, toPartnerDays(req.Days)); err != nil {
+			log.Printf("搭子行程日列表更新失败: %v", err)
 		}
 	}
 	response.Success(c, nil)
@@ -665,25 +703,7 @@ func GetPartnerDetail(c *gin.Context) {
 	isLiked := repository.IsPartnerLiked(userID, id)
 	isFavorited := repository.IsFavorited(userID, id, "partner")
 
-	// 行程安排：优先解析搭子自身 Itinerary，老数据兜底关联行程（含每日行程项）
-	var itineraryData interface{}
-	if partner.Itinerary != "" {
-		var days []model.TripDay
-		if err := json.Unmarshal([]byte(partner.Itinerary), &days); err == nil {
-			itineraryData = days
-		}
-	}
-	var tripData interface{}
-	if partner.TripID != "" {
-		trip, err := repository.GetTripByID(partner.TripID)
-		if err == nil {
-			tripData = trip
-			// 老数据：搭子未存 Itinerary 时用关联行程 days 兜底
-			if itineraryData == nil && len(trip.Days) > 0 {
-				itineraryData = trip.Days
-			}
-		}
-	}
+	// 行程安排：搭子自身行程日列表（关联表 partner_days，由 GetPartnerByID 预加载）
 
 	// 实时查询评论数
 	cm := repository.GetPartnerCommentCounts([]string{id})
@@ -707,7 +727,6 @@ func GetPartnerDetail(c *gin.Context) {
 		"onlineLink":      partner.OnlineLink,
 		"startDate":       partner.StartDate,
 		"endDate":         partner.EndDate,
-		"days":            partner.Days,
 		"travelTags":      partner.TravelTags,
 		"tags":            partner.Tags,
 		"desc":            partner.Desc,
@@ -751,8 +770,8 @@ func GetPartnerDetail(c *gin.Context) {
 		"application":     application,
 		"isLiked":         isLiked,
 		"isFavorited":     isFavorited,
-		"itinerary":       itineraryData,
-		"trip":            tripData,
+		"days":            partner.Days,
+		"tripId":          partner.TripID,
 	})
 }
 
@@ -1035,7 +1054,7 @@ func AIGeneratePartner(c *gin.Context) {
 	if req.StartDate != "" {
 		startDesc = req.StartDate
 	}
-	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, req.Days, startDesc)
+	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, startDesc, req.Days)
 	result, err := ai.Chat(prompt)
 	if err != nil {
 		response.Fail(c, 500, "AI生成失败")
@@ -1128,7 +1147,6 @@ func AIGeneratePartner(c *gin.Context) {
 		Title:           aiResult.Title,
 		Category:        aiResult.Category,
 		Destination:     aiResult.Destination,
-		Days:            aiResult.Days,
 		Address:         aiResult.Address,
 		StartDate:       parseDate(aiResult.StartDate),
 		EndDate:         parseDate(aiResult.EndDate),
@@ -1169,7 +1187,8 @@ func AIGeneratePartner(c *gin.Context) {
 		return
 	}
 
-	// 行程安排：AI 生成的 schedule 直接存搭子自身（不自动创建行程记录）
+	// 行程安排：AI 生成的 schedule 转搭子行程日列表落库（关联表 partner_days）
+	var tripDays []model.TripDay
 	if len(aiResult.Schedule) > 0 {
 		dayList := make([]model.TripDay, 0, len(aiResult.Schedule))
 		for i, d := range aiResult.Schedule {
@@ -1203,16 +1222,11 @@ func AIGeneratePartner(c *gin.Context) {
 				Items:     items,
 			})
 		}
-		if b, err := json.Marshal(dayList); err == nil {
-			p.Itinerary = string(b)
-			_ = repository.UpdatePartner(&p)
+		// 行程安排：AI 生成的 schedule 转搭子行程日列表落库（关联表 partner_days）
+		tripDays = dayList
+		if err := repository.UpdatePartnerWithDays(p.ID, nil, toPartnerDays(dayList)); err != nil {
+			log.Printf("搭子行程日列表写入失败: %v", err)
 		}
-	}
-
-	// 行程安排数组（前端 AI 流程依赖 days 数组结构）
-	var tripDays []model.TripDay
-	if p.Itinerary != "" {
-		_ = json.Unmarshal([]byte(p.Itinerary), &tripDays)
 	}
 
 	// 响应：搭子完整字段 + 行程安排数组（前端 AI 流程依赖 days 数组结构）
@@ -1223,7 +1237,10 @@ func AIGeneratePartner(c *gin.Context) {
 	respData["tripId"] = p.TripID
 	respData["coverImage"] = p.Cover
 	respData["cities"] = []string{p.Destination}
-	respData["dayCount"] = p.Days
+	respData["dayCount"] = len(tripDays)
+	if respData["dayCount"] == 0 {
+		respData["dayCount"] = aiResult.Days
+	}
 	if tripDays == nil {
 		tripDays = []model.TripDay{}
 	}

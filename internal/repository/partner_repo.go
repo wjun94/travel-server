@@ -36,20 +36,63 @@ func GetPartnerList(page, pageSize int, keyword string) ([]model.Partner, int64,
 		query = query.Where("title LIKE ? OR destination LIKE ? OR `desc` LIKE ? OR tags LIKE ?", kw, kw, kw, kw)
 	}
 	query.Count(&total)
-	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Preload("Days").Find(&list).Error
 	return list, total, err
 }
 
-// GetPartnerByID 根据 ID 获取搭子
+// GetPartnerByID 根据 ID 获取搭子（含行程日列表及每日行程项）
 func GetPartnerByID(id string) (*model.Partner, error) {
 	var p model.Partner
-	err := database.DB.First(&p, "id = ?", id).Error
+	err := database.DB.
+		Preload("Days.Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at asc")
+		}).
+		First(&p, "id = ?", id).Error
 	return &p, err
 }
 
 // UpdatePartner 更新搭子信息
 func UpdatePartner(p *model.Partner) error {
 	return database.DB.Save(p).Error
+}
+
+// UpdatePartnerWithDays 事务更新搭子基本信息并全量替换行程日列表（删除旧行程日后重建，保留搭子本体）
+func UpdatePartnerWithDays(id string, updates map[string]interface{}, days []model.PartnerDay) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if len(updates) > 0 {
+			if err := tx.Model(&model.Partner{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+		// 删除旧行程日及行程项
+		var dayIDs []string
+		if err := tx.Model(&model.PartnerDay{}).Where("partner_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("day_id IN ?", dayIDs).Delete(&model.PartnerDayItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("partner_id = ?", id).Delete(&model.PartnerDay{}).Error; err != nil {
+				return err
+			}
+		}
+		// 重建行程日（GORM 级联创建每日行程项）
+		for i := range days {
+			days[i].ID = ""
+			days[i].PartnerID = id
+			for j := range days[i].Items {
+				days[i].Items[j].ID = ""
+				days[i].Items[j].DayID = ""
+			}
+		}
+		if len(days) > 0 {
+			if err := tx.Create(&days).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // CreateApplication 创建搭子申请
@@ -130,7 +173,7 @@ func GetPartners(page, pageSize int, destination string, status int, ptype int) 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Preload("Days").Find(&list).Error
 	return list, total, err
 }
 
@@ -148,7 +191,7 @@ func GetMyPartners(userID string, page, pageSize, isDraft int) ([]model.Partner,
 	if isDraft >= 0 {
 		listQuery = listQuery.Where("is_draft = ?", isDraft)
 	}
-	err := listQuery.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&list).Error
+	err := listQuery.Offset(offset).Limit(pageSize).Order("created_at desc").Preload("Days").Find(&list).Error
 	return list, total, err
 }
 
@@ -161,7 +204,7 @@ func GetJoinedPartners(userID string, page, pageSize int) ([]model.Partner, int6
 		Where("pa.user_id = ? AND pa.status = 1 AND partners.is_draft = 0", userID)
 	query.Count(&total)
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).
-		Order("partners.created_at desc").Find(&list).Error
+		Order("partners.created_at desc").Preload("Days").Find(&list).Error
 	return list, total, err
 }
 
@@ -175,11 +218,24 @@ func CountJoinedPartners(userID string) (int64, error) {
 	return count, err
 }
 
-// DeletePartnerCascade 删除搭子（级联删除申请记录）
+// DeletePartnerCascade 删除搭子（级联删除申请记录及行程日列表）
 func DeletePartnerCascade(id string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("partner_id = ?", id).Delete(&model.PartnerApplication{}).Error; err != nil {
 			return err
+		}
+		// 级联删除行程日及行程项
+		var dayIDs []string
+		if err := tx.Model(&model.PartnerDay{}).Where("partner_id = ?", id).Pluck("id", &dayIDs).Error; err != nil {
+			return err
+		}
+		if len(dayIDs) > 0 {
+			if err := tx.Where("day_id IN ?", dayIDs).Delete(&model.PartnerDayItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("partner_id = ?", id).Delete(&model.PartnerDay{}).Error; err != nil {
+				return err
+			}
 		}
 		return tx.Where("id = ?", id).Delete(&model.Partner{}).Error
 	})

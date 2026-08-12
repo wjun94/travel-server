@@ -358,7 +358,7 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 	var partnerTotal int64
 	partnerQuery := database.DB.Model(&model.Partner{}).Where("user_id = ? AND is_draft = 0 AND is_public = 1", userID)
 	partnerQuery.Count(&partnerTotal)
-	partnerQuery.Order("created_at desc").Find(&partners)
+	partnerQuery.Order("created_at desc").Preload("Days").Find(&partners)
 
 	total := guideTotal + tripTotal + partnerTotal
 
@@ -487,7 +487,7 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 			ItemType:     "partner",
 			ViewCount:    p.ViewCount,
 			LikeCount:    p.LikeCount,
-			TripDays:     p.Days,
+			TripDays:     len(p.Days),
 			CreatedAt:    p.CreatedAt,
 		})
 	}

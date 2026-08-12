@@ -58,6 +58,8 @@ func InitMySQL() {
 		&model.TripItem{},
 		&model.TripMember{},
 		&model.Partner{},
+		&model.PartnerDay{},
+		&model.PartnerDayItem{},
 		&model.PartnerApplication{},
 		&model.PartnerLike{},
 		&model.Message{},

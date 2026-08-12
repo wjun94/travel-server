@@ -28,7 +28,6 @@ type Partner struct {
 	// 出行时间
 	StartDate *time.Time `gorm:"index" json:"startDate"` // 出发日期
 	EndDate   *time.Time `json:"endDate"`                // 结束日期
-	Days      int        `json:"days"`                   // 出行天数
 	// 标签（多选）
 	TravelTags string `gorm:"type:text" json:"travelTags"` // 逗号分隔，如：自驾,徒步,美食（兼容旧版）
 	Tags       string `gorm:"type:text" json:"tags"`       // 多选标签JSON数组，如：["徒步","拍照","美食"]
@@ -64,8 +63,8 @@ type Partner struct {
 	// 状态
 	Status   int `gorm:"default:0;index" json:"status"` // 0招募中 1满员 2取消 3已过期 4行程结束
 	IsPublic int `gorm:"default:1" json:"isPublic"`     // 0仅自己可见 1公开招募
-	// 行程安排（JSON，不随搭子自动创建行程，直接存搭子自身）
-	Itinerary string `gorm:"type:text" json:"-"` // 行程安排 JSON（TripDay 数组），由 handler 解析返回
+	// 行程安排：行程日列表（关联表 partner_days，参考行程表结构），由 GetPartnerByID 预加载
+	Days []PartnerDay `gorm:"foreignKey:PartnerID" json:"days,omitempty"`
 	// 运营统计
 	ViewCount     int `gorm:"default:0" json:"viewCount"`     // 浏览量
 	LikeCount     int `gorm:"default:0" json:"likeCount"`     // 点赞数
