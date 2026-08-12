@@ -86,6 +86,7 @@ type AccountOverviewItem struct {
 	TotalAmount float64   `json:"totalAmount"` // 总支出
 	Count       int64     `json:"count"`       // 总笔数
 	LastTime    time.Time `json:"lastTime"`    // 最后记账时间
+	LastNote    string    `json:"lastNote"`    // 最近一笔记账的笔记名称（备注）
 }
 
 // GetAccountOverview 获取我的账本总览（按目标聚合，按最后记账时间倒序）
@@ -97,10 +98,12 @@ func GetAccountOverview(userID string) ([]AccountOverviewItem, error) {
 		TotalAmount float64
 		Count       int64
 		LastTime    time.Time
+		LastNote    string
 	}
 	var aggs []aggRow
 	err := database.DB.Model(&model.Accounting{}).
-		Select("target_type, target_id, MAX(target_name) as target_name, SUM(amount) as total_amount, COUNT(*) as count, MAX(consumed_at) as last_time").
+		// last_note：分组内按消费时间倒序取最近一笔记账的备注（0x1f 为不可见分隔符，避免笔记内容干扰）
+		Select("target_type, target_id, MAX(target_name) as target_name, SUM(amount) as total_amount, COUNT(*) as count, MAX(consumed_at) as last_time, SUBSTRING_INDEX(GROUP_CONCAT(note ORDER BY consumed_at DESC SEPARATOR 0x1f), 0x1f, 1) as last_note").
 		Where("user_id = ? AND target_type IN (?) AND target_id != ''", userID, []string{"trip", "guide", "partner", "custom"}).
 		Group("target_type, target_id").Scan(&aggs).Error
 	if err != nil {
@@ -156,6 +159,7 @@ func GetAccountOverview(userID string) ([]AccountOverviewItem, error) {
 			TotalAmount: a.TotalAmount,
 			Count:       a.Count,
 			LastTime:    a.LastTime,
+			LastNote:    a.LastNote,
 		})
 	}
 	// 按最后记账时间倒序

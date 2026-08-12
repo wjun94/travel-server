@@ -10,6 +10,9 @@ import (
 	"travel-server/pkg/response"
 )
 
+// validChecklistTargetTypes 备忘清单可关联的目标类型（空=不关联）
+var validChecklistTargetTypes = map[string]bool{"": true, "trip": true, "guide": true, "partner": true}
+
 // GetChecklists 获取用户的备忘清单
 // @Summary 获取备忘清单
 // @Security BearerAuth
@@ -30,20 +33,49 @@ func GetChecklists(c *gin.Context) {
 	response.Success(c, gin.H{"list": lists, "total": total})
 }
 
-// CreateChecklist 创建新的备忘清单
+// CreateChecklist 创建新的备忘清单（可关联行程/攻略/搭子）
 // @Summary 创建备忘清单
 // @Security BearerAuth
 // @Tags 小程序-备忘
-// @Param body body model.Checklist true "清单信息"
+// @Param body body object{name=string,targetType=string,targetId=string,tripId=string,items=[]model.ChecklistItem} true "清单信息"
 // @Success 200 {object} response.Response
 // @Router /api/v1/checklist [post]
 func CreateChecklist(c *gin.Context) {
-	var cl model.Checklist
-	if err := c.ShouldBindJSON(&cl); err != nil {
+	var req struct {
+		Name       string                `json:"name"`
+		TargetType string                `json:"targetType"` // trip行程 guide攻略 partner搭子（空=不关联）
+		TargetID   string                `json:"targetId"`
+		TripID     string                `json:"tripId"` // 兼容旧字段
+		Items      []model.ChecklistItem `json:"items"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	cl.UserID = c.MustGet("userID").(string)
+	if !validChecklistTargetTypes[req.TargetType] {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	// 旧字段兼容：只传 tripId 时按行程关联处理
+	if req.TargetType == "" && req.TripID != "" {
+		req.TargetType, req.TargetID = "trip", req.TripID
+	}
+	// 有关联时目标 ID 必填
+	if req.TargetType != "" && req.TargetID == "" {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	cl := model.Checklist{
+		UserID:     c.MustGet("userID").(string),
+		Name:       req.Name,
+		TargetType: req.TargetType,
+		TargetID:   req.TargetID,
+		Items:      req.Items,
+	}
+	// trip 类型同步写兼容字段 trip_id
+	if req.TargetType == "trip" {
+		cl.TripID = req.TargetID
+	}
 	if err := repository.CreateChecklist(&cl); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
@@ -93,26 +125,51 @@ func GetChecklistDetail(c *gin.Context) {
 	response.Success(c, cl)
 }
 
-// UpdateChecklist 更新备忘清单
+// UpdateChecklist 更新备忘清单（名称 + 关联 + 条目）
 // @Summary 更新备忘清单
 // @Security BearerAuth
 // @Tags 小程序-备忘
 // @Param id path string true "清单ID"
-// @Param body body object{name=string,items=[]model.ChecklistItem} true "名称和条目"
+// @Param body body object{name=string,targetType=string,targetId=string,items=[]model.ChecklistItem} true "名称、关联和条目"
 // @Success 200 {object} response.Response
 // @Router /api/v1/checklist/{id} [put]
 func UpdateChecklist(c *gin.Context) {
 	id := c.Param("id")
 	uid := c.MustGet("userID").(string)
+	// 指针接收关联字段：nil=不修改，非nil=明确设置（空串即取消关联）
 	var req struct {
-		Name  string                `json:"name"`
-		Items []model.ChecklistItem `json:"items"`
+		Name       string                `json:"name"`
+		TargetType *string               `json:"targetType"` // trip行程 guide攻略 partner搭子
+		TargetID   *string               `json:"targetId"`
+		Items      []model.ChecklistItem `json:"items"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	if err := repository.UpdateChecklist(id, uid, req.Name, req.Items); err != nil {
+	// 关联字段必须成对出现
+	if (req.TargetType == nil) != (req.TargetID == nil) {
+		response.Fail(c, 400, "参数错误")
+		return
+	}
+	hasTarget := req.TargetType != nil
+	targetType, targetID := "", ""
+	if hasTarget {
+		targetType = *req.TargetType
+		if req.TargetID != nil {
+			targetID = *req.TargetID
+		}
+		if !validChecklistTargetTypes[targetType] {
+			response.Fail(c, 400, "参数错误")
+			return
+		}
+		// 设置了类型但未给目标 ID（取消关联除外）
+		if targetType != "" && targetID == "" {
+			response.Fail(c, 400, "参数错误")
+			return
+		}
+	}
+	if err := repository.UpdateChecklist(id, uid, req.Name, targetType, targetID, hasTarget, req.Items); err != nil {
 		response.Fail(c, 500, "更新失败")
 		return
 	}

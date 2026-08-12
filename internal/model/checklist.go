@@ -9,12 +9,18 @@ import (
 )
 
 // Checklist 备忘清单
+// 可关联行程/攻略/搭子（target_type + target_id），也可不关联
+// trip_id 为兼容旧字段，等同 target_type=trip 时的 target_id
+// target_name 为查询时填充的关联名称（不落库）
 type Checklist struct {
 	ID         string          `gorm:"primaryKey" json:"id"`
 	UserID     string          `gorm:"size:191" json:"userId"`
 	Name       string          `gorm:"size:100" json:"name"`                // 清单名称
 	IsTemplate int             `gorm:"default:0" json:"isTemplate"`         // 0否 1官方模板
-	TripID     string          `gorm:"size:191" json:"tripId"`              // 关联行程
+	TripID     string          `gorm:"size:191" json:"tripId"`              // 关联行程（兼容旧字段）
+	TargetType string          `gorm:"size:20" json:"targetType"`           // 关联类型：trip行程 guide攻略 partner搭子（空=无关联）
+	TargetID   string          `gorm:"size:191" json:"targetId"`            // 关联目标ID
+	TargetName string          `gorm:"-" json:"targetName"`                 // 关联名称（行程/攻略/搭子标题，查询时填充）
 	Items      []ChecklistItem `gorm:"foreignKey:ChecklistID" json:"items"` // 清单项
 	CreatedAt  time.Time       `json:"createdAt"`
 }

@@ -126,6 +126,7 @@ func main() {
 			miniAuth.POST("/partner", miniapp.CreatePartner)                    // 发布搭子
 			miniAuth.POST("/partner/ai-generate", miniapp.AIGeneratePartner)    // AI智能生成搭子
 			miniAuth.GET("/my/partners", miniapp.GetMyPartners)                 // 我的搭子列表（isDraft可筛草稿）
+			miniAuth.GET("/relations", miniapp.GetRelationOptions)              // 关联目标选项（行程/攻略/搭子，清单/记账本共用）
 			miniAuth.GET("/my/joined-partners", miniapp.GetMyJoinedPartners)    // 我参与的搭子列表
 			miniAuth.GET("/partner/:id", miniapp.GetPartnerDetail)              // 搭子详情
 			miniAuth.PUT("/partner/:id", miniapp.UpdatePartner)                 // 更新搭子（编辑草稿）
