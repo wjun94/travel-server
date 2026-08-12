@@ -140,8 +140,22 @@ func CreateAccountBook(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /api/v1/account/book [delete]
 func DeleteAccountBook(c *gin.Context) {
+	// 兼容两种传参：query（标准）与 body（微信小程序 DELETE 的 data 走请求体）
 	targetType := c.Query("targetType")
 	targetID := c.Query("targetId")
+	if targetType == "" || targetID == "" {
+		var req struct {
+			TargetType string `json:"targetType"`
+			TargetID   string `json:"targetId"`
+		}
+		_ = c.ShouldBindJSON(&req)
+		if targetType == "" {
+			targetType = req.TargetType
+		}
+		if targetID == "" {
+			targetID = req.TargetID
+		}
+	}
 	if !validTargetTypes[targetType] || targetID == "" {
 		response.Fail(c, 400, "参数错误")
 		return
