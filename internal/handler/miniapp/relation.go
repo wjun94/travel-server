@@ -16,18 +16,18 @@ import (
 func GetRelationOptions(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
-	// status=1 已发布行程；status=1 已发布攻略；isDraft=0 已发布搭子
-	trips, _, err := repository.ListUserTrips(userID, 1, 100, 1)
+	// 返回全部行程/攻略/搭子（status/isDraft=-1 不筛草稿，用户要求"全部"）
+	trips, _, err := repository.ListUserTrips(userID, 1, 100, -1)
 	if err != nil {
 		response.Fail(c, 500, "获取行程列表失败")
 		return
 	}
-	guides, _, err := repository.ListMyGuides(userID, 1, 100, 1)
+	guides, _, err := repository.ListMyGuides(userID, 1, 100, -1)
 	if err != nil {
 		response.Fail(c, 500, "获取攻略列表失败")
 		return
 	}
-	partners, _, err := repository.GetMyPartners(userID, 1, 100, 0)
+	partners, _, err := repository.GetMyPartners(userID, 1, 100, -1)
 	if err != nil {
 		response.Fail(c, 500, "获取搭子列表失败")
 		return
