@@ -147,9 +147,11 @@ func GetQWeather(c *gin.Context) {
 		return
 	}
 
-	// 5. 写入 Redis 缓存，6 小时过期
+	// 5. 写入 Redis 缓存，缓存当天数据，次日 0 点失效；之后仅当有人请求该接口时才重新拉取城市天气
 	if data, err := json.Marshal(weatherResult); err == nil {
-		database.RedisClient.Set(ctx, cacheKey, string(data), 6*time.Hour)
+		now := time.Now()
+		nextDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, 1)
+		database.RedisClient.Set(ctx, cacheKey, string(data), nextDay.Sub(now))
 	}
 
 	response.Success(c, weatherResult)
