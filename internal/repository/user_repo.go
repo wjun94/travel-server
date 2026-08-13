@@ -19,6 +19,8 @@ type UserProfileStats struct {
 	FollowCount        int    `json:"followCount"`        // 关注数
 	FollowerCount      int    `json:"followerCount"`      // 粉丝数
 	BlockCount         int64  `json:"blockCount"`         // 拉黑数
+	TotalLikes         int64  `json:"totalLikes"`         // 总获赞数
+	TotalFavs          int64  `json:"totalFavs"`          // 总收藏数
 }
 
 // UserPublicProfile 他人个人主页（含获赞收藏和关注状态）
@@ -61,6 +63,26 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 	var blockCount int64
 	database.DB.Model(&model.Follow{}).Where("user_id = ? AND status = 1", userID).Count(&blockCount)
 
+	// 获赞总数（用户所有攻略/行程/搭子的点赞数之和）
+	var totalLikes int64
+	database.DB.Raw(`SELECT COALESCE(
+		(SELECT SUM(like_count) FROM guides WHERE user_id = ?),
+		0) + COALESCE(
+		(SELECT SUM(like_count) FROM trips WHERE user_id = ?),
+		0) + COALESCE(
+		(SELECT SUM(like_count) FROM partners WHERE user_id = ?),
+		0)`, userID, userID, userID).Scan(&totalLikes)
+
+	// 收藏总数（用户攻略/行程/搭子被收藏的次数）
+	var totalFavs int64
+	database.DB.Raw(`SELECT COUNT(*) FROM favorites WHERE action = 2 AND target_type IN ('guide','trip','partner') AND target_id IN (
+		SELECT id FROM guides WHERE user_id = ?
+		UNION
+		SELECT id FROM trips WHERE user_id = ?
+		UNION
+		SELECT id FROM partners WHERE user_id = ?
+	)`, userID, userID, userID).Scan(&totalFavs)
+
 	return &UserProfileStats{
 		ID:                 user.ID,
 		Nickname:           user.Nickname,
@@ -74,6 +96,8 @@ func GetUserProfileStats(userID string) (*UserProfileStats, error) {
 		FollowCount:        user.FollowCount,
 		FollowerCount:      user.FollowerCount,
 		BlockCount:         blockCount,
+		TotalLikes:         totalLikes,
+		TotalFavs:          totalFavs,
 	}, nil
 }
 
@@ -105,20 +129,25 @@ func GetUserPublicProfile(userID, currentUserID string) (*UserPublicProfile, err
 
 	joinedPartnerCount, _ := CountJoinedPartners(userID)
 
-	// 获赞总数（用户所有已发布攻略的点赞数之和）
+	// 获赞总数（用户所有攻略/行程/搭子的点赞数之和）
 	var totalLikes int64
-	database.DB.Model(&model.Guide{}).
-		Select("COALESCE(SUM(like_count), 0)").
-		Where("user_id = ? AND status = 1", userID).
-		Scan(&totalLikes)
+	database.DB.Raw(`SELECT COALESCE(
+		(SELECT SUM(like_count) FROM guides WHERE user_id = ?),
+		0) + COALESCE(
+		(SELECT SUM(like_count) FROM trips WHERE user_id = ?),
+		0) + COALESCE(
+		(SELECT SUM(like_count) FROM partners WHERE user_id = ?),
+		0)`, userID, userID, userID).Scan(&totalLikes)
 
-	// 收藏总数（用户内容被收藏的次数）
+	// 收藏总数（用户攻略/行程/搭子被收藏的次数）
 	var totalFavs int64
-	database.DB.Raw(`SELECT COUNT(*) FROM favorites WHERE target_type IN ('guide','trip') AND target_id IN (
-		SELECT id FROM guides WHERE user_id = ? AND status = 1
+	database.DB.Raw(`SELECT COUNT(*) FROM favorites WHERE action = 2 AND target_type IN ('guide','trip','partner') AND target_id IN (
+		SELECT id FROM guides WHERE user_id = ?
 		UNION
 		SELECT id FROM trips WHERE user_id = ?
-	)`, userID, userID).Scan(&totalFavs)
+		UNION
+		SELECT id FROM partners WHERE user_id = ?
+	)`, userID, userID, userID).Scan(&totalFavs)
 
 	// 我是否已关注对方
 	followStatus, _ := GetFollowStatus(currentUserID, userID)
