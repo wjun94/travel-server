@@ -1142,7 +1142,9 @@ func AIGeneratePartner(c *gin.Context) {
 		}
 	}
 
+	// AI 生成不落库（不保存草稿），仅返回生成数据；用户确认发布后通过发布接口新建
 	p := model.Partner{
+		ID:              fmt.Sprintf("ai_%d", time.Now().UnixNano()), // 临时标识，仅用于前端流程串联，非库中记录ID
 		UserID:          userID,
 		Title:           aiResult.Title,
 		Category:        aiResult.Category,
@@ -1167,7 +1169,7 @@ func AIGeneratePartner(c *gin.Context) {
 		FeeInclude:      aiResult.FeeInclude,
 		FeeExclude:      aiResult.FeeExclude,
 		EstTotal:        aiResult.EstTotal,
-		IsDraft:         1, // AI生成先存草稿，用户编辑确认后再发布（复用草稿ID更新，避免重复创建）
+		IsDraft:         0, // 非草稿（AI生成不保存草稿）
 		IsPublic:        1,
 		IsAI:            1,
 	}
@@ -1182,12 +1184,8 @@ func AIGeneratePartner(c *gin.Context) {
 			p.EndDate = parseDate(addDaysStr(req.StartDate, aiResult.Days-1))
 		}
 	}
-	if err := repository.CreatePartner(&p); err != nil {
-		response.Fail(c, 500, "发布失败")
-		return
-	}
 
-	// 行程安排：AI 生成的 schedule 转搭子行程日列表落库（关联表 partner_days）
+	// 行程安排：AI 生成的 schedule 转为响应用行程日列表（不落库）
 	var tripDays []model.TripDay
 	if len(aiResult.Schedule) > 0 {
 		dayList := make([]model.TripDay, 0, len(aiResult.Schedule))
@@ -1222,11 +1220,7 @@ func AIGeneratePartner(c *gin.Context) {
 				Items:     items,
 			})
 		}
-		// 行程安排：AI 生成的 schedule 转搭子行程日列表落库（关联表 partner_days）
 		tripDays = dayList
-		if err := repository.UpdatePartnerWithDays(p.ID, nil, toPartnerDays(dayList)); err != nil {
-			log.Printf("搭子行程日列表写入失败: %v", err)
-		}
 	}
 
 	// 响应：搭子完整字段 + 行程安排数组（前端 AI 流程依赖 days 数组结构）
@@ -1234,7 +1228,6 @@ func AIGeneratePartner(c *gin.Context) {
 	if b, err := json.Marshal(p); err == nil {
 		json.Unmarshal(b, &respData)
 	}
-	respData["tripId"] = p.TripID
 	respData["coverImage"] = p.Cover
 	respData["cities"] = []string{p.Destination}
 	respData["dayCount"] = len(tripDays)

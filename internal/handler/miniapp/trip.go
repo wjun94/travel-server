@@ -86,8 +86,9 @@ func AIGenerateTrip(c *gin.Context) {
 		return
 	}
 
-	// 创建行程（填充AI返回的完整字段）
+	// AI 生成不落库（不保存草稿），仅返回生成数据；用户确认发布后通过发布接口新建
 	trip := model.Trip{
+		ID:           fmt.Sprintf("ai_%d", time.Now().UnixNano()), // 临时标识，仅用于前端流程串联，非库中记录ID
 		UserID:       uid,
 		Title:        aiResult.Title,
 		Countries:    aiResult.Countries,
@@ -97,7 +98,7 @@ func AIGenerateTrip(c *gin.Context) {
 		IsOverseas:   aiResult.IsOverseas,
 		TotalBudget:  aiResult.TotalBudget,
 		Summary:      aiResult.Summary,
-		Status:       1, // 草稿
+		Status:       0, // 非草稿
 		IsPublic:     1, // 默认公开
 		IsAI:         1, // AI生成
 	}
@@ -105,12 +106,9 @@ func AIGenerateTrip(c *gin.Context) {
 	if trip.Title == "" {
 		trip.Title = fmt.Sprintf("%s%d日游", req.Destination, req.Days)
 	}
-	if err := repository.CreateTrip(&trip); err != nil {
-		response.Fail(c, 500, "保存失败")
-		return
-	}
 
-	// 创建行程日及行程项（用户指定出发日期时，每天日期按出发日期顺延，AI 返回的日期不采用）
+	// 行程日及行程项（用户指定出发日期时，每天日期按出发日期顺延，AI 返回的日期不采用）
+	dayList := make([]model.TripDay, 0, len(aiResult.Days))
 	for i, d := range aiResult.Days {
 		dayNumber := d.Day
 		if dayNumber <= 0 {
@@ -120,29 +118,43 @@ func AIGenerateTrip(c *gin.Context) {
 		if req.StartDate != "" {
 			dayDate = addDaysStr(req.StartDate, dayNumber-1)
 		}
-		day := model.TripDay{
-			TripID:    trip.ID,
-			DayNumber: dayNumber,
-			Date:      dayDate,
-			Title:     fmt.Sprintf("第%d天", dayNumber),
-		}
-		repository.CreateTripDay(&day)
+		items := make([]model.TripItem, 0, len(d.Items))
 		for _, item := range d.Items {
-			tripItem := model.TripItem{
-				TripDayID:   day.ID,
+			items = append(items, model.TripItem{
 				StartTime:   item.Time,
 				SectionType: item.Type,
 				Title:       item.Name,
 				Address:     item.Address,
 				Description: item.Description,
-			}
-			repository.CreateTripItem(&tripItem)
+			})
 		}
+		dayList = append(dayList, model.TripDay{
+			DayNumber: dayNumber,
+			Date:      dayDate,
+			Title:     fmt.Sprintf("第%d天", dayNumber),
+			Items:     items,
+		})
 	}
 
-	// 重新加载完整数据
-	fullTrip, _ := repository.GetTripByID(trip.ID)
-	response.Success(c, fullTrip)
+	// 响应：平铺行程字段 + 每日行程数组（前端 AI 流程依赖 days 数组结构）
+	respData := map[string]interface{}{
+		"id":           trip.ID,
+		"userId":       uid,
+		"title":        trip.Title,
+		"coverImage":   "",
+		"countries":    aiResult.Countries,
+		"provinces":    aiResult.Provinces,
+		"cities":       aiResult.Cities,
+		"destinations": []string{req.Destination},
+		"isOverseas":   aiResult.IsOverseas,
+		"totalBudget":  aiResult.TotalBudget,
+		"summary":      aiResult.Summary,
+		"status":       0, // 非草稿
+		"isPublic":     1,
+		"isAI":         1,
+		"days":         dayList,
+	}
+	response.Success(c, respData)
 }
 
 // addDaysStr 按偏移天数计算日期字符串（YYYY-MM-DD + offset 天）
