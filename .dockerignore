@@ -1,0 +1,12 @@
+# 敏感文件：certs 通过 volume 挂载，env 通过 env_file 注入，均不进入镜像
+certs/
+.env*
+!.env.example
+.git/
+.qoder/
+docs/
+*.md
+docker-compose*.yml
+api.conf
+includes/
+ssl/

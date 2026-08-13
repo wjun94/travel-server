@@ -45,6 +45,7 @@ services:
     environment:
       - GOPROXY=https://goproxy.cn,direct
     volumes:
+      - ./certs:/app/certs # 挂载证书目录（和风天气/微信支付密钥文件）
       - /app/tmp
     depends_on:
       db:
