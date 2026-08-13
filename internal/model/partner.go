@@ -16,15 +16,15 @@ type Partner struct {
 	Type     int    `gorm:"default:0" json:"type"`                  // 0用户搭子 1官方活动
 	Category string `gorm:"size:50;default:''" json:"category"`     // 活动分类：旅游/美食/运动/学习/探店/看展/桌游
 	// 基础展示
-	Title        string  `gorm:"size:255" json:"title"`             // 招募标题
-	Cover        string  `gorm:"size:512" json:"cover"`             // 封面图
-	Images       string  `gorm:"type:text" json:"images"`           // 多图JSON数组
-	Destination  string  `gorm:"size:255;index" json:"destination"` // 目的地
-	Longitude    float64 `json:"longitude"`                         // 经度（同城匹配）
-	Latitude     float64 `json:"latitude"`                          // 纬度
-	Address      string  `gorm:"size:500" json:"address"`           // 详细地址
-	LocationType int     `gorm:"default:0" json:"locationType"`     // 0线下 1线上
-	OnlineLink   string  `gorm:"size:500" json:"onlineLink"`        // 线上链接
+	Title        string   `gorm:"size:255" json:"title"`                   // 招募标题
+	Cover        string   `gorm:"size:512" json:"cover"`                   // 封面图
+	Images       []string `gorm:"type:text;serializer:json" json:"images"` // 多图列表（JSON数组）
+	Destination  string   `gorm:"size:255;index" json:"destination"`       // 目的地
+	Longitude    float64  `json:"longitude"`                               // 经度（同城匹配）
+	Latitude     float64  `json:"latitude"`                                // 纬度
+	Address      string   `gorm:"size:500" json:"address"`                 // 详细地址
+	LocationType int      `gorm:"default:0" json:"locationType"`           // 0线下 1线上
+	OnlineLink   string   `gorm:"size:500" json:"onlineLink"`              // 线上链接
 	// 出行时间
 	StartDate *time.Time `gorm:"index" json:"startDate"` // 出发日期
 	EndDate   *time.Time `json:"endDate"`                // 结束日期

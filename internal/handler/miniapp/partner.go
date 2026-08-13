@@ -126,17 +126,10 @@ func CreatePartner(c *gin.Context) {
 
 	userID := c.MustGet("userID").(string)
 
-	// 多图列表转JSON字符串
-	imagesJSON := ""
-	if len(req.Images) > 0 {
-		b, _ := json.Marshal(req.Images)
-		imagesJSON = string(b)
-	}
-
 	p := model.Partner{
 		Title:           req.Title,
 		Cover:           req.Cover,
-		Images:          imagesJSON,
+		Images:          req.Images,
 		Category:        req.Category,
 		Destination:     req.Destination,
 		Longitude:       req.Longitude,
@@ -516,8 +509,7 @@ func UpdatePartner(c *gin.Context) {
 		partner.Cover = *req.Cover
 	}
 	if req.Images != nil {
-		b, _ := json.Marshal(req.Images)
-		partner.Images = string(b)
+		partner.Images = req.Images
 	}
 	if req.Category != nil {
 		partner.Category = *req.Category
@@ -711,6 +703,12 @@ func GetPartnerDetail(c *gin.Context) {
 		partner.CommentCount = int(cnt)
 	}
 
+	// 多图：保证返回数组（无图时返回空数组而非 null）
+	images := partner.Images
+	if images == nil {
+		images = []string{}
+	}
+
 	response.Success(c, gin.H{
 		"id":              partner.ID,
 		"userId":          partner.UserID,
@@ -718,7 +716,7 @@ func GetPartnerDetail(c *gin.Context) {
 		"category":        partner.Category,
 		"title":           partner.Title,
 		"cover":           partner.Cover,
-		"images":          partner.Images,
+		"images":          images,
 		"destination":     partner.Destination,
 		"longitude":       partner.Longitude,
 		"latitude":        partner.Latitude,
