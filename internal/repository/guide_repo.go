@@ -42,11 +42,11 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 	for _, u := range users {
 		userMap[u.ID] = u
 	}
-	// 批量获取当前用户的点赞状态
+	// 批量获取当前用户的点赞状态（action=1 点赞，排除收藏）
 	likedSet := make(map[string]bool)
 	if userID != "" {
 		var favs []model.Favorite
-		database.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "guide", guideIDs).Find(&favs)
+		database.DB.Where("user_id = ? AND target_type = ? AND target_id IN ? AND action = ?", userID, "guide", guideIDs, 1).Find(&favs)
 		for _, f := range favs {
 			likedSet[f.TargetID] = true
 		}
@@ -318,11 +318,11 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 		userMap[u.ID] = u
 	}
 
-	// 6. 批量获取当前用户的点赞状态（攻略和行程共用 Favorite 表）
+	// 6. 批量获取当前用户的点赞状态（攻略和行程共用 Favorite 表，action=1 点赞，排除收藏）
 	likedSet := make(map[string]bool)
 	if userID != "" {
 		var favs []model.Favorite
-		database.DB.Where("user_id = ? AND target_id IN ?", userID, itemIDs).Find(&favs)
+		database.DB.Where("user_id = ? AND target_id IN ? AND action = ?", userID, itemIDs, 1).Find(&favs)
 		for _, f := range favs {
 			likedSet[f.TargetID] = true
 		}
