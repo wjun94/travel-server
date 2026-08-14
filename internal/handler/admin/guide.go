@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ListGuides 后台攻略列表（含审核状态，支持状态筛选与目的地搜索）
+// ListGuides 后台攻略列表（含审核状态，支持状态筛选与目的地/标题搜索）
 // @Summary 攻略列表
 // @Security BearerAuth
 // @Tags 后台-内容
@@ -18,6 +18,7 @@ import (
 // @Param pageSize query int false "每页数量"
 // @Param status query int false "状态(0草稿 1已发布 2下架，-1或不传为全部)" default(-1)
 // @Param destination query string false "目的地关键词"
+// @Param title query string false "标题关键词"
 // @Success 200 {object} response.Response{data=object{list=[]model.Guide,total=int}}
 // @Router /api/v1/admin/guides [get]
 func ListGuides(c *gin.Context) {
@@ -25,7 +26,8 @@ func ListGuides(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	status, _ := strconv.Atoi(c.DefaultQuery("status", "-1"))
 	destination := c.Query("destination")
-	guides, total, err := repository.ListGuides(page, pageSize, status, destination)
+	title := c.Query("title")
+	guides, total, err := repository.ListGuides(page, pageSize, status, destination, title)
 	if err != nil {
 		response.Fail(c, 500, "获取攻略列表失败")
 		return

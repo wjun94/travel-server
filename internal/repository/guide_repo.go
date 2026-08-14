@@ -706,8 +706,8 @@ func GetGuideByID(id string) (*model.Guide, error) {
 	return &guide, err
 }
 
-// ListGuides 后台攻略列表（所有状态，支持状态筛选与目的地模糊搜索）
-func ListGuides(page, pageSize int, status int, destination string) ([]model.Guide, int64, error) {
+// ListGuides 后台攻略列表（所有状态，支持状态筛选与目的地/标题模糊搜索）
+func ListGuides(page, pageSize int, status int, destination string, title string) ([]model.Guide, int64, error) {
 	var guides []model.Guide
 	var total int64
 	offset := (page - 1) * pageSize
@@ -719,6 +719,10 @@ func ListGuides(page, pageSize int, status int, destination string) ([]model.Gui
 	// 目的地关键词模糊搜索
 	if destination != "" {
 		query = query.Where("destination LIKE ?", "%"+destination+"%")
+	}
+	// 标题关键词模糊搜索
+	if title != "" {
+		query = query.Where("title LIKE ?", "%"+title+"%")
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err

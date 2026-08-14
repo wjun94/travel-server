@@ -154,8 +154,8 @@ func GetUserAppliedPartnerIDs(userID string, partnerIDs []string) (map[string]bo
 	return result, nil
 }
 
-// GetPartners 搭子列表（分页，支持目的地/状态/类型筛选；type -1 全部 0用户 1官方）
-func GetPartners(page, pageSize int, destination string, status int, ptype int) ([]model.Partner, int64, error) {
+// GetPartners 搭子列表（分页，支持目的地/标题/状态/类型筛选；type -1 全部 0用户 1官方）
+func GetPartners(page, pageSize int, destination string, title string, status int, ptype int) ([]model.Partner, int64, error) {
 	var list []model.Partner
 	var total int64
 	offset := (page - 1) * pageSize
@@ -165,6 +165,10 @@ func GetPartners(page, pageSize int, destination string, status int, ptype int) 
 	}
 	if destination != "" {
 		query = query.Where("destination LIKE ?", "%"+destination+"%")
+	}
+	// 标题关键词模糊搜索
+	if title != "" {
+		query = query.Where("title LIKE ?", "%"+title+"%")
 	}
 	// status 仅筛选有效值（-1 或未传表示全部）
 	if status >= 0 {
