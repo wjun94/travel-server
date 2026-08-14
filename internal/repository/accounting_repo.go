@@ -13,7 +13,42 @@ func GetAccountsByTarget(targetType, targetID, userID string) ([]model.Accountin
 	var accounts []model.Accounting
 	err := database.DB.Where("target_type = ? AND target_id = ? AND user_id = ?", targetType, targetID, userID).
 		Order("consumed_at desc, created_at desc").Find(&accounts).Error
-	return accounts, err
+	if err != nil {
+		return accounts, err
+	}
+	// 绑定行程/攻略/搭子时填充目标名称（custom 账本已存储账本名，无需处理）
+	if targetType != "custom" && len(accounts) > 0 {
+		if name := GetTargetName(targetType, targetID); name != "" {
+			for i := range accounts {
+				accounts[i].TargetName = name
+			}
+		}
+	}
+	return accounts, nil
+}
+
+// GetTargetName 获取绑定目标名称（行程标题/攻略标题/搭子标题/自主账本名）
+func GetTargetName(targetType, targetID string) string {
+	switch targetType {
+	case "trip":
+		var t model.Trip
+		database.DB.Select("title").Where("id = ?", targetID).First(&t)
+		return t.Title
+	case "guide":
+		var g model.Guide
+		database.DB.Select("title").Where("id = ?", targetID).First(&g)
+		return g.Title
+	case "partner":
+		var p model.Partner
+		database.DB.Select("title").Where("id = ?", targetID).First(&p)
+		return p.Title
+	case "custom":
+		var acc model.Accounting
+		database.DB.Select("target_name").Where("target_type = ? AND target_id = ?", "custom", targetID).
+			Order("created_at desc").First(&acc)
+		return acc.TargetName
+	}
+	return ""
 }
 
 // CreateAccount 添加记账条目
@@ -52,6 +87,7 @@ type AccountSummary struct {
 	TotalAmount  float64            `json:"totalAmount"`  // 总支出
 	Count        int64              `json:"count"`        // 总笔数
 	CategoryStat map[string]float64 `json:"categoryStat"` // 各分类金额
+	TargetName   string             `json:"targetName"`   // 关联目标名称（行程/攻略/搭子标题，自主账本为账本名）
 }
 
 // GetAccountSummary 获取某目标的账本汇总
@@ -75,6 +111,7 @@ func GetAccountSummary(targetType, targetID, userID string) (AccountSummary, err
 		summary.Count += r.Count
 		summary.CategoryStat[r.Category] = r.Sum
 	}
+	summary.TargetName = GetTargetName(targetType, targetID)
 	return summary, nil
 }
 
