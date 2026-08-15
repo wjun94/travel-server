@@ -360,8 +360,37 @@ func GetUserFeed(userID string, page, pageSize int) ([]model.FeedItem, int64, er
 	partnerQuery.Count(&partnerTotal)
 	partnerQuery.Order("created_at desc").Preload("Days").Find(&partners)
 
-	total := guideTotal + tripTotal + partnerTotal
+	return mergeUserFeedItems(guides, trips, partners, guideTotal+tripTotal+partnerTotal, page, pageSize)
+}
 
+// ListMyNotes 我的全部笔记（攻略+行程+搭子，含草稿/私密，合并按时间倒序），供"我的笔记-全部"Tab使用
+func ListMyNotes(userID string, page, pageSize int) ([]model.FeedItem, int64, error) {
+	// 1. 查询我的攻略（全部状态）
+	var guides []model.Guide
+	var guideTotal int64
+	guideQuery := database.DB.Model(&model.Guide{}).Where("user_id = ?", userID)
+	guideQuery.Count(&guideTotal)
+	guideQuery.Order("created_at desc").Find(&guides)
+
+	// 2. 查询我的行程（全部状态）
+	var trips []model.Trip
+	var tripTotal int64
+	tripQuery := database.DB.Model(&model.Trip{}).Where("user_id = ?", userID)
+	tripQuery.Count(&tripTotal)
+	tripQuery.Order("created_at desc").Find(&trips)
+
+	// 3. 查询我的搭子（全部状态）
+	var partners []model.Partner
+	var partnerTotal int64
+	partnerQuery := database.DB.Model(&model.Partner{}).Where("user_id = ?", userID)
+	partnerQuery.Count(&partnerTotal)
+	partnerQuery.Order("created_at desc").Preload("Days").Find(&partners)
+
+	return mergeUserFeedItems(guides, trips, partners, guideTotal+tripTotal+partnerTotal, page, pageSize)
+}
+
+// mergeUserFeedItems 合并用户的攻略+行程+搭子：补全天数/行程项统计，按时间倒序后手动分页
+func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []model.Partner, total int64, page, pageSize int) ([]model.FeedItem, int64, error) {
 	// 批量查询攻略的天数和行程项统计
 	guideIDs := make([]string, len(guides))
 	for i, g := range guides {
