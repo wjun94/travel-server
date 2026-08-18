@@ -157,6 +157,7 @@ type GuideFeedItem struct {
 	LikeCount    int       `json:"likeCount"`    // 点赞数
 	TripDays     int       `json:"tripDays"`     // 行程天数
 	SectionCount int64     `json:"sectionCount"` // 行程项总数（不包含交通）
+	Status       int       `json:"status"`       // 状态：0草稿 1已发布 2下架
 	CreatedAt    time.Time `json:"createdAt"`    // 创建时间
 	AuthorName   string    `json:"authorName"`   // 作者昵称
 	AuthorAvatar string    `json:"authorAvatar"` // 作者头像
@@ -171,12 +172,15 @@ type FeedItem struct {
 	CoverImage   string    `json:"coverImage"`   // 封面图
 	Destinations []string  `json:"destinations"` // 目的地列表
 	Summary      string    `json:"summary"`      // 摘要/备注
-	ItemType     string    `json:"itemType"`     // 内容类型：guide(攻略) / trip(行程)
+	ItemType     string    `json:"itemType"`     // 内容类型：guide(攻略) / trip(行程) / partner(搭子)
 	IsOverseas   int       `json:"isOverseas"`   // 境内境外：0国内 1境外
 	ViewCount    int       `json:"viewCount"`    // 浏览量
 	LikeCount    int       `json:"likeCount"`    // 点赞数
 	TripDays     int       `json:"tripDays"`     // 行程天数
 	SectionCount int64     `json:"sectionCount"` // 行程项总数（不包含交通，仅guide有效）
+	Status       int       `json:"status"`       // 状态：guide 0草稿1已发布2下架 / trip 1草稿2已发布3已归档 / partner 0招募中1满员2取消3已过期4行程结束
+	IsDraft      int       `json:"isDraft"`      // 是否草稿（partner：0已发布 1草稿）
+	IsPublic     int       `json:"isPublic"`     // 是否公开（trip/partner：0私密/仅自己可见 1公开）
 	CreatedAt    time.Time `json:"createdAt"`    // 创建时间
 	AuthorName   string    `json:"authorName"`   // 作者昵称
 	AuthorAvatar string    `json:"authorAvatar"` // 作者头像

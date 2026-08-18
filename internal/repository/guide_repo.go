@@ -99,6 +99,7 @@ func GetGuideFeed(page, pageSize int, destination, userID string) ([]model.Guide
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
 			SectionCount: secMap[g.ID],
+			Status:       g.Status,
 			CreatedAt:    g.CreatedAt,
 			AuthorName:   userMap[g.UserID].Nickname,
 			AuthorAvatar: userMap[g.UserID].AvatarURL,
@@ -215,6 +216,7 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
 			SectionCount: secMap[g.ID],
+			Status:       g.Status,
 			CreatedAt:    g.CreatedAt,
 		})
 	}
@@ -273,6 +275,8 @@ func GetPublicFeed(page, pageSize int, destination, keyword, userID, tab string)
 			LikeCount:    t.LikeCount,
 			TripDays:     tripDayMap[t.ID],
 			SectionCount: tripSecMap[t.ID],
+			Status:       t.Status,
+			IsPublic:     t.IsPublic,
 			CreatedAt:    t.CreatedAt,
 		})
 	}
@@ -485,6 +489,7 @@ func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []mod
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
 			SectionCount: secMap[g.ID],
+			Status:       g.Status,
 			CreatedAt:    g.CreatedAt,
 		})
 	}
@@ -502,6 +507,8 @@ func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []mod
 			LikeCount:    t.LikeCount,
 			TripDays:     tripDayMap[t.ID],
 			SectionCount: tripSecMap[t.ID],
+			Status:       t.Status,
+			IsPublic:     t.IsPublic,
 			CreatedAt:    t.CreatedAt,
 		})
 	}
@@ -517,6 +524,9 @@ func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []mod
 			ViewCount:    p.ViewCount,
 			LikeCount:    p.LikeCount,
 			TripDays:     len(p.Days),
+			Status:       p.Status,
+			IsDraft:      p.IsDraft,
+			IsPublic:     p.IsPublic,
 			CreatedAt:    p.CreatedAt,
 		})
 	}
@@ -608,6 +618,7 @@ func ListMyGuides(userID string, page, pageSize, status int) ([]model.GuideFeedI
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
 			SectionCount: secMap[g.ID],
+			Status:       g.Status,
 			CreatedAt:    g.CreatedAt,
 		}
 	}
@@ -696,6 +707,7 @@ func ListUserPublishedGuides(userID string, page, pageSize int) ([]model.GuideFe
 			LikeCount:    g.LikeCount,
 			TripDays:     dayMap[g.ID],
 			SectionCount: secMap[g.ID],
+			Status:       g.Status,
 			CreatedAt:    g.CreatedAt,
 		}
 	}
