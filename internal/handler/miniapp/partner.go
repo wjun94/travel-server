@@ -298,7 +298,7 @@ func GetPartnerList(c *gin.Context) {
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
 // @Param isDraft query int false "草稿筛选（1草稿 0已发布，-1或不传为全部）" default(-1)
-// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64,commentCount=int},total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,longitude=float64,latitude=float64,address=string,locationType=int,onlineLink=string,startDate=string,endDate=string,days=int,travelTags=string,tags=string,desc=string,richDesc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,genderLimit=int,maleCount=int,femaleCount=int,minAge=int,maxAge=int,feeMode=int,budgetPerPerson=int,officialPrice=float64,feeInclude=string,feeExclude=string,estTotal=int,visibility=int,joinMode=int,autoClose=int,allowShare=int,allowCollect=int,isDraft=int,status=int,isPublic=int,viewCount=int,sortWeight=int,createdAt=string,updatedAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64,commentCount=int,statusText=string},total=int64}}
 // @Router /api/v1/my/partners [get]
 func GetMyPartners(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -332,6 +332,31 @@ type partnerItemVO struct {
 	IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
 	ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
 	DayCount     int    `json:"dayCount"`     // 出行天数（由行程日列表长度派生）
+	StatusText   string `json:"statusText"`   // 状态文案：草稿/仅自己可见/招募中/已满员/已解散/已过期/行程结束
+}
+
+// partnerStatusText 搭子状态文案（草稿/仅自己可见优先于招募状态）
+func partnerStatusText(p *model.Partner) string {
+	if p.IsDraft == 1 {
+		return "草稿"
+	}
+	if p.IsPublic == 0 {
+		return "仅自己可见"
+	}
+	switch p.Status {
+	case 0:
+		return "招募中"
+	case 1:
+		return "已满员"
+	case 2:
+		return "已解散"
+	case 3:
+		return "已过期"
+	case 4:
+		return "行程结束"
+	default:
+		return "招募中"
+	}
 }
 
 // enrichPartnerList 富化搭子列表：批量注入作者信息与关联行程项数（列表/我的/参与的共用）
@@ -365,6 +390,7 @@ func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerIt
 			IsSelf:       isSelf,
 			IsFollowed:   false,
 			DayCount:     dayCount,
+			StatusText:   partnerStatusText(&p),
 		}
 	}
 
@@ -392,7 +418,7 @@ func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerIt
 // @Tags 小程序-搭子
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,address=string,locationType=int,startDate=string,endDate=string,days=int,tags=string,desc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,status=int,isDraft=int,isPublic=int,viewCount=int,createdAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64},total=int64}}
+// @Success 200 {object} response.Response{data=object{list=[]object{id=string,userId=string,tripId=string,type=int,category=string,title=string,cover=string,images=string,destination=string,address=string,locationType=int,startDate=string,endDate=string,days=int,tags=string,desc=string,requirement=string,maxMembers=int,minMembers=int,currentMembers=int,status=int,isDraft=int,isPublic=int,viewCount=int,createdAt=string,authorId=string,authorName=string,authorAvatar=string,isApplied=bool,isSelf=bool,isFollowed=bool,itemCount=int64,statusText=string},total=int64}}
 // @Router /api/v1/my/joined-partners [get]
 func GetMyJoinedPartners(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
