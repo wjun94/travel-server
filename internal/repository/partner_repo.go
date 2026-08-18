@@ -100,6 +100,29 @@ func CreateApplication(app *model.PartnerApplication) error {
 	return database.DB.Create(app).Error
 }
 
+// GetPartnerItemCounts 批量查询搭子自有行程安排的行程项总数（按搭子ID分组，统计 partner_day_items）
+func GetPartnerItemCounts(partnerIDs []string) map[string]int64 {
+	if len(partnerIDs) == 0 {
+		return nil
+	}
+	type result struct {
+		PartnerID string
+		Count     int64
+	}
+	var rows []result
+	database.DB.Table("partner_day_items pdi").
+		Select("pd.partner_id, COUNT(pdi.id) as count").
+		Joins("JOIN partner_days pd ON pdi.day_id = pd.id").
+		Where("pd.partner_id IN ?", partnerIDs).
+		Group("pd.partner_id").
+		Find(&rows)
+	m := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		m[r.PartnerID] = r.Count
+	}
+	return m
+}
+
 // GetApplicationByID 获取申请详情
 func GetApplicationByID(id string) (*model.PartnerApplication, error) {
 	var app model.PartnerApplication

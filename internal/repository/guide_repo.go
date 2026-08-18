@@ -473,6 +473,13 @@ func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []mod
 		tripSecMap[s.TripID] = s.Count
 	}
 
+	// 批量查询搭子自有行程安排的行程项总数
+	partnerIDs := make([]string, len(partners))
+	for i, p := range partners {
+		partnerIDs[i] = p.ID
+	}
+	partnerItemCountMap := GetPartnerItemCounts(partnerIDs)
+
 	// 4. 合并为 FeedItem 切片（攻略+行程+搭子）
 	allItems := make([]model.FeedItem, 0, len(guides)+len(trips)+len(partners))
 	for _, g := range guides {
@@ -524,6 +531,7 @@ func mergeUserFeedItems(guides []model.Guide, trips []model.Trip, partners []mod
 			ViewCount:    p.ViewCount,
 			LikeCount:    p.LikeCount,
 			TripDays:     len(p.Days),
+			SectionCount: partnerItemCountMap[p.ID],
 			Status:       p.Status,
 			IsDraft:      p.IsDraft,
 			IsPublic:     p.IsPublic,

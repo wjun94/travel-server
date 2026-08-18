@@ -235,6 +235,7 @@ func GetPartnerList(c *gin.Context) {
 		IsFollowed   bool   `json:"isFollowed"`   // 是否已关注
 		ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
 		DayCount     int    `json:"dayCount"`     // 出行天数（由行程日列表长度派生）
+		SectionCount int64  `json:"sectionCount"` // 自有行程安排的行程项总数（与首页 sectionCount 一致）
 	}
 	result := make([]partnerVO, len(list))
 	for i, p := range list {
@@ -288,6 +289,14 @@ func GetPartnerList(c *gin.Context) {
 		}
 	}
 
+	// 批量查询搭子自有行程安排的行程项总数
+	partnerItemCountMap := repository.GetPartnerItemCounts(partnerIDs)
+	for i, p := range list {
+		if cnt, ok := partnerItemCountMap[p.ID]; ok {
+			result[i].SectionCount = cnt
+		}
+	}
+
 	response.Success(c, gin.H{"list": result, "total": total})
 }
 
@@ -333,6 +342,7 @@ type partnerItemVO struct {
 	ItemCount    int64  `json:"itemCount"`    // 关联行程的行程项总数
 	DayCount     int    `json:"dayCount"`     // 出行天数（由行程日列表长度派生）
 	StatusText   string `json:"statusText"`   // 状态文案：草稿/仅自己可见/招募中/已满员/已解散/已过期/行程结束
+	SectionCount int64  `json:"sectionCount"` // 自有行程安排的行程项总数（与首页 sectionCount 一致）
 }
 
 // partnerStatusText 搭子状态文案（草稿/仅自己可见优先于招募状态）
@@ -407,6 +417,18 @@ func enrichPartnerList(list []model.Partner, isApplied, isSelf bool) []partnerIt
 			if cnt, ok := itemCountMap[p.TripID]; ok {
 				result[i].ItemCount = cnt
 			}
+		}
+	}
+
+	// 批量查询搭子自有行程安排的行程项总数
+	partnerIDs := make([]string, len(list))
+	for i, p := range list {
+		partnerIDs[i] = p.ID
+	}
+	partnerItemCountMap := repository.GetPartnerItemCounts(partnerIDs)
+	for i, p := range list {
+		if cnt, ok := partnerItemCountMap[p.ID]; ok {
+			result[i].SectionCount = cnt
 		}
 	}
 	return result
