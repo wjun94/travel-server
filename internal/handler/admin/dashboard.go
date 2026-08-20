@@ -23,10 +23,10 @@ func countInRange(m interface{}, since *time.Time) int64 {
 
 // Dashboard 管理端首页统计（总数 + 今日/本周/本月新增）
 // @Summary 仪表盘统计
-// @Description 返回用户/攻略/搭子/行程/评论/收藏/搭子申请/投诉 8 个维度的总数与今日、本周（周一起）、本月新增数据
+// @Description 返回用户/攻略/搭子/行程/评论/收藏/搭子申请/投诉/AI生成 9 个维度的总数与今日、本周（周一起）、本月新增数据
 // @Security BearerAuth
 // @Tags 后台-仪表盘
-// @Success 200 {object} response.Response{data=object{user=object{total=int,today=int,week=int,month=int},guide=object{total=int,today=int,week=int,month=int},partner=object{total=int,today=int,week=int,month=int},trip=object{total=int,today=int,week=int,month=int},comment=object{total=int,today=int,week=int,month=int},favorite=object{total=int,today=int,week=int,month=int},application=object{total=int,today=int,week=int,month=int},complaint=object{total=int,today=int,week=int,month=int}}}
+// @Success 200 {object} response.Response{data=object{user=object{total=int,today=int,week=int,month=int},guide=object{total=int,today=int,week=int,month=int},partner=object{total=int,today=int,week=int,month=int},trip=object{total=int,today=int,week=int,month=int},comment=object{total=int,today=int,week=int,month=int},favorite=object{total=int,today=int,week=int,month=int},application=object{total=int,today=int,week=int,month=int},complaint=object{total=int,today=int,week=int,month=int},aiGenerate=object{total=int,today=int,week=int,month=int}}}
 // @Router /api/v1/admin/dashboard [get]
 func Dashboard(c *gin.Context) {
 	// 时间起点（Asia/Shanghai）：今日 0 点 / 本周一 0 点 / 本月 1 号 0 点
@@ -78,5 +78,6 @@ func Dashboard(c *gin.Context) {
 		"favorite":    favStat(&model.Favorite{}),
 		"application": stat(&model.PartnerApplication{}),
 		"complaint":   stat(&model.Complaint{}),
+		"aiGenerate":  stat(&model.AiGenerateLog{}),
 	})
 }

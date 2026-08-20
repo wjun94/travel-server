@@ -1084,6 +1084,9 @@ func AIGeneratePartner(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(string)
 
+	// 统计：记录一次AI生成点击
+	aiLog, _ := repository.CreateAiGenerateLog(userID, "partner")
+
 	// 额度校验：管理员不限次数，其他用户今日基础1次 + 邀请成功奖励，超出拒绝
 	user, _ := repository.GetUserByID(userID)
 	if user == nil || user.Role != 2 {
@@ -1103,6 +1106,7 @@ func AIGeneratePartner(c *gin.Context) {
 	prompt := fmt.Sprintf(ai.PartnerPrompt, req.Destination, req.Days, startDesc, req.Days)
 	result, err := ai.Chat(prompt)
 	if err != nil {
+		_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 2)
 		response.Fail(c, 500, "AI生成失败")
 		return
 	}
@@ -1150,6 +1154,7 @@ func AIGeneratePartner(c *gin.Context) {
 		} `json:"schedule"`
 	}
 	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
+		_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 2)
 		response.Fail(c, 500, "AI返回格式异常")
 		return
 	}
@@ -1284,6 +1289,7 @@ func AIGeneratePartner(c *gin.Context) {
 		tripDays = []model.TripDay{}
 	}
 	respData["days"] = tripDays
+	_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 1)
 	response.Success(c, respData)
 }
 
