@@ -37,6 +37,9 @@ func AIGenerateTrip(c *gin.Context) {
 	}
 	uid := c.MustGet("userID").(string)
 
+	// 统计：记录一次AI生成点击
+	aiLog, _ := repository.CreateAiGenerateLog(uid, "trip")
+
 	// 额度校验：管理员不限次数，其他用户今日基础1次 + 邀请成功奖励，超出拒绝
 	user, _ := repository.GetUserByID(uid)
 	if user == nil || user.Role != 2 {
@@ -56,6 +59,7 @@ func AIGenerateTrip(c *gin.Context) {
 	prompt := fmt.Sprintf(ai.TripPrompt, req.Destination, req.Days, startDesc)
 	result, err := ai.Chat(prompt)
 	if err != nil {
+		_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 2)
 		response.Fail(c, 500, "AI生成失败")
 		return
 	}
@@ -83,6 +87,7 @@ func AIGenerateTrip(c *gin.Context) {
 		} `json:"days"`
 	}
 	if err := json.Unmarshal([]byte(result), &aiResult); err != nil {
+		_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 2)
 		response.Fail(c, 500, "AI返回格式异常")
 		return
 	}
@@ -155,6 +160,7 @@ func AIGenerateTrip(c *gin.Context) {
 		"isAI":         1,
 		"days":         dayList,
 	}
+	_ = repository.UpdateAiGenerateLogStatus(aiLog.ID, 1)
 	response.Success(c, respData)
 }
 

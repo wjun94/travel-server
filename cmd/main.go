@@ -94,6 +94,7 @@ func main() {
 			// ---------- 攻略 ----------
 			miniAuth.POST("/guide", miniapp.CreateGuide)                       // 创建攻略
 			miniAuth.GET("/my/guides", miniapp.GetMyGuides)                    // 我的攻略列表（status可筛草稿）
+			miniAuth.GET("/my/notes", miniapp.GetMyNotes)                      // 我的全部笔记（攻略+行程+搭子合并）
 			miniAuth.GET("/guide/:id", miniapp.GetGuideDetail)                 // 攻略详情
 			miniAuth.PUT("/guide/:id", miniapp.UpdateGuide)                    // 更新攻略
 			miniAuth.DELETE("/guide/:id", miniapp.DeleteGuide)                 // 删除攻略（仅作者）
