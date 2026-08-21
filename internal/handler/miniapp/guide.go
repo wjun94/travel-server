@@ -127,10 +127,15 @@ func CreateGuide(c *gin.Context) {
 		response.Fail(c, 400, ve.Msg)
 		return
 	}
+	// 内容安全检测（论坛场景：标题/摘要/目的地/标签/每日行程文本）
+	uid := c.MustGet("userID").(string)
+	if !secGuard(c, uid, secSceneForum, secText(req.Title, req.Summary, req.Destination, req.Tags, guideDaysSecText(req.Days))) {
+		return
+	}
 	// 组装 Guide
 	guide := model.Guide{
 		ID:              snowflake.GenerateID(),
-		UserID:          c.MustGet("userID").(string),
+		UserID:          uid,
 		Title:           req.Title,
 		CoverImage:      req.CoverImage,
 		Destination:     req.Destination,
@@ -162,6 +167,18 @@ func CreateGuide(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"id": guide.ID})
+}
+
+// guideDaysSecText 提取攻略每日行程中的文本字段用于内容安全检测
+func guideDaysSecText(dayReqs []model.DayReq) string {
+	parts := make([]string, 0, len(dayReqs)*3)
+	for _, d := range dayReqs {
+		parts = append(parts, d.Title)
+		for _, it := range d.Items {
+			parts = append(parts, it.Title, it.Description, it.Address)
+		}
+	}
+	return secText(parts...)
 }
 
 // buildGuideSections 将请求的每日行程数据组装为 GuideSection 列表
@@ -297,6 +314,26 @@ func UpdateGuide(c *gin.Context) {
 	var req model.UpdateGuideReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
+		return
+	}
+	// 内容安全检测（仅检测本次更新的文本字段）
+	secParts := make([]string, 0, 5)
+	if req.Title != nil {
+		secParts = append(secParts, *req.Title)
+	}
+	if req.Summary != nil {
+		secParts = append(secParts, *req.Summary)
+	}
+	if req.Destination != nil {
+		secParts = append(secParts, *req.Destination)
+	}
+	if req.Tags != nil {
+		secParts = append(secParts, *req.Tags)
+	}
+	if len(req.Days) > 0 {
+		secParts = append(secParts, guideDaysSecText(req.Days))
+	}
+	if !secGuard(c, c.MustGet("userID").(string), secSceneForum, secText(secParts...)) {
 		return
 	}
 	updates := buildUpdateMap(&req)

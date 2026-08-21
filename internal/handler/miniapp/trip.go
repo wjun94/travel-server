@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -179,7 +180,14 @@ func CreateTrip(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	trip.UserID = c.MustGet("userID").(string)
+	// 内容安全检测（论坛场景：标题/摘要/目的地文本）
+	uid := c.MustGet("userID").(string)
+	if !secGuard(c, uid, secSceneForum, secText(trip.Title, trip.Summary,
+		strings.Join(trip.Countries, " "), strings.Join(trip.Provinces, " "),
+		strings.Join(trip.Cities, " "), strings.Join(trip.Destinations, " "))) {
+		return
+	}
+	trip.UserID = uid
 	if err := repository.CreateTrip(&trip); err != nil {
 		response.Fail(c, 500, "创建失败")
 		return
@@ -458,6 +466,17 @@ func UpdateTrip(c *gin.Context) {
 				updates[f] = string(b)
 			}
 		}
+	}
+
+	// 内容安全检测（仅检测本次更新的文本字段）
+	secParts := make([]string, 0, 6)
+	for _, k := range []string{"title", "summary", "countries", "provinces", "cities", "destinations"} {
+		if v, ok := updates[k]; ok && v != nil {
+			secParts = append(secParts, fmt.Sprintf("%v", v))
+		}
+	}
+	if !secGuard(c, userID, secSceneForum, secText(secParts...)) {
+		return
 	}
 
 	// 传入 days 时全量替换行程日（删除旧行程重建）

@@ -1,6 +1,7 @@
 package miniapp
 
 import (
+	"errors"
 	"strconv"
 
 	"travel-server/internal/model"
@@ -18,7 +19,9 @@ type CommentVO struct {
 	AvatarURL       string `json:"avatarUrl"`
 	ReplyCount      int64  `json:"replyCount"`      // 子回复数量
 	ReplyToNickname string `json:"replyToNickname"` // 被回复人昵称（仅回复列表有效）
-	IsAuthor        bool   `json:"isAuthor"`        // 是否是发帖人
+	IsAuthor        bool   `json:"isAuthor"`        // 评论者是否是发帖人
+	IsMine          bool   `json:"isMine"`          // 当前浏览者是否是评论作者
+	IsViewerAuthor  bool   `json:"isViewerAuthor"`  // 当前浏览者是否是帖子作者（帖主可删任意评论）
 }
 
 // toCommentVO 将 Comment 转为 CommentVO
@@ -50,8 +53,13 @@ func CreateComment(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 内容安全检测（评论场景）
+	uid := c.MustGet("userID").(string)
+	if !secGuard(c, uid, secSceneComment, req.Content) {
+		return
+	}
 	comment := model.Comment{
-		UserID:     c.MustGet("userID").(string),
+		UserID:     uid,
 		TargetType: req.TargetType,
 		TargetID:   req.TargetID,
 		ParentID:   req.ParentID,
@@ -98,7 +106,7 @@ func CreateComment(c *gin.Context) {
 	response.Success(c, comment)
 }
 
-// DeleteComment 删除自己的评论
+// DeleteComment 删除评论（评论作者本人或帖子作者均可）
 // @Summary 删除评论
 // @Security BearerAuth
 // @Tags 小程序-评论
@@ -109,10 +117,23 @@ func DeleteComment(c *gin.Context) {
 	id := c.Param("id")
 	uid := c.MustGet("userID").(string)
 	if err := repository.DeleteComment(id, uid); err != nil {
+		if errors.Is(err, repository.ErrCommentNotFound) {
+			response.Fail(c, 404, "评论不存在或无权删除")
+			return
+		}
 		response.Fail(c, 500, "删除失败")
 		return
 	}
 	response.Success(c, nil)
+}
+
+// getPostAuthorID 查询帖子作者ID（guide/trip/partner，不存在返回空串）
+func getPostAuthorID(targetType, targetID string) string {
+	authorID, err := repository.GetTargetAuthorID(targetType, targetID)
+	if err != nil {
+		return ""
+	}
+	return authorID
 }
 
 // GetComments 获取评论列表
@@ -146,9 +167,16 @@ func GetComments(c *gin.Context) {
 	}
 	replyCounts := repository.GetReplyCounts(ids)
 
+	// 浏览者身份（未登录为空）：帖子作者用于"作者"标识与帖主删除权限
+	viewerID := c.GetString("userID")
+	postAuthorID := getPostAuthorID(targetType, targetID)
+
 	list := make([]CommentVO, len(comments))
 	for i, c := range comments {
 		list[i] = toCommentVO(c, replyCounts[c.ID], "")
+		list[i].IsAuthor = postAuthorID != "" && c.UserID == postAuthorID
+		list[i].IsMine = viewerID != "" && c.UserID == viewerID
+		list[i].IsViewerAuthor = viewerID != "" && viewerID == postAuthorID
 	}
 	response.Success(c, gin.H{"list": list, "total": total})
 }
@@ -218,6 +246,9 @@ func GetReplies(c *gin.Context) {
 		}
 	}
 
+	// 浏览者身份（未登录为空）
+	viewerID := c.GetString("userID")
+
 	list := make([]CommentVO, len(replies))
 	for i, r := range replies {
 		nickname := ""
@@ -227,6 +258,8 @@ func GetReplies(c *gin.Context) {
 		isAuthor := targetAuthorID != "" && r.UserID == targetAuthorID
 		list[i] = toCommentVO(r, 0, nickname)
 		list[i].IsAuthor = isAuthor
+		list[i].IsMine = viewerID != "" && r.UserID == viewerID
+		list[i].IsViewerAuthor = viewerID != "" && viewerID == targetAuthorID
 	}
 	response.Success(c, list)
 }

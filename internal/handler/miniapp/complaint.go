@@ -71,6 +71,10 @@ func SubmitComplaint(c *gin.Context) {
 	}
 	imagesJSON, _ := json.Marshal(images)
 	userID := c.MustGet("userID").(string)
+	// 内容安全检测（评论场景：投诉原因与描述）
+	if !secGuard(c, userID, secSceneComment, secText(req.Reason, req.Content)) {
+		return
+	}
 	complaint := model.Complaint{
 		ID:         snowflake.GenerateID(),
 		UserID:     userID,

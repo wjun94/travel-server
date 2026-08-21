@@ -126,6 +126,13 @@ func CreatePartner(c *gin.Context) {
 
 	userID := c.MustGet("userID").(string)
 
+	// 内容安全检测（论坛场景：标题/目的地/描述/要求/标签等文本）
+	if !secGuard(c, userID, secSceneForum, secText(req.Title, req.Destination, req.Address,
+		req.Desc, req.RichDesc, req.Requirement, req.TravelTags, req.Tags,
+		req.FeeInclude, req.FeeExclude, req.OnlineLink)) {
+		return
+	}
+
 	p := model.Partner{
 		Title:           req.Title,
 		Cover:           req.Cover,
@@ -498,6 +505,18 @@ func UpdatePartner(c *gin.Context) {
 	var req UpdatePartnerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数错误")
+		return
+	}
+
+	// 内容安全检测（仅检测本次更新的文本字段）
+	secParts := make([]string, 0, 11)
+	for _, p := range []*string{req.Title, req.Destination, req.Address, req.Desc, req.RichDesc,
+		req.Requirement, req.TravelTags, req.Tags, req.FeeInclude, req.FeeExclude, req.OnlineLink} {
+		if p != nil {
+			secParts = append(secParts, *p)
+		}
+	}
+	if !secGuard(c, c.MustGet("userID").(string), secSceneForum, secText(secParts...)) {
 		return
 	}
 

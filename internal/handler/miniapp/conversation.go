@@ -110,6 +110,10 @@ func SendGroupMessage(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 内容安全检测（社交日志场景：群聊消息）
+	if !secGuard(c, userID, secSceneSocial, req.Content) {
+		return
+	}
 	msg := model.ConversationMessage{
 		ConversationID: convID,
 		FromUserID:     userID,

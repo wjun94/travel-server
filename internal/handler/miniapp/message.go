@@ -106,8 +106,13 @@ func SendMessage(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 内容安全检测（社交日志场景：私聊消息）
+	uid := c.MustGet("userID").(string)
+	if !secGuard(c, uid, secSceneSocial, req.Content) {
+		return
+	}
 	msg := model.Message{
-		FromUserID: c.MustGet("userID").(string),
+		FromUserID: uid,
 		ToUserID:   req.ToUserID,
 		Content:    req.Content,
 		Type:       1, // 私聊

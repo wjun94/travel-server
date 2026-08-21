@@ -116,7 +116,12 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 	updates := map[string]interface{}{}
+	uid := c.MustGet("userID").(string)
 	if req.Nickname != nil {
+		// 内容安全检测（资料场景：昵称）
+		if !secGuard(c, uid, secSceneProfile, *req.Nickname) {
+			return
+		}
 		updates["nickname"] = *req.Nickname
 	}
 	if req.AvatarURL != nil {
@@ -134,7 +139,6 @@ func UpdateProfile(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
-	uid := c.MustGet("userID").(string)
 	if err := database.DB.Model(&model.User{}).Where("id = ?", uid).Updates(updates).Error; err != nil {
 		response.Fail(c, 500, "更新失败")
 		return

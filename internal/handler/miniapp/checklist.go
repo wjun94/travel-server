@@ -65,6 +65,14 @@ func CreateChecklist(c *gin.Context) {
 		response.Fail(c, 400, "参数错误")
 		return
 	}
+	// 内容安全检测（论坛场景：清单名称 + 条目文本）
+	secParts := []string{req.Name}
+	for _, it := range req.Items {
+		secParts = append(secParts, it.Text)
+	}
+	if !secGuard(c, c.MustGet("userID").(string), secSceneForum, secText(secParts...)) {
+		return
+	}
 	cl := model.Checklist{
 		UserID:     c.MustGet("userID").(string),
 		Name:       req.Name,
@@ -168,6 +176,14 @@ func UpdateChecklist(c *gin.Context) {
 			response.Fail(c, 400, "参数错误")
 			return
 		}
+	}
+	// 内容安全检测（论坛场景：清单名称 + 条目文本）
+	secParts := []string{req.Name}
+	for _, it := range req.Items {
+		secParts = append(secParts, it.Text)
+	}
+	if !secGuard(c, uid, secSceneForum, secText(secParts...)) {
+		return
 	}
 	if err := repository.UpdateChecklist(id, uid, req.Name, targetType, targetID, hasTarget, req.Items); err != nil {
 		response.Fail(c, 500, "更新失败")

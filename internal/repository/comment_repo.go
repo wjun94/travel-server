@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"travel-server/internal/model"
 	"travel-server/pkg/database"
 
@@ -93,13 +95,20 @@ func GetReplyCounts(parentIDs []string) map[string]int64 {
 	return result
 }
 
-// DeleteComment 删除评论（校验用户归属，级联删除子回复）
+// DeleteComment 删除评论（评论作者本人或帖子作者均可，级联删除子回复）
 func DeleteComment(id, userID string) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		// 校验归属
+		// 校验归属：先按评论作者查
 		var c model.Comment
-		if err := tx.Where("id = ? AND user_id = ?", id, userID).First(&c).Error; err != nil {
+		if err := tx.Where("id = ?", id).First(&c).Error; err != nil {
 			return err
+		}
+		if c.UserID != userID {
+			// 评论作者非本人时，允许帖子（攻略/行程/搭子）作者删除
+			authorID, err := GetTargetAuthorID(c.TargetType, c.TargetID)
+			if err != nil || authorID != userID {
+				return ErrCommentNotFound
+			}
 		}
 		// 级联删除子回复
 		if err := tx.Where("parent_id = ?", id).Delete(&model.Comment{}).Error; err != nil {
@@ -108,6 +117,34 @@ func DeleteComment(id, userID string) error {
 		return tx.Delete(&c).Error
 	})
 }
+
+// GetTargetAuthorID 获取帖子作者ID（guide/trip/partner）
+func GetTargetAuthorID(targetType, targetID string) (string, error) {
+	switch targetType {
+	case "guide":
+		var g model.Guide
+		if err := database.DB.Select("user_id").Where("id = ?", targetID).First(&g).Error; err != nil {
+			return "", err
+		}
+		return g.UserID, nil
+	case "trip":
+		var t model.Trip
+		if err := database.DB.Select("user_id").Where("id = ?", targetID).First(&t).Error; err != nil {
+			return "", err
+		}
+		return t.UserID, nil
+	case "partner":
+		var p model.Partner
+		if err := database.DB.Select("user_id").Where("id = ?", targetID).First(&p).Error; err != nil {
+			return "", err
+		}
+		return p.UserID, nil
+	}
+	return "", ErrCommentNotFound
+}
+
+// ErrCommentNotFound 评论不存在或无权删除
+var ErrCommentNotFound = errors.New("评论不存在")
 
 // IncrementCommentLikeCount 点赞评论
 func IncrementCommentLikeCount(id string) error {
